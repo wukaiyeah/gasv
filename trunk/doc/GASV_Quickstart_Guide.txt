@@ -1,0 +1,188 @@
+Quickstart Guide to Geometric Analysis of Structural Variants (GASV)
+
+SUMMARY =======================================================
+
+Geometric Analysis of Structural Variants (GASV) is a software package 
+developed to analyze structural variants. This quickstart document 
+will demonstrate many features of GASV including determining the 
+structural variants from paired-end sequences (ESPs) whose mappings 
+are encoded in a BAM file.
+
+More documentation is available for both GASV and the BAM Preprocessor 
+in their respective README files.
+
+EXAMPLE: BAM FORMAT TO GASV PREDICTIONS ========================
+
+We will use the file "Example.bam" (available as a separate 
+download) to demonstrate using the BAM preprocessor
+in conjunction with GASV.
+
+(*) Preliminary Step - Installing SAMTools
+
+The BAM Preprocessor requires SAMTools be installed. SAMTools may be 
+downloaded at:
+         http://samtools.sourceforge.net/
+
+It may be a good idea to add samtools to your PATH environment variable 
+at this point.
+
+(*) Preliminary Step -  Building code to determine Lmin/Lmax
+
+From the GASV_RELEASE directory run the installation script, install.sh
+
+% ./install.sh
+
+(1) Run BAM Preprocessor to Create GASV Input Files
+
+The following command creates GASV input files by considering ESPs 
+from the BAM file "Example.bam" (this particular BAM file contains no library information and contains only reads from chr17, so no translocations):
+% cd bin
+% perl BAM_preprocessor.pl Example.bam
+
+Important: you must either have the path to samtools set in your PATH environment variable or you must specify the samtools path directly as an 
+option to the BAM_preprocessor.pl command, as in 
+"-SAMTOOLS_PATH /prg/samtools-0.1.6/samtools"
+
+Note that there are quite a few additional options you can use to get more
+customized results.
+
+For example, you can:
+- Use reads with mapping quality > 20 (rather than default of > 10)
+- Have Lmin/Lmax specified as 3 standard deviations away from the mean (rather
+than default of 99th percentile).
+% perl BAM_preprocessor.pl Example.bam -MAPPING_QUALITY 20 -CUTOFF_LMINLMAX SD=3
+
+
+Running the previous command creates the following files:
+
+Example.info
+Example_all.deletion
+Example_all.divergent
+Example_all.inversion
+Example_all.translocation
+
+The files Example_all.deletion, Example_all.inversion, 
+Example_all.translocation and Example_all.divergent correspond
+to ESP files in the GASV input format.
+
+Example.info contains information about the concordant fragment length
+distribution. 
+
+If you have you own chromosome naming method, please add option 
+"-CHROMOSOME_NAMING_FILE FILE_NAME"
+
+% perl BAM_preprocessor.pl Example.bam -CHROMOSOME_NAMING_FILE /data/chrom_naming_table.txt
+
+Note: For the format of the naming file please see BAM_preprocessor.txt.
+
+(2) Run GASV to Compute Structural Variants
+
+The following command builds the executable gasv.jar in the lib/ subdirectory
+% ./make_jar_cmd
+
+In addition to a GASV formatted input file, GASV requires the minimum/maximum
+allowable fragment length (Lmin/Lmax) for concordant pairs. The values of Lmin
+and Lmax are automatically computed by the BAM preprocessor. The calculated values of Lmin and Lmax are output to stdout and written to *.info. In the most 
+basic example above, for Example.bam, the contents of Example.info are:
+
+LibraryName     Lmin    Lmax
+all             153     247
+
+The following command will report inversion structural variants from 
+Example_all.inversion with at least 4 supporting fragments. 
+Note that if gasv.jar has not been added to the PATH, then a fully qualified pathname must be used.
+% java -jar gasv.jar --cluster --lmin 153 --lmax 247 --minClusterSize 
+4 Example_all.inversion
+
+Below is the contents of the *clusters file created, 
+Example_all.inversion.clusters:
+
+#Cluster_ID:	LeftChr:	LeftBreakPoint:	RightChr:	RightBreakPoint:	Num PES:	Localization:	Type:
+c522	17	40566182,40566317	17	40567335,40567463	4	68.3	IR
+
+The tab separated fields indicate that there is a single candidate 
+inversion structural variant on chromosome 17. The
+left breakpoint occurs between positions 40566182, 40566317 and the 
+right breakpoint between positions 40567335, 40567463.
+
+In addition, the final columns tell us:
+
+	- 4 supporting ESPs
+	- 68.3 localization
+		The smaller the localization the more precisely the
+		structural variant breakpoint is determined. Refer to 
+		our GASV MANUAL and ISMB manuscript for more discussion 
+		of localization.
+	- IR; type indicates that there is a reciprocal inversion (IR). 
+		Among the 4 ESPs at least one is in the ++ orientation 
+		(contains the left breakpoint) and one in the 
+		-- orientation (contains the right breakpoint). 
+
+SIMPLE EXAMPLES ================================================
+
+Sample ESP files (Cancer and sample), CGH file (sampleCGH), and batch 
+input files (sample.in, Cancer.in, and sampleCGH.in)
+are included in the GASV release under the sample/ subdirectory.
+
+(1) Determine cancer specific variants by comparing cancer and normal 
+ESP files:
+
+- Filter ESP cancer file using ESP sample file with specified 
+lmin and lmax
+% java -jar gasv.jar -f --lmin 20000 --lmax 60000 --lmin2 73370 --
+lmax2 228350 sample Cancer
+
+- Sort the cancer specific ESP file, Cancer.retained
+% ./sortESP.bash Cancer.retained
+
+- Cluster the cancer ESP file using default lmin and lmax and with 
+verbose output
+% java -jar gasv.jar -c --verbose Cancer.retained.sorted
+
+(2) Identify structural variants from combining aCGH data with ESP data:
+
+- Find overlaps between CGH data from the cgh file and clusters of 
+ESP's derived from an ESP file:
+% java -jar gasv.jar -g --verbose --lmin 20000 --lmax 60000 sample 
+sampleCGH
+
+USEFUL GASV OPTIONS EXAMPLES 
+================================================
+
+(i) --minClusterSize <val>
+Report only predictions with at least a minimum number of supporting 
+fragments.
+
+% java -jar gasv.jar --cluster  --lmin 70 --lmax 300 --minClusterSize 
+5 READS.sorted
+
+The example command will report only clusters of at least 5 supporting 
+fragments.
+
+(ii) --maximal
+In some cases a set of overlapping fragments may correspond to 
+multiple breakpoint events. The "--maximal" option will output 
+all maximal breakpoint events.
+
+% java -jar gasv.jar --cluster --lmin 70 --lmax 300 --minClusterSize 5 
+--maximal READS.sorted
+
+The example command will output all maximal clusters with at least 5 
+supporting fragments.
+
+(iii) --maxPairedEndsPerWin <val>
+The speed at which GASV runs corresponds to the number of fragments in 
+a particular genomic region. Often some genomic regions (such as centromeres) 
+will have a high density of discordant fragments. GASV's running time
+can be significantly increased by skipping such high density regions with 
+the "--maxPairedEndsPerWin" option.
+
+% java -jar ../gasv.jar --cluster --lmin 70 --lmax 300 --
+maxPairedEndsPerWin 10000 READS.sorted
+
+(iv) --output <val>
+As discussed in the GASV MANUAL there are three different output formats
+that can be specified for *clusters file. The reads format, "--output reads" 
+will specify the names of the reads in a cluster.
+
+% java -jar ../gasv.jar --cluster --lmin 70 --lmax 300 --output reads READS.sorted

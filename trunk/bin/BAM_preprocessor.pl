@@ -1,0 +1,633 @@
+#!/usr/bin/perl
+# Copyright 2010 Benjamin Raphael, Suzanne Sindi, Hsin-Ta Wu, Anna Ritz, Luke Peng
+# 
+#   This file is part of gasv.
+#  
+#   gasv is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#  
+#   gasv is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#   
+#   You should have received a copy of the GNU General Public License
+#   along with gasv.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+#use strict;
+use warnings;
+use Getopt::Long;
+use LWP::Simple qw();
+
+my $BAMFILE = $ARGV[0];
+my $SAMPATH = "samtools";
+my $LIBSEP = "separated-library";
+my $OUTPUTPREFIX = "NO_SPE";
+my $MAPPINGQ = 10;
+my $CUTOFF = "PCT=99%";
+my $FIRST_READ = 500000;
+my $NAMING_INDEXING_FILE = "DEFAULT";
+my $PROPER_L = 10000;
+
+#my $NCBI_FTP = "ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/pilot_data/data/";
+
+GetOptions("SAMTOOLS_PATH=s", \$SAMPATH, "LIBRARY_SEPARATED=s", \$LIBSEP, "OUTPUT_PREFIX=s", \$OUTPUTPREFIX, "MAPPING_QUALITY=s", \$MAPPINGQ, "CUTOFF_LMINLMAX=s", \$CUTOFF, "USE_NUMBER_READS=s", \$FIRST_READ, "CHROMOSOME_NAMING=s", \$NAMING_INDEXING_FILE, "PROPER_LENGTH=s", \$PROPER_L);
+die("
+	Usage: perl BAM_preprocessor_new.pl <bam file>
+	Options:
+	-SAMTOOLS_PATH     STRING  A path of samtools
+	-LIBRARY_SEPARATED STRING  Extract fragments from separated libraries or whole BAM file
+	-OUTPUT_PREFIX     STRING  The prefix for output files
+	-MAPPING_QUALITY   INT     Minimum mapping quality
+	-CUTOFF_LMINLMAX   STRING  A lower and upper bounds on the fragment distribution
+	-USE_NUMBER_READS  INT     The number of fragments (designated as a proper pair) use to computing Lmax and Lmin
+	-CHROMOSOME_NAMING STRING  Specify chromosome naming in this file
+	-PROPER_LENGTH     INT     A threshold to consider fragments as a proper pair
+	\n
+") unless (scalar(@ARGV) == 1);
+
+if($OUTPUTPREFIX eq "NO_SPE"){
+	$OUTPUTPREFIX = getDefaultPrefix($BAMFILE);
+}
+
+CheckRequiredFile($SAMPATH, $BAMFILE, $MAPPINGQ, $CUTOFF);
+
+print "\n===================================================================================================\n";
+print "PATH OF SAMTOOLS:     $SAMPATH\n";
+print "BAM FILE:             $BAMFILE\n";
+print "USING DATASETS:       $LIBSEP\n";
+print "OUTPUT PREFIX:        $OUTPUTPREFIX\n";
+print "MAPPING QUALITY:      $MAPPINGQ\n";
+print "CUTOFF SETTING:       $CUTOFF\n";
+print "NUMBER OF READS:      $FIRST_READ\n";
+if($NAMING_INDEXING_FILE ne "DEFAULT"){
+	print "NAMING FILE:          $NAMING_INDEXING_FILE\n";
+}
+if($CUTOFF =~ /SD/){
+	print "MAXIMUM PROPER LENGTH:$PROPER_L\n";
+}
+print "===================================================================================================\n\n";
+
+
+my $ERRLOG = $OUTPUTPREFIX.".bampreprocessor.err.log".$$.time();
+my $debug_mode = 0;
+my %LB;
+my %LB_LMIN;
+my %LB_LMAX;
+my %ID_LB = ();
+my %LB_FH = ();
+my $SEP_LIB = 0;
+my $ESPfile = $OUTPUTPREFIX.".info";
+`echo "LibraryName	Lmin	Lmax" > $ESPfile`;
+
+$FIRST_READ = $FIRST_READ * 2;
+
+if($LIBSEP eq "all"){
+	$LB{"all"} = "all";
+}
+elsif($LIBSEP eq "separated-library"){
+	$SEP_LIB = 1;
+	open(SAM_IN, $SAMPATH." view -H $BAMFILE 2>$ERRLOG|"); # pipeline in
+	while(my $line = <SAM_IN>){
+		chomp $line;
+		#if($line =~ /\sLB:(.+?)\s/){
+		#	$LB{$1} = $1;
+		#}
+
+		if($line =~ /^\@RG/){
+			my ($id)=($line=~/ID\:(\S+)/);
+			my ($lib)=($line=~/LB\:(\S+)/);
+			my ($platform)=($line=~/PL\:(\S+)/);
+			my ($sample)=($line=~/SM\:(\S+)/);
+			my ($insertsize)=($line=~/PI\:(\d+)/);
+
+			$ID_LB{$id} = $lib;
+			$LB{$lib} = $lib;
+		}
+
+	}
+	close(SAM_IN);
+	HandleSamtoolsErrors();
+}
+else{
+	print STDERR "Bad LIBRARY_SEPARATED_FLAG: ".$ARGV[0]."\n";
+	exit;
+}
+
+
+if (scalar(keys %ID_LB) == 0) {
+	print STDERR "Warning: no libraries found in BAM header information. Using all mode instead.\n";
+	$LB{"all"} = "all";
+	$SEP_LIB = 0;
+}
+
+my @lib_delete;
+foreach my $library_id (keys %LB){
+	my $USE_EXACT = 0;
+	my $LMIN=0;
+	my $LMAX=0;
+	my $CHECKING_FILE = $OUTPUTPREFIX."_".$library_id.".bampreprocessor.checking.txt".$$.time();
+
+	if(!CheckPairInfo($CHECKING_FILE, $SAMPATH, $BAMFILE, $library_id, $SEP_LIB, $FIRST_READ)){
+		if($library_id eq "all"){
+			print STDERR "\nBAM file you're using appears to lack pairing information!\n";
+			print STDERR "Try to run 'samtools sort -n' and then 'samtools fixmate' to generate the pairing information! See http://samtools.sourceforge.net/samtools.shtml for details.\n";
+			print STDERR "Or set more reads to check pairing information using option -USE_NUMBER_READS <number>.\n";
+			system("rm -f $CHECKING_FILE");
+			exit 0;
+		}
+		else {
+			print STDERR "\nLibrary $library_id in BAM file you're using appears to lack pairing information!\n";
+			print STDERR "Try to run 'samtools sort -n' and then 'samtools fixmate' to generate the pairing information! See http://samtools.sourceforge.net/samtools.shtml for details.\n";
+			print STDERR "Or set more reads to check pairing information using option -USE_NUMBER_READS <number>.\n";
+			print STDERR "Skip computing $library_id!\n\n";
+			system("rm -f $CHECKING_FILE");
+			my @id_delete;
+			foreach my $id (keys %ID_LB){
+				if($ID_LB{$id} eq $library_id){
+					push(@id_delete, $id);
+				}
+			}
+			foreach my $id (@id_delete){
+				delete $ID_LB{$id};
+			}
+			push(@lib_delete, $library_id);
+		}
+
+		next if ($SEP_LIB == 1);
+	}
+
+	if ($CUTOFF =~ /EXACT/) {
+		$USE_EXACT = 1;
+		my $LMINLMAX = substr $CUTOFF, 6;
+		my @tmpLMINLMAX = split(/,/, $LMINLMAX);
+		$LMIN = $tmpLMINLMAX[0];
+		$LMAX = $tmpLMINLMAX[1];
+		print "EXACT flag: $CUTOFF used, so using Lmin of ".$LMIN." and Lmax of ".$LMAX.".  Will NOT check distribution of concordant pairs!!\n"; 
+	}
+
+	if ($USE_EXACT == 0){
+		print "Computing Lmin and Lmax ...\n";
+		($LMIN, $LMAX) = GetLminLmax($CHECKING_FILE, $library_id, $MAPPINGQ, $CUTOFF, $FIRST_READ, $ESPfile, $PROPER_L);
+	}
+
+	CheckAllTypes($CHECKING_FILE, $LMIN, $LMAX);
+
+	$LB_LMIN{$library_id} = $LMIN;
+	$LB_LMAX{$library_id} = $LMAX;
+
+	print "Lmax and Lmin are recorded in $ESPfile\n";
+
+	my $filesize = -s $CHECKING_FILE;
+	if($filesize == 0){
+		print STDERR "Size of Concordant pairs is ZERO.\n";
+	}
+	if ((!defined($LMIN)) || (!defined($LMIN)) || $LMIN < 1 || $LMAX < 1) {
+		print STDERR "WARNING: Lmin: $LMAX, and Lmax: $LMIN for library $library_id are either undefined or set to invalid values!\n";
+		#exit;
+	}
+	system("rm -f $CHECKING_FILE");
+}
+
+foreach my $library_id(@lib_delete){
+	delete $LB{$library_id};
+}
+
+if ($SEP_LIB == 1) {
+	print "Parsing BAM file with different library ids ...\n";
+}
+else {
+	print "Parsing BAM file ...\n";
+}
+
+my $cmd = "$SAMPATH view -F 0x000C -f 0x0001 $BAMFILE 2>$ERRLOG|";
+
+# open files
+my $fh_c = 0;
+foreach my $library_id(keys %LB){
+	my $outdisfile = $OUTPUTPREFIX."_".$library_id.".read.discordant";
+	my $fh = "FH".$fh_c;
+	$fh_c++;
+	$LB_FH{$library_id} = $fh;
+	open($fh, ">$outdisfile");
+}
+
+open(BAM, $cmd) || die "unable to open $BAMFILE\n";
+while(my $line = <BAM>){
+	chomp $line;
+	my @temp = split(/\t+/, $line);
+	my $flag = $temp[1];
+	my $value = $temp[11];
+	my ($id)=($value=~/RG\:Z\:(\S+)/);
+
+	#print "$id\n";
+	if($SEP_LIB == 0 || exists $ID_LB{$id}){
+	    my ($TAG,$LMIN,$LMAX);
+	    if ($SEP_LIB == 0) {
+		$TAG = $LB_FH{"all"};
+		$LMIN = $LB_LMIN{"all"};
+		$LMAX = $LB_LMAX{"all"};
+	    }
+	    else {
+		$TAG = $LB_FH{$ID_LB{$id}};
+		$LMIN = $LB_LMIN{$ID_LB{$id}};
+		$LMAX = $LB_LMAX{$ID_LB{$id}};
+	    }	    
+		if($temp[6] eq "="){
+			my $q_ori = ($flag & 0x0010)?'-':'+';
+			my $m_ori = ($flag & 0x0020)?'-':'+';
+			if($q_ori eq $m_ori){ # discordant file, putative inversion pairs
+				print $TAG $line."\n";
+			}
+			else{
+				if($q_ori eq "+" && $m_ori eq "-" && $temp[8] > 0){ # concordant or delete
+					if ($temp[8] <= $LMAX && $temp[8] >= $LMIN){ # output as concordant   Lmin <= L <= Lmax
+						if($debug_mode == 1){ # continually write into concordant only debug mode was opened
+							print CON $line."\n";
+						}
+					}
+					else{ # output as discordant, putative deletion pairs
+						print $TAG $line."\n";
+					}
+				}
+				elsif($q_ori eq "-" && $m_ori eq "+" && $temp[8] < 0){ # concordant or delete
+					if (abs($temp[8]) <= $LMAX && abs($temp[8]) >= $LMIN){ # output as concordant
+						if($debug_mode == 1){
+							print CON $line."\n";
+						}
+					}
+					else{ # output as discordant
+						print $TAG $line."\n";
+					}
+				}
+				else{ # discordant, putative divergent pairs
+					print $TAG $line."\n";
+				}
+			}
+		}	
+		else{ # putative translocation pairs
+			print $TAG $line."\n";
+		}
+	}
+}
+close(BAM);
+
+foreach my $library_id(keys %LB){
+	my $prefix_esp = $OUTPUTPREFIX."_".$library_id;
+	my $outdisfile = $OUTPUTPREFIX."_".$library_id.".read.discordant";
+
+	# close files
+	close($LB_FH{$library_id});
+
+	my $DELTHRE = $LB_LMAX{$library_id};
+	my $disfilesize = -s $outdisfile;
+	if($disfilesize == 0){
+		print STDERR "Size of Discordant pairs is ZERO.\n";
+		HandleSamtoolsErrors();
+	}
+	else{
+		sleep(3);
+		HandleSamtoolsErrors();
+		print "Generating GASV inputs... \n";
+		print "$prefix_esp\n";
+		# add naming parameter $NAMING_INDEXING_FILE (2010.01.27)
+		if (CheckFileInPATH("generate_GASV.pl")) {
+			system("./generate_GASV.pl ALL $outdisfile $MAPPINGQ $DELTHRE $prefix_esp $NAMING_INDEXING_FILE");
+		} else {
+			system("./generate_GASV.pl ALL $outdisfile $MAPPINGQ $DELTHRE $prefix_esp $NAMING_INDEXING_FILE");
+		}
+		print "GASV input generation complete. Sorting Files... \n";
+		system("bash sortESP.bash $prefix_esp.deletion");
+		system("bash sortESP.bash $prefix_esp.divergent");
+		system("bash sortESP.bash $prefix_esp.inversion");
+		system("bash sortESP.bash $prefix_esp.translocation");
+		system("mv -f $prefix_esp.deletion.sorted $prefix_esp.deletion");
+		system("mv -f $prefix_esp.divergent.sorted $prefix_esp.divergent");
+		system("mv -f $prefix_esp.inversion.sorted $prefix_esp.inversion");
+		system("mv -f $prefix_esp.translocation.sorted $prefix_esp.translocation");
+		print "Sorting Complete. \n";
+		print "GASV inputs: \n";
+		print "- $prefix_esp.deletion\n";
+		print "- $prefix_esp.divergent\n";
+		print "- $prefix_esp.inversion\n";
+		print "- $prefix_esp.translocation\n";
+		print "- lmin: ".$LB_LMIN{$library_id}.", lmax: ".$LB_LMAX{$library_id}."\n";
+		MissingChromosomeErrors($prefix_esp);
+		if($debug_mode == 0){
+			system("rm -f $outdisfile");
+		}
+	}
+}
+
+if(-e $ERRLOG){
+	system("rm -f $ERRLOG");
+}
+
+sub MissingChromosomeErrors {
+	my $missingfile = $_[0].".missing_chromosome";
+	my $missingfilesize = -s $missingfile;
+	print "\n\n";
+
+	if(-e $missingfile){
+		print STDERR "The following chromosome(s) are not defined in chromosome naming file nor by default settings!\n";
+		open(IN, $missingfile);
+		while(<IN>){
+			print STDERR $_;
+		}
+		close(IN);
+	}
+	system("rm -f $missingfile");
+}
+
+sub HandleSamtoolsErrors {
+	open(ERR_IN, $ERRLOG);
+	while (my $line = <ERR_IN>) {
+		chomp $line;
+		if($line =~ /bam_header_read(.+?)EOF marker is absent/){
+			#print "EOF line found: ".$line."\n";
+			#ignore this error message, as it seems to come up with some 1000G bam files, but processing of header appears to be otherwise ok.
+
+		} else {
+			print $line."\n";
+		}
+
+	}
+	close(ERR_IN);
+	system("rm -f $ERRLOG");
+}
+
+sub CheckPairInfo {
+
+	my $in_checkf = $_[0];
+	my $in_sampath = $_[1];
+	my $in_bamfile = $_[2];
+	my $in_library = $_[3];
+	my $lib_sep = $_[4];
+	my $in_fread = $_[5] * 4;
+	my $cmd;
+	my $pairing_flag = 0;
+
+	print "Checking pairing information on library $in_library... ";
+	if ($lib_sep == 1) {
+		$cmd = "$in_sampath view -l $in_library $in_bamfile 2>$ERRLOG| head -n $in_fread > $in_checkf";
+	}
+	else {
+		$cmd = "$in_sampath view $in_bamfile 2>$ERRLOG| head -n $in_fread > $in_checkf";
+	}
+	system($cmd);
+
+	open(CHECK, $in_checkf) || die "unable to open $in_checkf\n";
+	while(my $line = <CHECK>){
+		chomp $line;
+
+		my @temp = split(/\t+/, $line);
+
+		if($temp[1] & 0x0001 && $temp[6] ne "*"){
+			$pairing_flag = 1;
+		}
+
+		last if($pairing_flag == 1);
+	}
+	close(CHECK);
+
+	if($pairing_flag == 1){
+		print "\n";
+	}
+
+	return $pairing_flag;
+
+}
+
+sub GetLminLmax{
+
+	my $in_checkf = $_[0];
+	my $in_library = $_[1];
+	my $in_mappingq = $_[2];
+	my $in_cutoff = $_[3];
+	my $in_num_reads = $_[4];
+	my $in_espfile = $_[5];
+	my $in_truncate_length = $_[6];
+
+	if (CheckFileInPATH("LminLmaxProcessor")) {
+		open(PROC_IN, "LminLmaxProcessor $in_checkf $in_mappingq $in_library $in_library $in_cutoff $in_num_reads $in_truncate_length |");
+	} else {
+		open(PROC_IN, "./LminLmaxProcessor $in_checkf $in_mappingq $in_library $in_library $in_cutoff $in_num_reads $in_truncate_length |");
+	}
+
+	my $line = <PROC_IN>;
+	if (! $line) {
+		print "LminLmaxProcessor failed - Could not find Lmin/Lmax!!\n";
+		exit 0;
+	}
+	chomp $line;
+	my @tmpESP = split(/\t/, $line);
+	my $in_LMIN = $tmpESP[0];
+	my $in_LMAX = $tmpESP[1];
+	printf "\n%20s	Lmin	Lmax\n", " ";
+	printf "%20s	%s	%s\n\n", $in_library,$in_LMIN,$in_LMAX;
+
+	`echo "$in_library      $in_LMIN   $in_LMAX" >> $in_espfile`;
+	close(PROC_IN);
+
+	return ($in_LMIN, $in_LMAX);
+}
+
+sub CheckAllTypes {
+
+	my $in_checkf = $_[0];
+	my $in_LMIN = $_[1];
+	my $in_LMAX = $_[2];
+	# check four type data in this BAM file
+	my $tl = 0;
+	my $di = 0;
+	my $in = 0;
+	my $de = 0;
+
+	print "Checking four types of structural variants in BAM file ... ";
+	open(CHECK, $in_checkf);
+	while(my $line = <CHECK>){
+		chomp $line;
+		my @temp = split(/\t+/, $line);
+		if($temp[6] eq "="){
+			my $q_ori = ($temp[1] & 0x0010)?'-':'+';
+			my $m_ori = ($temp[1] & 0x0020)?'-':'+';
+			if($q_ori eq $m_ori){ # discordant file, putative inversion pairs
+				$in = 1;
+			}
+			else{
+				if($q_ori eq "+" && $m_ori eq "-" && $temp[8] > 0){ # concordant or delete
+					if ($temp[8] < $in_LMAX && $temp[8] > $in_LMIN){ # output as concordant   Lmin <= L <= Lmax
+					}
+					else{ # output as discordant, putative deletion pairs
+						$de = 1;
+					}
+				}
+				elsif($q_ori eq "-" && $m_ori eq "+" && $temp[8] < 0){ # concordant or delete
+					if (abs($temp[8]) < $in_LMAX && abs($temp[8]) > $in_LMIN){ # output as concordant
+					}
+					else{ # output as discordant
+						$de = 1;
+					}
+				}
+				else{ # discordant, putative divergent pairs
+					$di = 1;
+				}
+			}
+		}
+		else{
+			if ($temp[6] ne "*") {
+				$tl = 1;
+			}
+		}
+
+		last if($tl == 1 && $di == 1 && $in == 1 && $de == 1)
+	}
+	close(CHECK);
+
+	if($tl == 1 && $di == 1 && $in == 1 && $de == 1){
+		print "\n";
+	}
+
+	if($tl == 0){
+		print STDERR "\nWARNING: BAM file you're using appears to lack translocation information\n";
+	}
+	if($di == 0){
+		print STDERR "\nWARNING: BAM file you're using appears to lack divergent information\n";
+	}
+	if($in == 0){
+		print STDERR "\nWARNING: BAM file you're using appears to lack inversion information\n";
+	}
+	if($de == 0){
+		print STDERR "\nWARNING: BAM file you're using appears to lack deletion information\n";
+	}
+}
+sub CheckFileInPATH{
+	my $file = $_[0];
+	my $foundInPath = 0;
+	my @PATH = split(/:/, $ENV{PATH});
+	foreach my $pathDir (@PATH) {
+		if (-e $pathDir."/".$file) {
+			$foundInPath = 1;
+			last;
+		}
+	}
+	return $foundInPath;
+}
+sub CheckRequiredFile{
+	my $Spath = $_[0];
+	my $Bfile = $_[1];
+	my $Mq = $_[2];
+	my $Co = $_[3];
+	my $ans = "";
+
+	if (!(CheckFileInPATH("generate_GASV.pl") ) && !(-e "generate_GASV.pl")) {
+		print STDERR "ERROR: generate_GASV.pl script not found!  BAM_Preprocessor.pl must be run from same directory in which generate_GASV.pl is located, or generate_GASV.pl must be in PATH.\n";
+		exit 0;
+	}
+
+	if ($Spath eq "samtools") {
+		#case where no path was set, so assumes samtools exists in the current PATH!
+		if (!(CheckFileInPATH("samtools"))) {
+			print STDERR "ERROR: path to samtools, currently set to $Spath , is not in PATH! Please either use -SAMTOOLS_PATH <path> to set it or add it to the PATH.\n";
+			exit 0;
+		}
+	}
+	elsif(!(-e $Spath)){
+		print STDERR "ERROR: The path to samtools, currently set to $Spath , does not exist! Please use -SAMTOOLS_PATH <path> to set it.\n";
+		exit 0;
+	}
+	elsif(-d $Spath){
+		print STDERR "ERROR: The path to samtools $Spath is set as a directory, but it must actually indicate the samtools executable. Please correct -SAMTOOLS_PATH <path> to include the executable name, not just the containing directory.\n";
+		exit 0;
+	}
+	elsif (!($Spath =~ /samtools/)) {
+		print STDERR "ERROR: The path to samtools, currently set to $Spath , points to a file which exists, but does not actually point to the samtools command (the path does not include any files named 'samtools')! Please use -SAMTOOLS_PATH <path> to set it correctly.\n";
+		exit 0;
+	}
+
+	# **** check BAM file format ****
+	if ($Bfile =~ /^ftp:\/\//i || $Bfile =~ /^http:\/\//i){ # remote file check
+		if(!LWP::Simple::head($Bfile)){
+			print STDERR "The BAM file $Bfile does not exist!\n\n";
+			exit 0;
+		}
+	}
+	elsif (!(-e $Bfile)) { # local file check
+
+		print STDERR "ERROR: BAM file $Bfile does not exist!\n\n";
+		exit 0;
+
+		#while($ans ne 'Y'){
+		#	print "Would you like to search this BAM file $Bfile on NCBI ftp site? (Y/N):";
+		#	chomp ($ans = <STDIN>);
+		#	if($ans eq 'N'){
+		#		exit 0;
+		#	}
+		#	else{
+		#		if ($ans ne 'Y'){
+		#			print STDERR "Bad input! \n";
+		#		}
+		#		last if($ans eq 'Y');
+		#	}
+		#}
+		#if($ans eq "Y"){
+		#	print STDERR "Finding the BAM file on NCBI ftp site ... \n";
+		#	my @bam_sep = split(/\./, $Bfile);
+		#	my $newBfile = $NCBI_FTP.$bam_sep[0]."/alignment/".$Bfile;
+		#	if(LWP::Simple::head($newBfile)){
+		#		print STDERR "$Bfile exists on NCBI ftp!\n";
+		#		print STDERR "Start runnning preprocessor using remote file: $newBfile\n";
+		#		$BAMFILE = $newBfile;
+		#	}
+		#	else{
+		#		print STDERR "The BAM file $Bfile does not exist on NCBI ftp site!\n\n";
+		#		print STDERR "Check your naming format of BAM file !\n\n";
+		#		print STDERR "The file names are formatted as such\n";
+		#		print STDERR "	NA12878.SLX.maq.SRP000033.2009_07.bam\n	NA12878.chrom1.454.maq.SRP000032.2009_07.bam\n\n";
+		#		print STDERR "If the alignment has been split by chromosome there will be a chromosome name.\n";
+		#		print STDERR "The sequencing technology is next, SLX for illumina, 454 for 454 and SOLID for SOLiD.\n";
+		#		print STDERR "The next term is aligner name, e.g. ssaha2, maq, MOSAIK, corona, and so on.\n";
+		#		print STDERR "The SRP is the study identifier, 31 is pilot1 low coverage, 32 is pilot2 high coverage, 33 is pilot3 gene targetted sequencing.\n";
+		#		print STDERR "The final term is 2007_09, this is the relase date.\n\n";
+		#		print STDERR "Or ... \n\n";
+		#		print STDERR "You can directly using remote mode by typing \"perl BAM_preprocessor.pl <ftp://link_of_bam_file>\"\n";
+		#		exit 0;
+		#	}
+		#}
+		#else{
+		#	exit 0;
+		#}
+	}
+
+	if ($Mq < 0) {
+		print STDERR "ERROR: Mapping Quality must be larger than zero!\n";
+		exit 0;
+	}
+
+	if (!($Co =~ /EXACT/)) {
+		#check LminLmaxProcessor
+		if (!(CheckFileInPATH("LminLmaxProcessor") ) && !(-e "LminLmaxProcessor")) {
+			print STDERR "ERROR: LminLmaxProcessor does not exist!  LminLmaxProcessor must be built first and in PATH or current directory.  Run install.sh to build.\n";
+			exit 0;
+		}
+	}
+
+}
+
+
+sub getDefaultPrefix{
+	my $in_bam = $_[0];
+	my @temp = split(/\//,$in_bam);
+	my $bamname = pop(@temp);
+
+	if($bamname =~ /^(.+?)\.bam$/i){
+		return $1;
+	}
+	else{
+		return $bamname;
+	}
+
+}

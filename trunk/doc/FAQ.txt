@@ -1,0 +1,153 @@
+Frequently Asked Questions (FAQ)
+Geometric Analysis of Structural Variants (GASV)
+
+A list of FAQ questions regarding GASV software.
+
+Contact: Ben Raphael at gasv@cs.brown.edu
+===============================================
+
+(*) What does GASV do?
+
+GASV stands for Geometric Analysis of Structural Variants. GASV
+determines structural variants from either paired-end sequencing
+(ESPs) or array comparative genomic hybridization (aCGH).  GASV
+identifies structural variants and annotates the breakpoints with
+the uncertainty inherent in the data.
+
+For more information on GASV refer to our Manual, MANUAL.txt and our
+ISMB manuscript:
+
+S. Sindi, E. Helman, A. Bashir, B.J. Raphael. A Geometric Approach for
+Classification and Comparison of Structural Variants. Joint: 17th
+Annual International Conference on Intelligent Systems in Molecular
+Biology and 8th Annual International European Conference on
+Computational Biology (ISMB/ECCB 09).  Bioinformatics 2009
+25(12):i222-i230.
+
+(*) In the output of GASV, what is the meaning of localization? What
+does "-1" localization" mean?
+
+For each structural variant, GASV compute a 2D breakpoint region
+consisting of all possible pairs of breakpoints that can explain the
+set of discordant ESPs.
+
+The localization is simply the square root of the area of the
+breakpoint region. Generally speaking, the smaller the localization,
+the more precisely the left and right breakpoint can be determined.
+
+Sometimes several discordant ESPs will suggest multiple structural
+variants. In this case there is not a unique breakpoint region and GASV
+will report a "-1" for the localization and list the maximum ranges for
+the left and right breakpoint regions. (Refer to our ISMB manuscript for
+an example of such as cluster.)
+
+To obtain the set of structural variants, corresponding to the maximal
+breakpoint regions for a cluster with "-1" localization, run GASV with
+the "--maximal" option.
+
+For further illustration of our method refer to our ISMB manuscript.
+
+(*) What type of structural variants does GASV report?
+
+GASV reports deletions, invertions, and translocations from paired-end
+sequencing and/or array comparative genomic hybridization data. GASV
+does not currently report insertions.
+
+(*) Clustering a file of ESPs with GASV is taking a long time to run/
+running out of memory.
+
+The running time of GASV depends on the density of ESPs in a region of
+the chromosome. Often times regions, such as the centromere, have a high
+density of discordant fragments. GASV's running time can be
+significantly increased by skipping such high density regions with the
+
+"--maxPairedEndsPerWin <val>" or "--maxClusterSize <val>"
+
+options and running without the "--maximal" option. Another option is to
+split the file of ESPs into several files.
+
+(*) I am seeing the following warning message:
+>> WARNING: "TIMED OUT" while searching cluster (containing read _____________)
+>> for maximal clusters! Probably due to too many rectangles to be searched. 
+>> Caught exception TIMED OUT - too many rectangles to search: 1000
+
+What does this mean?
+
+It means that many paired end reads are overlapping in this region of the
+genome, but they are not overlapping in a way that produces one clear
+overlap region. If the --maximal option is used, the program will attempt
+to find the maximal overlap regions.  However, when the region is very
+complex, searching for these maximal clusters can be very demanding on
+time and resources.  If the search for maximal clusters is taking too long
+for any particular super-cluster, then the program will print this message and
+abandon its search.  So only the maximal subclusters found up until that point
+will be reported.
+
+In a densely covered genome, these warnings should be relatively common, and
+are not a cause for concern.  Given the complexity of such regions, it
+is unlikely that any firm conclusions can be drawn from them, so it makes
+sense to implement this trade-off for savings in time and computing
+resources.
+
+
+(*) I see an error message that says to run samtools fixmate.  How do I do this?
+Make sure that samtools is installed.
+First you need to sort the BAM file (assume your BAM file is named "data.bam"):
+        samtools sort -n data.bam data.sorted
+This creates a file named data.sorted.bam.
+Now just run fixmate:
+        samtools fixmate data.sorted.bam data.sorted.fixed.bam
+
+(*) How do I use the BAM_preprocessor.pl if my data is split up into multiple BAM files?
+You'll need to merge all the BAM files into a single BAM file.
+You can read about the samtools merge command in detail at
+http://samtools.sourceforge.net/samtools.shtml
+But a basic example of how to merge 3 BAM files (data1.bam, data2.bam, data3.bam) is:
+        samtools sort data1.bam data1.sorted
+        samtools sort data2.bam data2.sorted
+        samtools sort data3.bam data3.sorted
+        samtools merge data.sorted.bam data1.sorted.bam data2.sorted.bam data3.sorted.bam
+
+Of course sorting the original BAM's is only necessary if they are not already sorted.
+
+(*) When run the BAM_preprocessor.pl on a remote file (http:// or ftp://) I receive an
+error message that the BAM file does not exist, but I am sure it does exist.
+Why does this happen?
+
+There may be too many connections to your BAM file server, and this makes the server timeout.
+We suggest running the command again later.
+
+(*) Why is there a message showing chromosome missed in DEFAULT NAMING? How do I fix it?
+
+By default, the BAM preprocessor only accepts the following chromosome reference names: chr1 to chr24, 
+chrX(chrx), or chrY(chry). The "chr" prefix is optional. Reads with non-standard naming are ignored by default.
+If your BAM file includes "non-standard" chromosome naming, you can use
+an option "-CHROMOSOME_NAMING_FILE <filename>" to specify your own chromosome naming file.
+The format of this file is
+chr_name1	number1
+chr_name2	number2
+etc.
+
+For example:
+chr1	1
+chr2	2
+chrM	3
+MT	4
+chr2_random	5
+
+etc.
+
+
+(*) Why do I get an extremely large value for Lmax? How do I solve this problem?
+
+We now use a method based on the orientation and the mapped length rather than the
+proper pair flag (0x0002) recorded in BAM file to compute the values of Lmin and Lmax. 
+If you find unreasonably large values for Lmax, use the option 
+"-PROPER_LENGTH <proper_length>" (default is 10000) to set a lower threshold on Lmax. 
+In this case only pairs with a mapped separation smaller than this length will be used 
+to calculating Lmin/Lmax
+
+For example:
+% perl BAM_preprocessor.pl NA18507.SLX.maq.SRP000031.2009_08.bam -PROPER_LENGTH 2000
+
+===============================================
