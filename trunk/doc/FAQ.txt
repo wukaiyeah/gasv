@@ -150,4 +150,9 @@ to calculating Lmin/Lmax
 For example:
 % perl BAM_preprocessor.pl NA18507.SLX.maq.SRP000031.2009_08.bam -PROPER_LENGTH 2000
 
+
+(*) Running install.sh results in an error - LminLmaxProcessor cannot be compiled?
+
+It is possible that you don't have automake installed on your system.  Try installing automake and try again.
+
 ===============================================
