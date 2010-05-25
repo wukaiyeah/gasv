@@ -52,6 +52,7 @@ public class GASVMain{
 	public static boolean USE_MAXIMAL = false;
 	public static int READ_LENGTH = -1;
 	public static boolean USE_ALL = false;
+	public static boolean NORECIPROCAL_MODE = false;
 	//public static String NAME_TO_CHR_FILE = null;
 
 	public static int NUM_CHROM = 24;
@@ -82,7 +83,35 @@ public class GASVMain{
 		return retVal;
 	}*/
 
+	static boolean orientationsMatch(Clone c1, Clone c2) {
+		if (c1.getX() < 0) {
+			if (c2.getX() >= 0) {
+				return false;
+			} 
+		} else {
+			if (c2.getX() < 0) {
+				return false;
+			}
+		}
+		if (c1.getY() < 0) {
+			if (c2.getY() >= 0) {
+				return false;
+			} 
+		} else {
+			if (c2.getY() < 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	static int overlap(Clone Clone1,Clone Clone2){
+		//if in --noreciprocal mode, orientations much match in order for overlap to be true!
+		if (GASVMain.NORECIPROCAL_MODE) {
+			if (!GASVMain.orientationsMatch(Clone1, Clone2)) {
+				return 0;
+			}
+		}
 		int bmin1 =(int)Clone1.getBmin(); int bmax1 =(int)Clone1.getBmax();
 		int bmin2 =(int)Clone2.getBmin(); int bmax2 =(int)Clone2.getBmax();
 	
@@ -193,6 +222,7 @@ System.out.println("\n########################################");
 				+ "\n\t\tstandard \tThe default output mode with interval coordinates and no read names"
 				+ "\n\t\treads \tOutput mode with interval coordinates and read names"
 				+ "\n\t\tregions \tOutput mode with region coordinates and read names");
+		System.out.println("--nonreciprocal \tOnly ESP's with exact matching orientations will be clustered together.  E.g. +/+ and -/- inversion ESP's will be segregated into separate clusters.");
 		//System.out.println("--nametochr <filename> \tUse the filename to translate transcript names to unique id's in place of chromosomes");
 		System.out.println("\n########################################");
 
@@ -410,6 +440,10 @@ System.out.println("\n########################################");
 
 				} else if (args[i].equals("--maximal")) {
 					USE_MAXIMAL = true;
+					++count;
+
+				} else if (args[i].equals("--noreciprocal")) {
+					GASVMain.NORECIPROCAL_MODE = true;
 					++count;
 
 				//} else if (args[i].equals("--all")) {

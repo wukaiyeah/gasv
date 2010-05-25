@@ -16,13 +16,13 @@ Inc. (http://www.seisw.com/).
 
 Contact: Ben Raphael at gasv@cs.brown.edu
 
-Version: 1.4
-Version Date: Mar 5 2010
+Version: 1.4.1
+Version Date: May 25 2010
 
 SUMMARY ==============================================
 
 This README file lists and annotates the files distributed
-with GASV Release 1.4, GASV_RELEASE_1.4.tar.gz.
+with GASV Release 1.4.1, GASV_RELEASE_1.4.1.tar.gz.
 
 CONTENTS =============================================
 

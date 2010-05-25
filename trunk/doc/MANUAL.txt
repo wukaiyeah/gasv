@@ -16,8 +16,8 @@ Inc. (http://www.seisw.com/).
 
 Contact: Ben Raphael at gasv@cs.brown.edu
 
-Version: 1.4
-Version Date: Mar 5 2010
+Version: 1.4.1
+Version Date: May 25 2010
 
 SUMMARY ==============================================
 
@@ -207,6 +207,11 @@ stated below:
 						supporting fragments
                                 regions		Detailed mode with region
                                                 coordinates and fragment names
+
+	 --nonreciprocal 	Only ESP's with exact matching orientations 
+				will be clustered together.  E.g. +/+ and 
+				-/- inversion ESP's will be segregated into 
+				separate clusters.
 
 
 FILE FORMATS ================================================

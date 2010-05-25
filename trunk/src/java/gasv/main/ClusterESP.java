@@ -745,7 +745,16 @@ public class ClusterESP{
 						//cloneM.
 						// QUESTION: should this be >= ?? From suzanne's overlap() method,
 						// looks like colinear sides ARE considered same cluster!
-						break;
+						if (GASVMain.NORECIPROCAL_MODE) {
+							//if non-reciprocal mode, can only take this shortcut
+							// if they are the exact same orientations
+							if (GASVMain.orientationsMatch(cloneB, cloneM)) {
+								break;
+							}
+
+						} else { 
+							break;
+						}
 					}
 				}
 			}//End For

@@ -1,3 +1,6 @@
+NEW IN RELEASE 1.4.1 ====================================
+* Added the --noreciprocal option.
+
 NEW IN RELEASE 1.4 ====================================
 
 * Simplified BAM_preprocessor.pl execution. 
@@ -39,7 +42,7 @@ NEW IN RELEASE 1.4 ====================================
   "TNR+" to represent (+-) classic non-reciprocal translocations
   "TNR-" to represent (-+) classic non-reciprocal translocations 
   "TNO+" to represent (++) Robertsonian-type translocations 
-  "TNO-" to represent (--) Robertsonian-type translocations 
+  "TNO-" to represent (--) Robertsonian-type translocations
 
 NEW IN RELEASE 1.3.1 ====================================
 * Fixed BAM_preprocessor.pl bugs which arise when running multiple instances of the BAM_preprocessor.pl concurrently and within the same directory.
