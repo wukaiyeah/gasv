@@ -1,3 +1,10 @@
+NEW IN RELEASE 1.5 =====================================
+
+* Added support for SOLiD sequencing format.
+* Added command-line specification of Lmin/Lmax for
+   individual libraries.
+(See BAM_preprocessor.txt for more information.)
+
 NEW IN RELEASE 1.4.1 ====================================
 * Added the --noreciprocal option.
 
