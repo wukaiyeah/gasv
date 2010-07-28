@@ -1,21 +1,6 @@
 #!/usr/bin/perl
-# Copyright 2010 Benjamin Raphael, Suzanne Sindi, Hsin-Ta Wu, Anna Ritz, Luke Peng
-# 
-#   This file is part of gasv.
-#  
-#   gasv is free software: you can redistribute it and/or modify
-#   it under the terms of the GNU General Public License as published by
-#   the Free Software Foundation, either version 3 of the License, or
-#   (at your option) any later version.
-#  
-#   gasv is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#   GNU General Public License for more details.
-#   
-#   You should have received a copy of the GNU General Public License
-#   along with gasv.  If not, see <http://www.gnu.org/licenses/>.
-#
+# Ver. 1.3 2010.01.27
+# Ver. 1.4 2010.05.10 (add solid platform)
 
 %first_end;
 %naming_chrom;
@@ -26,6 +11,7 @@ my $tag = $ARGV[0];
 my $MAPQ = $ARGV[2];
 my $output_prefix = $ARGV[4];
 my $chrom_flag = "df"; # df: default ns: non-standard
+my $platform = $ARGV[6];
 
 if($tag eq "ALL"){
 	my $TRLFILE = $ARGV[4].".translocation";
@@ -58,11 +44,20 @@ while(my $line = <FHD>){
 	my $chrom_exist = 0;
 	my @temp_info = split(/\t/, $line);
 	my $flag = $temp_info[1];
+	my $qual = $temp_info[4];
+	
+	# using
+	if($line=~/Aq\:i\:(\d+)/){ 
+		$qual=$1;
+	}
+	elsif($line=~/AM\:i\:(\d+)/){
+		$qual=$1;
+	}
 
-	my $q_ori = ($temp[1] & 0x0010)?'-':'+';
+
 	($chrom_tmp, $chrom_exist) = checkChromosomeNaming($chrom_flag, $temp_info[2]);
 
-	if(!($flag & 0x0400) && ($flag & 0x0001) && $temp_info[4] > $MAPQ && ($chrom_flag eq "df" && $chrom_exist == 1) || ($chrom_flag eq "ns" && $chrom_exist == 1)){
+	if(!($flag & 0x0400) && ($flag & 0x0001) && $qual > $MAPQ && ($chrom_flag eq "df" && $chrom_exist == 1) || ($chrom_flag eq "ns" && $chrom_exist == 1)){
 		if(!exists $first_end{$temp_info[0]}){
 			$first_end{$temp_info[0]}++;
 		}
@@ -87,7 +82,6 @@ while(my $line = <FHD>){
 			}
 
 			if($chrom_exist == 1){
-				#if($temp_info[1] eq "1" || $temp_info[1] eq "65" || $temp_info[1] eq "129"){
 				if(!($flag & 0x0010) && !($flag & 0x0020)){
 					if($temp_info[3] < $temp_info[7]){ # this read as left mapped read
 						$left_coord_start = $temp_info[3];
@@ -99,6 +93,14 @@ while(my $line = <FHD>){
 						$right_chrom = $mate_chrom;
 						$right_ori = '+';
 
+						if($platform =~ /solid/i){
+							if ($flag & 0x0040){ # the first read with smaller position (left), flipping the second read.
+								$right_ori = ($right_ori eq '-')?'+':'-';
+							}
+							elsif ($flag & 0x0080){ # this is the second read with smaller position (left), flipping itself.
+								$left_ori = ($left_ori eq '-')?'+':'-';
+							}
+						}
 					}
 					else{ # this read as right mapped read
 						$left_coord_start = $temp_info[7];
@@ -109,9 +111,17 @@ while(my $line = <FHD>){
 						$right_coord_start = $temp_info[3];
 						$right_chrom = $current_chrom;
 						$right_ori = '+';
+
+						if($platform =~ /solid/i){
+							if ($flag & 0x0040){ # the first read with larger position (right), flipping the second read.
+								$left_ori = ($left_ori eq '-')?'+':'-';
+							}
+							elsif ($flag & 0x0080){ # this is the second read with larger position (right), flipping itself.
+								$right_ori = ($right_ori eq '-')?'+':'-';
+							}
+						}
 					}
 				}
-				#elsif($temp_info[1] eq "17" || $temp_info[1] eq "81" || $temp_info[1] eq "145"){ # all with flag 0x0010 - strand of the query is reverse
 				elsif(($flag & 0x0010) && !($flag & 0x0020)){					
 					if($temp_info[3] < $temp_info[7]){ # this read as left mapped read
 						$left_coord_start = $temp_info[3];
@@ -122,6 +132,15 @@ while(my $line = <FHD>){
 						$right_coord_start = $temp_info[7];
 						$right_chrom = $mate_chrom;
 						$right_ori = '+';
+	
+						if($platform =~ /solid/i){
+							if ($flag & 0x0040){ # the first read with smaller position (left), flipping the second read.
+								$right_ori = ($right_ori eq '-')?'+':'-';
+							}
+							elsif ($flag & 0x0080){ # this is the second read with smaller position (left), flipping itself.
+								$left_ori = ($left_ori eq '-')?'+':'-';
+							}
+						}
 					}
 					else{
 						$left_coord_start = $temp_info[7];
@@ -132,9 +151,16 @@ while(my $line = <FHD>){
 						$right_coord_start = $temp_info[3];
 						$right_chrom = $current_chrom;
 						$right_ori = '-';
+						if($platform =~ /solid/i){
+							if ($flag & 0x0040){ # the first read with larger position (right), flipping the second read.
+								$left_ori = ($left_ori eq '-')?'+':'-';
+							}
+							elsif ($flag & 0x0080){ # this is the second read with larger position (right), flipping itself.
+								$right_ori = ($right_ori eq '-')?'+':'-';
+							}
+						}
 					}
 				}
-				#elsif($temp_info[1] eq "33" || $temp_info[1] eq "161" || $temp_info[1] eq "97"){ # all with flag 0x0020 - strand of the mate is reverse
 				elsif(!($flag & 0x0010) && ($flag & 0x0020)){					
 					if($temp_info[3] < $temp_info[7]){ # this read as left mapped read
 						$left_coord_start = $temp_info[3];
@@ -145,6 +171,14 @@ while(my $line = <FHD>){
 						$right_coord_start = $temp_info[7];
 						$right_chrom = $mate_chrom;
 						$right_ori = '-';
+						if($platform =~ /solid/i){
+							if ($flag & 0x0040){ # the first read with smaller position (left), flipping the second read.
+								$right_ori = ($right_ori eq '-')?'+':'-';
+							}
+							elsif ($flag & 0x0080){ # this is the second read with smaller position (left), flipping itself.
+								$left_ori = ($left_ori eq '-')?'+':'-';
+							}
+						}
 					}
 					else{
 						$left_coord_start = $temp_info[7];
@@ -155,11 +189,17 @@ while(my $line = <FHD>){
 						$right_coord_start = $temp_info[3];
 						$right_chrom = $current_chrom;
 						$right_ori = '+';
+						if($platform =~ /solid/i){
+							if ($flag & 0x0040){ # the first read with larger position (right), flipping the second read.
+								$left_ori = ($left_ori eq '-')?'+':'-';
+							}
+							elsif ($flag & 0x0080){ # this is the second read with larger position (right), flipping itself.
+								$right_ori = ($right_ori eq '-')?'+':'-';
+							}
+						}
 					}
 				}
-				#elsif($temp_info[1] eq "49" || $temp_info[1] eq "113" || $temp_info[1] eq "177"){
-				#if(($flag & 0x0010) && ($flag & 0x0020)){
-				else{
+				else {  #if(($flag & 0x0010) && ($flag & 0x0020)){
 					if($temp_info[3] < $temp_info[7]){ # this read as left mapped read
 						$left_coord_start = $temp_info[3];
 						$left_coord_end = $temp_info[3] + length($temp_info[9]);
@@ -169,6 +209,14 @@ while(my $line = <FHD>){
 						$right_coord_start = $temp_info[7];
 						$right_chrom = $mate_chrom;
 						$right_ori = '-';
+						if($platform =~ /solid/i){
+							if ($flag & 0x0040){ # the first read with smaller position (left), flipping the second read.
+								$right_ori = ($right_ori eq '-')?'+':'-';
+							}
+							elsif ($flag & 0x0080){ # this is the second read with smaller position (left), flipping itself.
+								$left_ori = ($left_ori eq '-')?'+':'-';
+							}
+						}
 					}
 					else{ # this read as right mapped read
 						$left_coord_start = $temp_info[7];
@@ -179,6 +227,14 @@ while(my $line = <FHD>){
 						$right_coord_start = $temp_info[3];
 						$right_chrom = $current_chrom;
 						$right_ori = '-';
+						if($platform =~ /solid/i){
+							if ($flag & 0x0040){ # the first read with larger position (right), flipping the second read.
+								$left_ori = ($left_ori eq '-')?'+':'-';
+							}
+							elsif ($flag & 0x0080){ # this is the second read with larger position (right), flipping itself.
+								$right_ori = ($right_ori eq '-')?'+':'-';
+							}
+						}
 					}
 				}
 
@@ -188,9 +244,6 @@ while(my $line = <FHD>){
 				if ((($right_chrom eq "Y") || ($right_chrom eq "y")) && $chrom_flag eq "df") {
 					$right_chrom = 24;
 				}
-				#if ((($right_chrom eq "MT") || ($right_chrom eq "mt")) && $chrom_flag eq "df") {
-				#	$right_chrom = 25;
-				#}
 
 				if ((($left_chrom eq "X") || ($left_chrom eq "x")) && $chrom_flag eq "df") {
 					$left_chrom = 23;
@@ -198,12 +251,9 @@ while(my $line = <FHD>){
 				if ((($left_chrom eq "Y") || ($left_chrom eq "y")) && $chrom_flag eq "df") {
 					$left_chrom = 24;
 				}
-				#if ((($left_chrom eq "MT") || ($left_chrom eq "mt")) && $chrom_flag eq "df") {
-				#	$left_chrom = 25;
-				#}
 
 				if($right_chrom ne $left_chrom && $tag eq "ALL"){
-					# translocation
+					# translocations
 					if ($left_chrom < $right_chrom) {
 						print TRL $temp_info[0]."	".$left_chrom."	".$left_coord_start."	".$left_coord_end."	".$left_ori."	".$right_chrom."	".$right_coord_start."	".$right_coord_end."	".$right_ori."\n";
 					}
@@ -213,33 +263,24 @@ while(my $line = <FHD>){
 
 				}
 				elsif($left_chrom eq $right_chrom && $tag eq "ALL"){
-
-					if(($left_ori eq '+' && $right_ori eq '+') || ($left_ori eq '-' && $right_ori eq '-')){
-						# inversion
-						if($right_coord_end - $left_coord_start > 0){
+						if(($left_ori eq '+' && $right_ori eq '+') || ($left_ori eq '-' && $right_ori eq '-')){ # inversions
 							print INV $temp_info[0]."	".$left_chrom."	".$left_coord_start."	".$left_coord_end."	".$left_ori."	".$right_chrom."	".$right_coord_start."	".$right_coord_end."	".$right_ori."\n";
 						}
 						else{
-							print INV $temp_info[0]."	".$right_chrom."	".$right_coord_start."	".$right_coord_end."	".$right_ori."	".$left_chrom."	".$left_coord_start."	".$left_coord_end."	".$left_ori."\n";
-						}
-
-					}
-					else{
-						# deletion
-						if($left_ori eq '+'){ #&& $right_coord_end - $left_coord_start > 0){
-							my $frag_length = $right_coord_end - $left_coord_start;
-							if($frag_length > $T_LENGTH){
-								print DEL $temp_info[0]."	".$left_chrom."	".$left_coord_start."	".$left_coord_end."	".$left_ori."	".$right_chrom."	".$right_coord_start."	".$right_coord_end."	".$right_ori."\n";
+							# deletions
+							if($left_ori eq '+'){ #&& $right_coord_end - $left_coord_start > 0){
+								if(abs($temp_info[8]) > $T_LENGTH){
+									print DEL $temp_info[0]."	".$left_chrom."	".$left_coord_start."	".$left_coord_end."	".$left_ori."	".$right_chrom."	".$right_coord_start."	".$right_coord_end."	".$right_ori."\n";
+								}
+							}
+							# divergents
+							elsif($right_ori eq '+'){ # && $left_coord_end - $right_coord_start > 0){
+								#my $frag_length = $right_coord_end - $left_coord_start;
+								if(abs($temp_info[8]) > $T_LENGTH){
+									print DISV $temp_info[0]."	".$left_chrom."	".$left_coord_start."	".$left_coord_end."	".$left_ori."	".$right_chrom."	".$right_coord_start."	".$right_coord_end."	".$right_ori."\n";
+								}
 							}
 						}
-						# divergent
-						elsif($right_ori eq '+'){ # && $left_coord_end - $right_coord_start > 0){
-							my $frag_length = $right_coord_end - $left_coord_start;
-							if($frag_length > $T_LENGTH){
-								print DISV $temp_info[0]."	".$left_chrom."	".$left_coord_start."	".$left_coord_end."	".$left_ori."	".$right_chrom."	".$right_coord_start."	".$right_coord_end."	".$right_ori."\n";
-							}
-						}
-					}
 				}
 			}	
 

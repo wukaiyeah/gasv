@@ -1,21 +1,4 @@
 #!/usr/bin/perl
-# Copyright 2010 Benjamin Raphael, Suzanne Sindi, Hsin-Ta Wu, Anna Ritz, Luke Peng
-# 
-#   This file is part of gasv.
-#  
-#   gasv is free software: you can redistribute it and/or modify
-#   it under the terms of the GNU General Public License as published by
-#   the Free Software Foundation, either version 3 of the License, or
-#   (at your option) any later version.
-#  
-#   gasv is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#   GNU General Public License for more details.
-#   
-#   You should have received a copy of the GNU General Public License
-#   along with gasv.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 #use strict;
 use warnings;
@@ -31,12 +14,12 @@ my $CUTOFF = "PCT=99%";
 my $FIRST_READ = 500000;
 my $NAMING_INDEXING_FILE = "DEFAULT";
 my $PROPER_L = 10000;
+my $LMINLMAX_FILE = "";
+my $PLATFORM = "";
 
-#my $NCBI_FTP = "ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/pilot_data/data/";
-
-GetOptions("SAMTOOLS_PATH=s", \$SAMPATH, "LIBRARY_SEPARATED=s", \$LIBSEP, "OUTPUT_PREFIX=s", \$OUTPUTPREFIX, "MAPPING_QUALITY=s", \$MAPPINGQ, "CUTOFF_LMINLMAX=s", \$CUTOFF, "USE_NUMBER_READS=s", \$FIRST_READ, "CHROMOSOME_NAMING=s", \$NAMING_INDEXING_FILE, "PROPER_LENGTH=s", \$PROPER_L);
+GetOptions("SAMTOOLS_PATH=s", \$SAMPATH, "LIBRARY_SEPARATED=s", \$LIBSEP, "OUTPUT_PREFIX=s", \$OUTPUTPREFIX, "MAPPING_QUALITY=s", \$MAPPINGQ, "CUTOFF_LMINLMAX=s", \$CUTOFF, "USE_NUMBER_READS=s", \$FIRST_READ, "CHROMOSOME_NAMING=s", \$NAMING_INDEXING_FILE, "PROPER_LENGTH=s", \$PROPER_L, "PLATFORM=s", \$PLATFORM);
 die("
-	Usage: perl BAM_preprocessor_new.pl <bam file>
+	Usage: perl BAM_preprocessor.pl <bam file>
 	Options:
 	-SAMTOOLS_PATH     STRING  A path of samtools
 	-LIBRARY_SEPARATED STRING  Extract fragments from separated libraries or whole BAM file
@@ -46,6 +29,7 @@ die("
 	-USE_NUMBER_READS  INT     The number of fragments (designated as a proper pair) use to computing Lmax and Lmin
 	-CHROMOSOME_NAMING STRING  Specify chromosome naming in this file
 	-PROPER_LENGTH     INT     A threshold to consider fragments as a proper pair
+	-PLATFORM	   STRING  Specify Illumina or SOLiD as platform if missing PL tag in \@RG line
 	\n
 ") unless (scalar(@ARGV) == 1);
 
@@ -69,6 +53,15 @@ if($NAMING_INDEXING_FILE ne "DEFAULT"){
 if($CUTOFF =~ /SD/){
 	print "MAXIMUM PROPER LENGTH:$PROPER_L\n";
 }
+if($PLATFORM ne ""){
+	if($PLATFORM =~ /^(SOLiD|Illumina)$/i){
+		print "PLATFORM:             $PLATFORM\n";
+	}
+	else{
+		print "ERROR: Please specify your platform as Illumina or SOLiD.\n";
+		exit(1);
+	}
+}
 print "===================================================================================================\n\n";
 
 
@@ -78,25 +71,45 @@ my %LB;
 my %LB_LMIN;
 my %LB_LMAX;
 my %ID_LB = ();
+my %PLAT_LB = ();
 my %LB_FH = ();
 my $SEP_LIB = 0;
 my $ESPfile = $OUTPUTPREFIX.".info";
+my %LB_CUTOFF = ();
 `echo "LibraryName	Lmin	Lmax" > $ESPfile`;
 
 $FIRST_READ = $FIRST_READ * 2;
 
 if($LIBSEP eq "all"){
 	$LB{"all"} = "all";
+	open(SAM_IN, $SAMPATH." view -H $BAMFILE 2>$ERRLOG|"); # pipeline in
+	while(my $line = <SAM_IN>){
+		chomp $line;
+		if($line =~ /^\@RG/){
+			my ($platform) = ($line =~ /PL\:(\S+)/);
+			my ($id)=($line=~/ID\:(\S+)/);
+			if($line !~ /PL\:(\S+)/ && $PLATFORM eq ""){
+				print STDERR "WARNING: Missing PL tag in \@RG $id lines. Use the default setting 'Illumina'. Or you can specify the platform as Illumina or SOLiD using -PLATFORM. \n";
+				$platform = "Illumina";
+			}
+			if(!exists $PLAT_LB{"all"}){
+				$PLAT_LB{"all"} = $platform;
+			}
+			else{
+				if($PLAT_LB{"all"} ne $platform){
+					print STDERR "ERROR: Platforms in BAM file are not uniform. Using separated library mode!\n";
+					exit(1);
+				}
+			}
+		}
+	}
+	close(SAM_IN);
 }
 elsif($LIBSEP eq "separated-library"){
 	$SEP_LIB = 1;
 	open(SAM_IN, $SAMPATH." view -H $BAMFILE 2>$ERRLOG|"); # pipeline in
 	while(my $line = <SAM_IN>){
 		chomp $line;
-		#if($line =~ /\sLB:(.+?)\s/){
-		#	$LB{$1} = $1;
-		#}
-
 		if($line =~ /^\@RG/){
 			my ($id)=($line=~/ID\:(\S+)/);
 			my ($lib)=($line=~/LB\:(\S+)/);
@@ -104,13 +117,28 @@ elsif($LIBSEP eq "separated-library"){
 			my ($sample)=($line=~/SM\:(\S+)/);
 			my ($insertsize)=($line=~/PI\:(\d+)/);
 
-			$ID_LB{$id} = $lib;
-			$LB{$lib} = $lib;
+			if($line !~ /PL\:(\S+)/ && $PLATFORM eq ""){
+				print STDERR "WARNING: Missing PL tag in \@RG $id lines. Use the default setting 'Illumina'. Or you can specify the platform as Illumina or SOLiD using -PLATFORM. \n";
+				$platform = "Illumina";
+			}
+			if($line !~ /LB\:(\S+)/){
+				print STDERR "WARNING: Missing LB tag in \@RG $id lines. \n\n";
+			}
+			else{
+				if($PLATFORM ne ""){
+					$PLAT_LB{$lib} = $PLATFORM;
+				}
+				else{
+					$PLAT_LB{$lib} = $platform;
+				}
+				$ID_LB{$id} = $lib;
+				$LB{$lib} = $lib;
+			}
 		}
 
 	}
 	close(SAM_IN);
-	HandleSamtoolsErrors();
+	#HandleSamtoolsErrors();
 }
 else{
 	print STDERR "Bad LIBRARY_SEPARATED_FLAG: ".$ARGV[0]."\n";
@@ -122,6 +150,18 @@ if (scalar(keys %ID_LB) == 0) {
 	print STDERR "Warning: no libraries found in BAM header information. Using all mode instead.\n";
 	$LB{"all"} = "all";
 	$SEP_LIB = 0;
+}
+
+if ($CUTOFF =~ /FILE/){
+	my $cut_file = substr $CUTOFF, 5;
+	# read lower and upper bounds for each library
+	open(IN, $cut_file);
+	while(<IN>){
+		chomp;
+		(my $l, my $v) = split(/\t+/, $_);
+		$LB_CUTOFF{$l} = $v;
+	}
+	close(IN);
 }
 
 my @lib_delete;
@@ -156,11 +196,10 @@ foreach my $library_id (keys %LB){
 			}
 			push(@lib_delete, $library_id);
 		}
-
 		next if ($SEP_LIB == 1);
 	}
 
-	if ($CUTOFF =~ /EXACT/) {
+	if ($CUTOFF =~ /EXACT=/) {
 		$USE_EXACT = 1;
 		my $LMINLMAX = substr $CUTOFF, 6;
 		my @tmpLMINLMAX = split(/,/, $LMINLMAX);
@@ -169,9 +208,41 @@ foreach my $library_id (keys %LB){
 		print "EXACT flag: $CUTOFF used, so using Lmin of ".$LMIN." and Lmax of ".$LMAX.".  Will NOT check distribution of concordant pairs!!\n"; 
 	}
 
-	if ($USE_EXACT == 0){
+	elsif ($CUTOFF =~ /SD=/ || $CUTOFF =~/PCT=/){
 		print "Computing Lmin and Lmax ...\n";
 		($LMIN, $LMAX) = GetLminLmax($CHECKING_FILE, $library_id, $MAPPINGQ, $CUTOFF, $FIRST_READ, $ESPfile, $PROPER_L);
+	}
+	elsif ($CUTOFF =~ /FILE=/) {
+		if(exists $LB_CUTOFF{$library_id}){
+			if ($LB_CUTOFF{$library_id} =~ /EXACT=/) {
+				$USE_EXACT = 1;
+				my $LMINLMAX = substr $LB_CUTOFF{$library_id}, 6;
+				my @tmpLMINLMAX = split(/,/, $LMINLMAX);
+				$LMIN = $tmpLMINLMAX[0];
+				$LMAX = $tmpLMINLMAX[1];
+				print "EXACT flag: $LB_CUTOFF{$library_id} used, so using Lmin of ".$LMIN." and Lmax of ".$LMAX.".  Will NOT check distribution of concordant pairs!!\n";
+			}
+			elsif ($LB_CUTOFF{$library_id} =~ /SD=/ || $LB_CUTOFF{$library_id} =~ /PCT=/){
+				print "Computing Lmin and Lmax ...\n";
+				($LMIN, $LMAX) = GetLminLmax($CHECKING_FILE, $library_id, $MAPPINGQ, $LB_CUTOFF{$library_id}, $FIRST_READ, $ESPfile, $PROPER_L);
+			}
+			else{
+				print STDERR "A wrong CUTOFF tag in the file.\n";
+				$LMIN = 0;
+				$LMAX = 0;
+			}
+		}
+		else{
+			print STDERR "A library $library_id does not record in the file.\n";
+			print STDERR "Use default setting PCT=99% as the cutoff of Lmin and Lmax!\n";
+			print "Computing Lmin and Lmax ...\n";
+			my $dfile_cutoff = "PCT=99%";
+			($LMIN, $LMAX) = GetLminLmax($CHECKING_FILE, $library_id, $MAPPINGQ, $dfile_cutoff, $FIRST_READ, $ESPfile, $PROPER_L);
+		}
+	}
+	else{
+		print STDERR "Check your CUTOFF_LMINLMAX tag, $CUTOFF!\n";
+		exit 0;
 	}
 
 	CheckAllTypes($CHECKING_FILE, $LMIN, $LMAX);
@@ -220,25 +291,37 @@ while(my $line = <BAM>){
 	chomp $line;
 	my @temp = split(/\t+/, $line);
 	my $flag = $temp[1];
-	my $value = $temp[11];
-	my ($id)=($value=~/RG\:Z\:(\S+)/);
+	my ($id)=($line=~/RG\:Z\:(\S+)\s/);
 
-	#print "$id\n";
 	if($SEP_LIB == 0 || exists $ID_LB{$id}){
-	    my ($TAG,$LMIN,$LMAX);
-	    if ($SEP_LIB == 0) {
-		$TAG = $LB_FH{"all"};
-		$LMIN = $LB_LMIN{"all"};
-		$LMAX = $LB_LMAX{"all"};
-	    }
-	    else {
-		$TAG = $LB_FH{$ID_LB{$id}};
-		$LMIN = $LB_LMIN{$ID_LB{$id}};
-		$LMAX = $LB_LMAX{$ID_LB{$id}};
-	    }	    
+		my ($TAG,$LMIN,$LMAX);
+		if ($SEP_LIB == 0) {
+			$TAG = $LB_FH{"all"};
+			$LMIN = $LB_LMIN{"all"};
+			$LMAX = $LB_LMAX{"all"};
+		}
+		else {
+			$TAG = $LB_FH{$ID_LB{$id}};
+			$LMIN = $LB_LMIN{$ID_LB{$id}};
+			$LMAX = $LB_LMAX{$ID_LB{$id}};
+		}	    
 		if($temp[6] eq "="){
 			my $q_ori = ($flag & 0x0010)?'-':'+';
 			my $m_ori = ($flag & 0x0020)?'-':'+';
+			
+			if($PLAT_LB{$ID_LB{$id}} =~ /SOLID/i) { # flip the orientation of the second read
+				if ($flag & 0x0040){
+					$m_ori = ($m_ori eq '-')?'+':'-';
+				}
+				elsif ($flag & 0x0080){
+					$q_ori = ($q_ori eq '-')?'+':'-';
+				}
+				else{
+					print STDERR "WARNING: Read ID $temp[0] does not contain either the flag 0x0040 or 0x0080! This read will be skipped.\n";
+					next;
+				}
+			}
+
 			if($q_ori eq $m_ori){ # discordant file, putative inversion pairs
 				print $TAG $line."\n";
 			}
@@ -294,10 +377,11 @@ foreach my $library_id(keys %LB){
 		print "Generating GASV inputs... \n";
 		print "$prefix_esp\n";
 		# add naming parameter $NAMING_INDEXING_FILE (2010.01.27)
+		# add Solid platform tag (2010.07.22)
 		if (CheckFileInPATH("generate_GASV.pl")) {
-			system("./generate_GASV.pl ALL $outdisfile $MAPPINGQ $DELTHRE $prefix_esp $NAMING_INDEXING_FILE");
+			system("./generate_GASV.pl ALL $outdisfile $MAPPINGQ $DELTHRE $prefix_esp $NAMING_INDEXING_FILE $PLAT_LB{$library_id}");
 		} else {
-			system("./generate_GASV.pl ALL $outdisfile $MAPPINGQ $DELTHRE $prefix_esp $NAMING_INDEXING_FILE");
+			system("./generate_GASV.pl ALL $outdisfile $MAPPINGQ $DELTHRE $prefix_esp $NAMING_INDEXING_FILE $PLAT_LB{$library_id}");
 		}
 		print "GASV input generation complete. Sorting Files... \n";
 		system("bash sortESP.bash $prefix_esp.deletion");
@@ -343,7 +427,7 @@ sub MissingChromosomeErrors {
 }
 
 sub HandleSamtoolsErrors {
-	open(ERR_IN, $ERRLOG);
+	open(ERR_IN, $ERRLOG) or die "cannot open $ERRLOG: $!\n";;
 	while (my $line = <ERR_IN>) {
 		chomp $line;
 		if($line =~ /bam_header_read(.+?)EOF marker is absent/){
@@ -356,7 +440,7 @@ sub HandleSamtoolsErrors {
 
 	}
 	close(ERR_IN);
-	system("rm -f $ERRLOG");
+	#system("rm -f $ERRLOG");
 }
 
 sub CheckPairInfo {
@@ -447,13 +531,31 @@ sub CheckAllTypes {
 	my $de = 0;
 
 	print "Checking four types of structural variants in BAM file ... ";
+
 	open(CHECK, $in_checkf);
 	while(my $line = <CHECK>){
 		chomp $line;
+		my ($id)=($line=~/RG\:Z\:(\S+)\s/);
 		my @temp = split(/\t+/, $line);
+		my $flag = $temp[1];
 		if($temp[6] eq "="){
 			my $q_ori = ($temp[1] & 0x0010)?'-':'+';
 			my $m_ori = ($temp[1] & 0x0020)?'-':'+';
+
+			if($PLAT_LB{$ID_LB{$id}} =~ /SOLID/i) { # flip the orientation of the second read
+				if ($flag & 0x0040){
+					$m_ori = ($m_ori eq '-')?'+':'-';
+				}
+				elsif ($flag & 0x0080){
+					$q_ori = ($q_ori eq '-')?'+':'-';
+				}
+				else{
+					print STDERR "WARNING: Read ID $temp[0] does not contain either the flag 0x0040 or 0x0080! This read will be skipped.\n";
+					next;
+				}
+			}
+
+
 			if($q_ori eq $m_ori){ # discordant file, putative inversion pairs
 				$in = 1;
 			}
@@ -501,7 +603,7 @@ sub CheckAllTypes {
 		print STDERR "\nWARNING: BAM file you're using appears to lack inversion information\n";
 	}
 	if($de == 0){
-		print STDERR "\nWARNING: BAM file you're using appears to lack deletion information\n";
+		print STDERR "\nWARNING: BAM file you're using appears to lack deletion/insertion information\n";
 	}
 }
 sub CheckFileInPATH{
@@ -559,47 +661,6 @@ sub CheckRequiredFile{
 
 		print STDERR "ERROR: BAM file $Bfile does not exist!\n\n";
 		exit 0;
-
-		#while($ans ne 'Y'){
-		#	print "Would you like to search this BAM file $Bfile on NCBI ftp site? (Y/N):";
-		#	chomp ($ans = <STDIN>);
-		#	if($ans eq 'N'){
-		#		exit 0;
-		#	}
-		#	else{
-		#		if ($ans ne 'Y'){
-		#			print STDERR "Bad input! \n";
-		#		}
-		#		last if($ans eq 'Y');
-		#	}
-		#}
-		#if($ans eq "Y"){
-		#	print STDERR "Finding the BAM file on NCBI ftp site ... \n";
-		#	my @bam_sep = split(/\./, $Bfile);
-		#	my $newBfile = $NCBI_FTP.$bam_sep[0]."/alignment/".$Bfile;
-		#	if(LWP::Simple::head($newBfile)){
-		#		print STDERR "$Bfile exists on NCBI ftp!\n";
-		#		print STDERR "Start runnning preprocessor using remote file: $newBfile\n";
-		#		$BAMFILE = $newBfile;
-		#	}
-		#	else{
-		#		print STDERR "The BAM file $Bfile does not exist on NCBI ftp site!\n\n";
-		#		print STDERR "Check your naming format of BAM file !\n\n";
-		#		print STDERR "The file names are formatted as such\n";
-		#		print STDERR "	NA12878.SLX.maq.SRP000033.2009_07.bam\n	NA12878.chrom1.454.maq.SRP000032.2009_07.bam\n\n";
-		#		print STDERR "If the alignment has been split by chromosome there will be a chromosome name.\n";
-		#		print STDERR "The sequencing technology is next, SLX for illumina, 454 for 454 and SOLID for SOLiD.\n";
-		#		print STDERR "The next term is aligner name, e.g. ssaha2, maq, MOSAIK, corona, and so on.\n";
-		#		print STDERR "The SRP is the study identifier, 31 is pilot1 low coverage, 32 is pilot2 high coverage, 33 is pilot3 gene targetted sequencing.\n";
-		#		print STDERR "The final term is 2007_09, this is the relase date.\n\n";
-		#		print STDERR "Or ... \n\n";
-		#		print STDERR "You can directly using remote mode by typing \"perl BAM_preprocessor.pl <ftp://link_of_bam_file>\"\n";
-		#		exit 0;
-		#	}
-		#}
-		#else{
-		#	exit 0;
-		#}
 	}
 
 	if ($Mq < 0) {
@@ -607,11 +668,17 @@ sub CheckRequiredFile{
 		exit 0;
 	}
 
-	if (!($Co =~ /EXACT/)) {
-		#check LminLmaxProcessor
-		if (!(CheckFileInPATH("LminLmaxProcessor") ) && !(-e "LminLmaxProcessor")) {
-			print STDERR "ERROR: LminLmaxProcessor does not exist!  LminLmaxProcessor must be built first and in PATH or current directory.  Run install.sh to build.\n";
-			exit 0;
+	if ($Co !~ /^EXACT=/ && $Co !~ /^SD=/ && $Co !~ /^PCT=/ && $Co !~ /^FILE=/){
+		print STDERR "Check your CUTOFF_LMINLMAX tag, $CUTOFF!\n";
+		exit 0;
+	}
+	else{
+		if (!($Co =~ /EXACT/)) {
+			#check LminLmaxProcessor
+			if (!(CheckFileInPATH("LminLmaxProcessor") ) && !(-e "LminLmaxProcessor")) {
+				print STDERR "ERROR: LminLmaxProcessor does not exist!  LminLmaxProcessor must be built first and in PATH or current directory.  Run install.sh to build.\n";
+				exit 0;
+			}
 		}
 	}
 

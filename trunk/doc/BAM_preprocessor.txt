@@ -22,7 +22,7 @@ Summary:
                         also acceptable)
                 2. Decide on BAM_preprocessor.pl options to use (if different 
                         from defaults).
-		3. Run the BAM_preprocessor.pl in the bin/ subdirectory
+		3. Run the BAM_preprocessor.pl
 
         Usage:
                 % BAM_preprocessor.pl <bam file or hyperlink> [Options]
@@ -51,6 +51,10 @@ Summary:
 
 		-PROPER_LENGTH     	INT     Threshold for considering
 						fragments as a proper pair
+
+		-PLATFORM		STRING	Specify the platform if the
+						SAM/BAM file does not cotain
+						'PL' tag in its header
 
 	Options:
 
@@ -92,6 +96,14 @@ Summary:
                         * EXACT=X,Y: Take Lmin to be X and Lmax to be Y without
 				analyzing fragment length distributions at all.
 
+			* FILE=X.txt: specify a file with the following information 
+				for using different cutoffs in different libraries
+
+				FORMAT:
+				library_id1	EXACT=123,456
+				library_id2	SD=3
+				library_id3	PCT=90%
+
                 -USE_NUMBER_READS: (Default Setting: 500000)
                 	The number of fragments (designated as a proper pair)
 			in the BAM file to use in computing Lmax and Lmin.
@@ -132,6 +144,12 @@ Summary:
 
 			Note: If you use EXACT=X,Y or PCT=X% as CUTOFF_LMINLMAX,
 			this option will not be considered.
+
+		-PLATFORM:  (SOLiD or Illumina; Default Setting: Illumina)
+			BAM preprocessor will automatically detect the platform
+			using in SAM/BAM files. If the platform is not specified
+			'Illumina' is used as default.			
+
         Output:
                 OUTPUT_PREFIX(_LIBRARY_ID).deletion
                 OUTPUT_PREFIX(_LIBRARY_ID).divergent
