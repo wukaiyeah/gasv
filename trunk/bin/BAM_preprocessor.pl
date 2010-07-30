@@ -1,4 +1,22 @@
 #!/usr/bin/perl
+#!/bin/bash
+# Copyright 2010 Benjamin Raphael, Suzanne Sindi, Hsin-Ta Wu, Anna Ritz, Luke Peng
+# 
+#   This file is part of gasv.
+#  
+#   gasv is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#  
+#   gasv is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#   
+#   You should have received a copy of the GNU General Public License
+#   along with gasv.  If not, see <http://www.gnu.org/licenses/>.
+#
 
 #use strict;
 use warnings;
@@ -38,6 +56,20 @@ if($OUTPUTPREFIX eq "NO_SPE"){
 }
 
 CheckRequiredFile($SAMPATH, $BAMFILE, $MAPPINGQ, $CUTOFF);
+my $ERRLOG = $OUTPUTPREFIX.".bampreprocessor.err.log".$$.time();
+my $debug_mode = 0;
+my %LB;
+my %LB_LMIN;
+my %LB_LMAX;
+my %ID_LB = ();
+my %PLAT_LB = ();
+my %LB_FH = ();
+my $SEP_LIB = 0;
+my $ESPfile = $OUTPUTPREFIX.".info";
+my %LB_CUTOFF = ();
+my $MISSING_PL_TAG = 0;
+my @MISSING_LB_AY;
+`echo "LibraryName      Lmin    Lmax" > $ESPfile`;
 
 print "\n===================================================================================================\n";
 print "PATH OF SAMTOOLS:     $SAMPATH\n";
@@ -53,105 +85,40 @@ if($NAMING_INDEXING_FILE ne "DEFAULT"){
 if($CUTOFF =~ /SD/){
 	print "MAXIMUM PROPER LENGTH:$PROPER_L\n";
 }
+
 if($PLATFORM ne ""){
-	if($PLATFORM =~ /^(SOLiD|Illumina)$/i){
-		print "PLATFORM:             $PLATFORM\n";
-	}
-	else{
+	if($PLATFORM !~ /^(SOLiD|Illumina)$/i){
 		print "ERROR: Please specify your platform as Illumina or SOLiD.\n";
 		exit(1);
 	}
+	print "PLATFORM:             ".((readHeaderInfo() eq "illumina")?"Illumina":"SOLiD")."\n";
+}
+else{
+	print "PLATFORM:             ".((readHeaderInfo() eq "illumina")?"Illumina":"SOLiD")."\n";
 }
 print "===================================================================================================\n\n";
 
-
-my $ERRLOG = $OUTPUTPREFIX.".bampreprocessor.err.log".$$.time();
-my $debug_mode = 0;
-my %LB;
-my %LB_LMIN;
-my %LB_LMAX;
-my %ID_LB = ();
-my %PLAT_LB = ();
-my %LB_FH = ();
-my $SEP_LIB = 0;
-my $ESPfile = $OUTPUTPREFIX.".info";
-my %LB_CUTOFF = ();
-`echo "LibraryName	Lmin	Lmax" > $ESPfile`;
-
 $FIRST_READ = $FIRST_READ * 2;
-
-if($LIBSEP eq "all"){
-	$LB{"all"} = "all";
-	open(SAM_IN, $SAMPATH." view -H $BAMFILE 2>$ERRLOG|"); # pipeline in
-	while(my $line = <SAM_IN>){
-		chomp $line;
-		if($line =~ /^\@RG/){
-			my ($platform) = ($line =~ /PL\:(\S+)/);
-			my ($id)=($line=~/ID\:(\S+)/);
-			if($line !~ /PL\:(\S+)/ && $PLATFORM eq ""){
-				print STDERR "WARNING: Missing PL tag in \@RG $id lines. Use the default setting 'Illumina'. Or you can specify the platform as Illumina or SOLiD using -PLATFORM. \n";
-				$platform = "Illumina";
-			}
-			if(!exists $PLAT_LB{"all"}){
-				$PLAT_LB{"all"} = $platform;
-			}
-			else{
-				if($PLAT_LB{"all"} ne $platform){
-					print STDERR "ERROR: Platforms in BAM file are not uniform. Using separated library mode!\n";
-					exit(1);
-				}
-			}
-		}
-	}
-	close(SAM_IN);
+if ($MISSING_PL_TAG == 1){
+	print STDERR "WARNING: Missing PL tag in the header. Use the default setting 'Illumina'. Or you can specify the platform as Illumina or SOLiD using -PLATFORM. \n";
 }
-elsif($LIBSEP eq "separated-library"){
-	$SEP_LIB = 1;
-	open(SAM_IN, $SAMPATH." view -H $BAMFILE 2>$ERRLOG|"); # pipeline in
-	while(my $line = <SAM_IN>){
-		chomp $line;
-		if($line =~ /^\@RG/){
-			my ($id)=($line=~/ID\:(\S+)/);
-			my ($lib)=($line=~/LB\:(\S+)/);
-			my ($platform)=($line=~/PL\:(\S+)/);
-			my ($sample)=($line=~/SM\:(\S+)/);
-			my ($insertsize)=($line=~/PI\:(\d+)/);
-
-			if($line !~ /PL\:(\S+)/ && $PLATFORM eq ""){
-				print STDERR "WARNING: Missing PL tag in \@RG $id lines. Use the default setting 'Illumina'. Or you can specify the platform as Illumina or SOLiD using -PLATFORM. \n";
-				$platform = "Illumina";
-			}
-			if($line !~ /LB\:(\S+)/){
-				print STDERR "WARNING: Missing LB tag in \@RG $id lines. \n\n";
-			}
-			else{
-				if($PLATFORM ne ""){
-					$PLAT_LB{$lib} = $PLATFORM;
-				}
-				else{
-					$PLAT_LB{$lib} = $platform;
-				}
-				$ID_LB{$id} = $lib;
-				$LB{$lib} = $lib;
-			}
-		}
-
-	}
-	close(SAM_IN);
-	#HandleSamtoolsErrors();
+if (scalar(@MISSING_LB_AY) != 0){
+	print join("\n", @MISSING_LB_AY)."\n\n";
 }
-else{
-	print STDERR "Bad LIBRARY_SEPARATED_FLAG: ".$ARGV[0]."\n";
-	exit;
-}
-
-
 if (scalar(keys %ID_LB) == 0) {
 	print STDERR "Warning: no libraries found in BAM header information. Using all mode instead.\n";
 	$LB{"all"} = "all";
+	if($PLATFORM =~ /solid/i){
+		$PLAT_LB{"all"} = "solid";
+	}
+	elsif($PLATFORM =~ /illumina/i){
+		$PLAT_LB{"all"} = "Illumina";
+	}
+	else{
+		print STDERR "ERROR: Missing platform information. Using -PLATFORM to specify your platform\n";
+	}
 	$SEP_LIB = 0;
 }
-
 if ($CUTOFF =~ /FILE/){
 	my $cut_file = substr $CUTOFF, 5;
 	# read lower and upper bounds for each library
@@ -299,12 +266,14 @@ while(my $line = <BAM>){
 			$TAG = $LB_FH{"all"};
 			$LMIN = $LB_LMIN{"all"};
 			$LMAX = $LB_LMAX{"all"};
+			$ID_LB{$id} = "all";
 		}
 		else {
 			$TAG = $LB_FH{$ID_LB{$id}};
 			$LMIN = $LB_LMIN{$ID_LB{$id}};
 			$LMAX = $LB_LMAX{$ID_LB{$id}};
 		}	    
+
 		if($temp[6] eq "="){
 			my $q_ori = ($flag & 0x0010)?'-':'+';
 			my $m_ori = ($flag & 0x0020)?'-':'+';
@@ -538,6 +507,10 @@ sub CheckAllTypes {
 		my ($id)=($line=~/RG\:Z\:(\S+)\s/);
 		my @temp = split(/\t+/, $line);
 		my $flag = $temp[1];
+
+		if ($SEP_LIB == 0) {
+			$ID_LB{$id} = "all";
+		}
 		if($temp[6] eq "="){
 			my $q_ori = ($temp[1] & 0x0010)?'-':'+';
 			my $m_ori = ($temp[1] & 0x0020)?'-':'+';
@@ -684,6 +657,110 @@ sub CheckRequiredFile{
 
 }
 
+sub readHeaderInfo{
+
+	my $display_pl;
+	if($LIBSEP eq "all"){
+		$LB{"all"} = "all";
+		open(SAM_IN, $SAMPATH." view -H $BAMFILE 2>$ERRLOG|"); # pipeline in
+		while(my $line = <SAM_IN>){
+			chomp $line;
+			if($line =~ /^\@RG/){
+				my ($platform) = ($line =~ /PL\:(\S+)/);
+				my ($id)=($line=~/ID\:(\S+)/);
+				if($line !~ /PL\:(\S+)/ && $PLATFORM eq ""){
+					$MISSING_PL_TAG = 1;
+					$platform = "Illumina";
+				}
+
+				if(!exists $PLAT_LB{"all"}){
+					if($line =~ /PL\:(\S+)/){
+						$PLAT_LB{"all"} = $platform;
+					}
+					else{
+						$PLAT_LB{"all"} = $PLATFORM;
+					}
+				}
+				else{
+					if($line =~ /PL\:(\S+)/){
+						if($PLAT_LB{"all"} ne $platform){
+							print STDERR "ERROR: Platforms in BAM file are not uniform. Check your SAM/BAM files!\n";
+							exit(1);
+						}
+					}
+				}
+			}
+		}
+		close(SAM_IN);
+		$display_pl = $PLAT_LB{"all"};
+	}
+
+	elsif($LIBSEP eq "separated-library"){
+		$SEP_LIB = 1;
+		my %plset;
+		open(SAM_IN, $SAMPATH." view -H $BAMFILE 2>$ERRLOG|"); # pipeline in
+		while(my $line = <SAM_IN>){
+			chomp $line;
+			if($line =~ /^\@RG/){
+				my ($id)=($line=~/ID\:(\S+)/);
+				my ($lib)=($line=~/LB\:(\S+)/);
+				my ($platform)=($line=~/PL\:(\S+)/);
+				my ($sample)=($line=~/SM\:(\S+)/);
+				my ($insertsize)=($line=~/PI\:(\d+)/);
+
+				if($line !~ /PL\:(\S+)/ && $PLATFORM eq ""){
+					$MISSING_PL_TAG = 1;
+					$platform = "Illumina";
+				}
+				if($line !~ /LB\:(\S+)/){
+					#print STDERR "WARNING: Missing LB tag in \@RG $id lines. \n\n";
+					push (@MISSING_LB_AY, "WARNING: Missing LB tag in \@RG $id lines.");
+				}
+				else{
+					if($PLATFORM ne ""){
+						$PLAT_LB{$lib} = $PLATFORM;
+						$plset{lc $PLATFORM} = 1;
+					}
+					else{
+						$PLAT_LB{$lib} = $platform;
+						$plset{lc $platform} = 1;
+					}
+					$ID_LB{$id} = $lib;
+					$LB{$lib} = $lib;
+				}
+			}
+
+		}
+		close(SAM_IN);
+		#HandleSamtoolsErrors();
+		my @tmp = keys %plset;
+		if(scalar(@tmp) == 1){
+			$display_pl = $tmp[0];
+		}
+		else{
+			if($PLATFORM ne ""){
+				$display_pl = $PLATFORM;
+			}
+			else{
+				if(scalar(@tmp) > 1){
+					print STDERR "ERROR: Platforms in BAM file are not uniform. Check your SAM/BAM files!\n";
+				}
+				else{
+					print STDERR "ERROR: There is no platform tag in the header. Use -PLATFORM to specify your platform.\n";
+				}
+				$display_pl = "";
+				exit(1);
+			}
+		}
+	}
+	else{
+		print STDERR "Bad LIBRARY_SEPARATED_FLAG: ".$ARGV[0]."\n";
+		$display_pl = "";
+		exit;
+	}
+
+	return $display_pl;
+}
 
 sub getDefaultPrefix{
 	my $in_bam = $_[0];
@@ -696,5 +773,4 @@ sub getDefaultPrefix{
 	else{
 		return $bamname;
 	}
-
 }
