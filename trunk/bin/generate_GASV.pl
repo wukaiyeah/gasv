@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-#!/bin/bash
 # Copyright 2010 Benjamin Raphael, Suzanne Sindi, Hsin-Ta Wu, Anna Ritz, Luke Peng
 # 
 #   This file is part of gasv.
