@@ -1,21 +1,4 @@
 #!/usr/bin/perl
-# Copyright 2010 Benjamin Raphael, Suzanne Sindi, Hsin-Ta Wu, Anna Ritz, Luke Peng
-# 
-#   This file is part of gasv.
-#  
-#   gasv is free software: you can redistribute it and/or modify
-#   it under the terms of the GNU General Public License as published by
-#   the Free Software Foundation, either version 3 of the License, or
-#   (at your option) any later version.
-#  
-#   gasv is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#   GNU General Public License for more details.
-#   
-#   You should have received a copy of the GNU General Public License
-#   along with gasv.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 #use strict;
 use warnings;
@@ -68,6 +51,7 @@ my $ESPfile = $OUTPUTPREFIX.".info";
 my %LB_CUTOFF = ();
 my $MISSING_PL_TAG = 0;
 my @MISSING_LB_AY;
+my $RG_TAG = 1;
 `echo "LibraryName      Lmin    Lmax" > $ESPfile`;
 
 print "\n===================================================================================================\n";
@@ -90,16 +74,18 @@ if($PLATFORM ne ""){
 		print "ERROR: Please specify your platform as Illumina or SOLiD.\n";
 		exit(1);
 	}
-	print "PLATFORM:             ".((readHeaderInfo() eq "illumina")?"Illumina":"SOLiD")."\n";
+	print "PLATFORM:             ".$PLATFORM."\n";
 }
 else{
-	print "PLATFORM:             ".((readHeaderInfo() eq "illumina")?"Illumina":"SOLiD")."\n";
+	$PLATFORM = ((readHeaderInfo() eq "illumina")?"Illumina":"SOLiD");
+	print "PLATFORM:             ".$PLATFORM."\n";
 }
 print "===================================================================================================\n\n";
 
 $FIRST_READ = $FIRST_READ * 2;
 if ($MISSING_PL_TAG == 1){
-	print STDERR "WARNING: Missing PL tag in the header. Use the default setting 'Illumina'. Or you can specify the platform as Illumina or SOLiD using -PLATFORM. \n";
+	print STDERR "WARNING: Missing PL tag in the header. Using 'Illumina' as platform instead. \n";
+	print STDERR "         Or you can specify the platform as Illumina or SOLiD using -PLATFORM. \n";
 }
 if (scalar(@MISSING_LB_AY) != 0){
 	print join("\n", @MISSING_LB_AY)."\n\n";
@@ -112,9 +98,6 @@ if (scalar(keys %ID_LB) == 0) {
 	}
 	elsif($PLATFORM =~ /illumina/i){
 		$PLAT_LB{"all"} = "Illumina";
-	}
-	else{
-		print STDERR "ERROR: Missing platform information. Using -PLATFORM to specify your platform\n";
 	}
 	$SEP_LIB = 0;
 }
@@ -257,7 +240,13 @@ while(my $line = <BAM>){
 	chomp $line;
 	my @temp = split(/\t+/, $line);
 	my $flag = $temp[1];
-	my ($id)=($line=~/RG\:Z\:(\S+)\s/);
+	my $id;
+	if($RG_TAG == 1){ # Header contains Reading Group information
+		($id)=($line=~/RG\:Z\:(\S+)\s/);
+	}
+	else{ # no RG info. Assign RG as all.
+		$id = "all";
+	}
 
 	if($SEP_LIB == 0 || exists $ID_LB{$id}){
 		my ($TAG,$LMIN,$LMAX);
@@ -276,7 +265,7 @@ while(my $line = <BAM>){
 		if($temp[6] eq "="){
 			my $q_ori = ($flag & 0x0010)?'-':'+';
 			my $m_ori = ($flag & 0x0020)?'-':'+';
-			
+
 			if($PLAT_LB{$ID_LB{$id}} =~ /SOLID/i) { # flip the orientation of the second read
 				if ($flag & 0x0040){
 					$m_ori = ($m_ori eq '-')?'+':'-';
@@ -322,6 +311,9 @@ while(my $line = <BAM>){
 		else{ # putative translocation pairs
 			print $TAG $line."\n";
 		}
+	}
+	else{
+		print STDERR "Warning: Missing reading group $id in the header! Check header by samtools view -H! \n";
 	}
 }
 close(BAM);
@@ -503,9 +495,15 @@ sub CheckAllTypes {
 	open(CHECK, $in_checkf);
 	while(my $line = <CHECK>){
 		chomp $line;
-		my ($id)=($line=~/RG\:Z\:(\S+)\s/);
+		my $id;
 		my @temp = split(/\t+/, $line);
 		my $flag = $temp[1];
+		if($RG_TAG == 1){
+			($id)=($line=~/RG\:Z\:(\S+)\s/);
+		}
+		else{
+			$id = "all";
+		}
 
 		if ($SEP_LIB == 0) {
 			$ID_LB{$id} = "all";
@@ -659,6 +657,7 @@ sub CheckRequiredFile{
 sub readHeaderInfo{
 
 	my $display_pl;
+	my $readinggp_tag = 0;
 	if($LIBSEP eq "all"){
 		$LB{"all"} = "all";
 		open(SAM_IN, $SAMPATH." view -H $BAMFILE 2>$ERRLOG|"); # pipeline in
@@ -688,6 +687,7 @@ sub readHeaderInfo{
 						}
 					}
 				}
+				$readinggp_tag = 1;
 			}
 		}
 		close(SAM_IN);
@@ -727,8 +727,8 @@ sub readHeaderInfo{
 					$ID_LB{$id} = $lib;
 					$LB{$lib} = $lib;
 				}
+				$readinggp_tag = 1;
 			}
-
 		}
 		close(SAM_IN);
 		#HandleSamtoolsErrors();
@@ -743,22 +743,26 @@ sub readHeaderInfo{
 			else{
 				if(scalar(@tmp) > 1){
 					print STDERR "ERROR: Platforms in BAM file are not uniform. Check your SAM/BAM files!\n";
+					exit(1);
 				}
 				else{
-					print STDERR "ERROR: There is no platform tag in the header. Use -PLATFORM to specify your platform.\n";
+					$display_pl = "illumina";
 				}
-				$display_pl = "";
-				exit(1);
 			}
 		}
-	}
-	else{
-		print STDERR "Bad LIBRARY_SEPARATED_FLAG: ".$ARGV[0]."\n";
-		$display_pl = "";
-		exit;
+		 if($readinggp_tag == 0){
+			 $MISSING_PL_TAG = 1;
+			 $display_pl = "illumina";
+			 $RG_TAG = 0;
+		 }
+	 }
+	 else{
+		 print STDERR "Bad LIBRARY_SEPARATED_FLAG: ".$ARGV[0]."\n";
+		 $display_pl = "";
+		 exit;
 	}
 
-	return $display_pl;
+	return lc($display_pl);
 }
 
 sub getDefaultPrefix{
