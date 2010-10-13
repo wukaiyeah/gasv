@@ -32,7 +32,7 @@ using namespace std;
 void process_getLminLmax(string fn, int mapq, string outfile, string prefix, string location, int cutoff, int truncate_length);
 void outputResult(string o, string p, int min, int max);
 vector<string> parsingSD_PERC(string q);
-
+int getFragLength(char q, char m, int third, int seventh, int readlength, int insertlength);
 
 int main(int argc, char** argv) {
 
@@ -121,7 +121,12 @@ void process_getLminLmax(string fn, int mapq, string outfile, string prefix, str
 							minReadLength = tokens[9].length();
 						}
 						counter++;
-						int flength = abs(atoi(tokens[8].c_str()));
+						//int flength = abs(atoi(tokens[8].c_str()));
+
+						char q_ori = (atoi(tokens[1].c_str()) & 0x0010)?'-':'+';
+						char m_ori = (atoi(tokens[1].c_str()) & 0x0020)?'-':'+';
+						int flength = getFragLength(q_ori, m_ori, atoi(tokens[3].c_str()), atoi(tokens[7].c_str()), tokens[9].length(), atoi(tokens[8].c_str()));
+
 						if(truncate_length == 0){
 							fragl[flength]++;
 							total_length += flength;
@@ -214,3 +219,27 @@ void outputResult(string outfile, string outprefix, int lmin_out, int lmax_out){
 	cout << lmin_out << "\t" << lmax_out << endl;
 }
 
+int getFragLength(char q, char m, int third, int seventh, int readlength, int insertlength){
+
+	int frag_length = 0;
+	if(q == '+' && m == '-' && insertlength > 0){
+		frag_length = seventh+readlength-third;
+	}
+	else if(q == '-' && m == '+' && insertlength < 0){
+		frag_length = third+readlength-seventh;
+	}
+	else{
+		if(q == m){
+			frag_length = seventh-third;
+		}
+		else{
+			if(q == '+' && m == '-' && insertlength < 0){
+				frag_length = third-(seventh+readlength);
+			}
+			else if(q == '-' && m == '+' && insertlength > 0){
+				frag_length = seventh-(third+readlength);
+			}
+		}
+	}
+	return abs(frag_length);
+}

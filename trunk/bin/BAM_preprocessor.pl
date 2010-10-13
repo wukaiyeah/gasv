@@ -284,7 +284,14 @@ while(my $line = <BAM>){
 			}
 			else{
 				if($q_ori eq "+" && $m_ori eq "-" && $temp[8] > 0){ # concordant or delete
-					if ($temp[8] <= $LMAX && $temp[8] >= $LMIN){ # output as concordant   Lmin <= L <= Lmax
+
+					my $left_start = $temp[3];
+					my $right_end = $temp[7]+length($temp[9]);
+					my $flength = $right_end-$left_start;
+
+					# 20101012, based on Coordinations rather than Insert Size tag.
+					if ($flength <= $LMAX && $flength >= $LMIN){ 
+					#if ($temp[8] <= $LMAX && $temp[8] >= $LMIN){ # output as concordant   Lmin <= L <= Lmax
 						if($debug_mode == 1){ # continually write into concordant only debug mode was opened
 							print CON $line."\n";
 						}
@@ -294,7 +301,12 @@ while(my $line = <BAM>){
 					}
 				}
 				elsif($q_ori eq "-" && $m_ori eq "+" && $temp[8] < 0){ # concordant or delete
-					if (abs($temp[8]) <= $LMAX && abs($temp[8]) >= $LMIN){ # output as concordant
+					my $left_start = $temp[7];
+					my $right_end = $temp[3]+length($temp[9]);
+					my $flength = $right_end-$left_start;
+
+					if (abs($flength) <= $LMAX && abs($flength) >= $LMIN){
+					#if (abs($temp[8]) <= $LMAX && abs($temp[8]) >= $LMIN){ # output as concordant
 						if($debug_mode == 1){
 							print CON $line."\n";
 						}
@@ -456,6 +468,7 @@ sub GetLminLmax{
 	my $in_truncate_length = $_[6];
 
 	if (CheckFileInPATH("LminLmaxProcessor")) {
+		print STDERR "$in_checkf $in_mappingq $in_library $in_library $in_cutoff $in_num_reads $in_truncate_length\n";
 		open(PROC_IN, "LminLmaxProcessor $in_checkf $in_mappingq $in_library $in_library $in_cutoff $in_num_reads $in_truncate_length |");
 	} else {
 		open(PROC_IN, "./LminLmaxProcessor $in_checkf $in_mappingq $in_library $in_library $in_cutoff $in_num_reads $in_truncate_length |");
@@ -531,14 +544,22 @@ sub CheckAllTypes {
 			}
 			else{
 				if($q_ori eq "+" && $m_ori eq "-" && $temp[8] > 0){ # concordant or delete
-					if ($temp[8] < $in_LMAX && $temp[8] > $in_LMIN){ # output as concordant   Lmin <= L <= Lmax
+					my $left_start = $temp[3];
+					my $right_end = $temp[7]+length($temp[9]);
+					my $flength = $right_end-$left_start;
+					# 20101012, based on Coordinations rather than Insert Size tag.
+					if ($flength <= $LMAX && $flength >= $LMIN){
 					}
 					else{ # output as discordant, putative deletion pairs
 						$de = 1;
 					}
 				}
 				elsif($q_ori eq "-" && $m_ori eq "+" && $temp[8] < 0){ # concordant or delete
-					if (abs($temp[8]) < $in_LMAX && abs($temp[8]) > $in_LMIN){ # output as concordant
+					my $left_start = $temp[7];
+					my $right_end = $temp[3]+length($temp[9]);
+					my $flength = $right_end-$left_start;
+
+					if (abs($flength) <= $LMAX && abs($flength) >= $LMIN){
 					}
 					else{ # output as discordant
 						$de = 1;
