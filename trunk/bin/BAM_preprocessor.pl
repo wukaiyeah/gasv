@@ -548,7 +548,7 @@ sub CheckAllTypes {
 					my $right_end = $temp[7]+length($temp[9]);
 					my $flength = $right_end-$left_start;
 					# 20101012, based on Coordinations rather than Insert Size tag.
-					if ($flength <= $LMAX && $flength >= $LMIN){
+					if ($flength <= $in_LMAX && $flength >= $in_LMIN){
 					}
 					else{ # output as discordant, putative deletion pairs
 						$de = 1;
@@ -559,7 +559,7 @@ sub CheckAllTypes {
 					my $right_end = $temp[3]+length($temp[9]);
 					my $flength = $right_end-$left_start;
 
-					if (abs($flength) <= $LMAX && abs($flength) >= $LMIN){
+					if (abs($flength) <= $in_LMAX && abs($flength) >= $in_LMIN){
 					}
 					else{ # output as discordant
 						$de = 1;
