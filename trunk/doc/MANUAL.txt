@@ -245,6 +245,7 @@ paired-end sequences.  They are also output by the --filter mode.
 (See above)
 
 ***ESP files MUST BE SORTED prior to running GASV with ./sortESP.bash***
+***ESP files created by GASV's BAM_Preprocessor.pl are already sorted***
 
 Each line gives the mapping information for a ESP.  Columns are
 tab-separated in the following format:
@@ -289,15 +290,8 @@ The GASV Batch input files provide a list of the ESP or CGH file(s) to
 be processed.   As mentioned elsewhere, each of the ESP and CGH files
 must be sorted by chromosome and genomic coordinates. The script
 ./sortESP.bash should be used to sort files prior to running GASV.
-
-In addition, the files listed in a *.in file must also be "globally"
-sorted, in the sense that earlier files listed must contain the data 
-for the
-lower-numbered chromosomes and the files closer to the bottom of the
-list should contain the higher-numbered chromosomes. E.g. If two files
-are listed, and the first file contains data from chromosomes 1, 2, 3,
-and 4, then no data from chromosomes 1, 2, or 3 should be in the
-second file.
+Note that ESP files created by the GASV Bam Preprocessor are 
+automatically sorted.
 
 For ESP files, each line gives the name of a ESP file, the word "ESP"
 to indicate the file type, and the minimum (Lmin) and maximum (Lmax)
