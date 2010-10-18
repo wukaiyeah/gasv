@@ -4,6 +4,7 @@ NEW IN RELEASE 1.5 =====================================
 * Added command-line specification of Lmin/Lmax for
    individual libraries.
 (See BAM_preprocessor.txt for more information.)
+* Corrected bug in BAM_preprocessor.pl
 
 NEW IN RELEASE 1.4.1 ====================================
 * Added the --noreciprocal option.
