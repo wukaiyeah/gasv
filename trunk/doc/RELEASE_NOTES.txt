@@ -1,3 +1,7 @@
+NEW IN RELEASE 1.5.1 ===================================
+
+*Corrected typo in BAM Preprocessor & Updated Documentation.
+
 NEW IN RELEASE 1.5 =====================================
 
 * Added support for SOLiD sequencing format.

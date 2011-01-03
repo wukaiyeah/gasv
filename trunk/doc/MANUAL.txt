@@ -16,8 +16,8 @@ Inc. (http://www.seisw.com/).
 
 Contact: Ben Raphael at gasv@cs.brown.edu
 
-Version: 1.4.1
-Version Date: May 25 2010
+Version: 1.5.1
+Version Date: Jan 3 2011
 
 SUMMARY ==============================================
 
