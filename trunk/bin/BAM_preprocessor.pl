@@ -351,7 +351,7 @@ foreach my $library_id(keys %LB){
 		# add naming parameter $NAMING_INDEXING_FILE (2010.01.27)
 		# add Solid platform tag (2010.07.22)
 		if (CheckFileInPATH("generate_GASV.pl")) {
-			system("./generate_GASV.pl ALL $outdisfile $MAPPINGQ $DELTHRE $prefix_esp $NAMING_INDEXING_FILE $PLAT_LB{$library_id}");
+			system("generate_GASV.pl ALL $outdisfile $MAPPINGQ $DELTHRE $prefix_esp $NAMING_INDEXING_FILE $PLAT_LB{$library_id}");
 		} else {
 			system("./generate_GASV.pl ALL $outdisfile $MAPPINGQ $DELTHRE $prefix_esp $NAMING_INDEXING_FILE $PLAT_LB{$library_id}");
 		}
