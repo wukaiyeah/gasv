@@ -442,7 +442,7 @@ System.out.println("\n########################################");
 					USE_MAXIMAL = true;
 					++count;
 
-				} else if (args[i].equals("--noreciprocal")) {
+				} else if (args[i].equals("--noreciprocal") || args[i].equals("--nonreciprocal") ) {
 					GASVMain.NORECIPROCAL_MODE = true;
 					++count;
 
