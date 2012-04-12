@@ -100,6 +100,7 @@ if (scalar(keys %ID_LB) == 0) {
 		$PLAT_LB{"all"} = "Illumina";
 	}
 	$SEP_LIB = 0;
+	$RG_TAG = 0; # add 20120316
 }
 if ($CUTOFF =~ /FILE/){
 	my $cut_file = substr $CUTOFF, 5;
@@ -241,6 +242,7 @@ while(my $line = <BAM>){
 	my @temp = split(/\t+/, $line);
 	my $flag = $temp[1];
 	my $id;
+
 	if($RG_TAG == 1){ # Header contains Reading Group information
 		($id)=($line=~/RG\:Z\:(\S+)\s/);
 	}

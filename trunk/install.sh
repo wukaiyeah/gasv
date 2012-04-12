@@ -20,7 +20,6 @@
 # install.sh - Builds the LminLmaxProcessor executable and moves it into the bin directory 
 
 cd src/cpp/LminLmaxProcessor_Source
-./configure
 make
 mv LminLmaxProcessor ../../../bin
 
