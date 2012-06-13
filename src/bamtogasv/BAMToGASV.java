@@ -691,7 +691,8 @@ public class BAMToGASV {
 	 * @param stddev - standard deviation parameter passed by the user.
 	 */
 	public void getLminLmaxSTD(Library lib,int stddev) {
-		double mean = (double) (lib.total_L)/lib.counter;
+		//double mean = (double) (lib.total_L)/lib.counter;
+		double mean = (double) (lib.total_L)/lib.total_C;
 		double sd_up = 0;
 
 		//System.out.println(mean);
@@ -700,7 +701,8 @@ public class BAMToGASV {
 			Map.Entry<Integer,Integer> libtmp = libIter.next();
 			sd_up += libtmp.getValue().intValue()*Math.pow(libtmp.getKey().intValue()-mean, 2);
 		}
-		double sd = Math.sqrt(sd_up/lib.counter);
+		//double sd = Math.sqrt(sd_up/lib.counter);
+		double sd = Math.sqrt(sd_up/lib.total_C);
 		lib.Lmin = (int) (mean-(sd*stddev));
 		lib.Lmax = (int) (mean+(sd*stddev));
 	}
@@ -715,15 +717,15 @@ public class BAMToGASV {
 			System.out.println("WARNING: PCT=" + percent + "% would result in an Lmin LARGER than Lmax!!  Proceeding under assumption user meant to input PCT="+ (100-percent) + "% instead!");
 			percent=100-percent;
 		}
-		int Lmin_q = (int) ((lib.counter/2) * ((double)(100-percent)/100));
-		int Lmax_q = (int) ((lib.counter/2) * ((double)percent/100));
+		long Lmin_q = Math.round(((lib.total_C) * ((float)(100-percent)/100)) + 0.5);
+		long Lmax_q = Math.round(((lib.total_C) * ((float)percent/100)) + 0.5 );
 		//System.out.println("Lmin_q = " + Lmin_q + " and Lmax_q = " + Lmax_q);
 
 		int counting_q = 0;
+		int last_value = 0;
 		Iterator<Map.Entry<Integer, Integer>> libIter = lib.lengthHist.entrySet().iterator();
 		while(libIter.hasNext()){
 			Map.Entry<Integer,Integer> libtmp = libIter.next();
-			//System.out.println(libtmp.getKey() + " --> " + libtmp.getValue());
 			if(counting_q <= Lmin_q && counting_q+libtmp.getValue().intValue() >= Lmin_q){
 				lib.Lmin=libtmp.getKey().intValue();
 				//System.out.println("lib.Lmin = " + lib.Lmin + " and lib.Lmax = " + lib.Lmax);
@@ -733,6 +735,12 @@ public class BAMToGASV {
 				//System.out.println("lib.Lmin = " + lib.Lmin + " and lib.Lmax = " + lib.Lmax);
 			}
 			counting_q += libtmp.getValue().intValue();
+			//System.out.println(libtmp.getKey() + " --> " + libtmp.getValue() + " ---" + counting_q);
+			last_value = libtmp.getKey().intValue();
+		}
+
+		if(lib.Lmax == Integer.MIN_VALUE){
+			lib.Lmax = last_value;
 		}
 	}
 
@@ -991,6 +999,7 @@ public class BAMToGASV {
 					}
 					if(PROPER_LENGTH == 0){ // TODO: Should this be insertL == 0?
 						lib.total_L += insertL;
+						lib.total_C += 1;
 						if (lib.lengthHist.containsKey(insertL)){
 							int tmp = lib.lengthHist.get(insertL).intValue();
 							lib.lengthHist.put(insertL, new Integer(tmp+1));
@@ -999,6 +1008,7 @@ public class BAMToGASV {
 						}							
 					} else if(insertL <= PROPER_LENGTH){
 						lib.total_L += insertL;
+						lib.total_C += 1;
 						if (lib.lengthHist.containsKey(insertL)){
 							int tmp = lib.lengthHist.get(insertL).intValue();
 							lib.lengthHist.put(insertL, new Integer(tmp+1));
