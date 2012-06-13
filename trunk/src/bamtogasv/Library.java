@@ -28,7 +28,7 @@ public class Library {
 	public String name;
 	public ArrayList<GASVPair> firstNreads;
 	public boolean pairedTag, mateFound, computedStats;
-	public int Lmin,Lmax,counter,total_L, minRead_L;
+	public int Lmin,Lmax,counter,total_L, minRead_L, total_C;
 	public TreeMap<Integer, Integer> lengthHist; /// TreeMap is sorted
 	public HashMap<VariantType,Integer> numTmpFilesForVariant; // <variant_type, # of tmp files written>
 	public HashMap<VariantType,ArrayList<String>> rowsForVariant; // <variant_type,lines to sort> 
@@ -37,6 +37,7 @@ public class Library {
 		name = n;
 		mateFound=false;
 		total_L = 0;
+		total_C = 0;
 		Lmin = Integer.MIN_VALUE;
 		Lmax = Integer.MIN_VALUE;
 		minRead_L = Integer.MAX_VALUE;
