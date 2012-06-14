@@ -313,7 +313,33 @@ public class ReadESP extends ReadFile {
 			}
 
 		}
-		//make sure that the file is sorted correctly!
+	
+				if(isOverlapping(c)){
+					if(!overlapESPWarningRaised_){
+						Out.print("Warning: File: " +  file_ + " contains a PR with overlapping reads "
+								  + " GASV ignores such cases. The first such PR case encountered: "
+								  + nextLine);
+						overlapESPWarningRaised_ = true;
+					}
+					numOverlapping_++;
+					throw new Exception("Overlapping PR encountered: " + nextLine);
+				}
+				
+				if (isConcordant(c)) {
+					
+					if (!concordantESPWarningRaised_) {
+						Out.print("Warning: File: " + file_ + " contains concordant PR data! "
+								  + "Concordant data is ignored by GASV. The first concordant PR encountered: " 
+								  + nextLine);  
+						concordantESPWarningRaised_ = true;
+					}
+					numConcordant_++;
+					throw new Exception("Concordant PR encountered: " + nextLine);
+				}
+				
+
+				
+				//make sure that the file is sorted correctly!
 		if (useWindowSize && (Math.abs(c.getX()) < (endWindowPos_ - windowSize_))) {
 			Out.print("Encountered line " + nextLine + "\n with matching chromosomes but has coordinate " 
 					+ Math.abs(c.getX()) + " that is smaller than "
@@ -322,28 +348,7 @@ public class ReadESP extends ReadFile {
 		 	System.exit(-1);
 		}
 
-		if (isConcordant(c)) {
 
-			if (!concordantESPWarningRaised_) {
-				Out.print("Warning: File: " + file_ + " contains concordant PR data! "
-						+ "Concordant data is ignored by GASV. The first concordant PR encountered: " 
-						+ nextLine);  
-				concordantESPWarningRaised_ = true;
-			}
-			numConcordant_++;
-			throw new Exception("Concordant PR encountered: " + nextLine);
-		}
-				
-		if(isOverlapping(c)){
-			if(!overlapESPWarningRaised_){
-				Out.print("Warning: File: " +  file_ + " contains a PR with overlapping reads "
-						  + " GASV ignores such cases. The first such PR case encountered: "
-						  + nextLine);
-				overlapESPWarningRaised_ = true;
-			}
-			numOverlapping_++;
-			throw new Exception("Overlapping PR encountered: " + nextLine);
-		}
 
 		if (useWindowSize && (Math.abs(c.getX()) > endWindowPos_)) {
 			//Out.print3("TMP!!! ReadESP: cur read pair outside current window, with read.x= " + Math.abs(c.getX()) 
