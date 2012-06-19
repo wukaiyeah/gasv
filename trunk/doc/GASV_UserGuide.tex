@@ -12,6 +12,7 @@
 \usepackage{fancyvrb}
 \usepackage{tabularx}
 \usepackage{framed}
+\usepackage{float}
 
 \usepackage{graphicx,amsmath,amsthm,url,color,amsfonts}
 \DeclareMathOperator*{\argmax}{arg\,max}
@@ -34,7 +35,7 @@
 
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
-\title{User Guide for GASV (Version 2.0)}
+\title{User Guide for GASV and GASVPro (Version 2.0)}
 %\author{The Author}
 \date{}                                           % Activate to display a given date or no date
 
@@ -708,6 +709,88 @@ GASV provides two additional formatting options for the clusters file. These opt
 
 
 \noindent Note: The output produced from GASV.jar may differ from output produced by earlier versions of GASV. Refer to RELEASE\_NOTES.txt for more information.
+\clearpage
+
+\section{GASVPro}
+
+GASVPro is a probabilistic version of our original GASV algorithm.  GASVPro combines read depth information along with discordant paired-read mappings into a single probabilistic model. When multiple alignments of a read are given, GASVPro utilizes a Markov Chain Monte Carlo procedure to sample over the space of possible alignments.
+
+\subsection{GASVPro Input Parameters}
+Because GASVPro was designed to be run after BAMtoGASV and GASV, the input files to GASVPro will appear familiar to those who have experience with the GASV pipeline. There are also a number of probabilistic and statistical parameters that GASVPro requires.
+\begin{description}
+\item[] {\bf Input Files}{
+\begin{description}
+\item[] {\bf Clusters File}: must be in GASV Default Clusters Format (see section 4.3.2). {\bf NOTE:} The \verb+--output regions+ parameter must be passed to GASV to produce a clusters file of the correct format.
+\item[] {{\bf Concordant File}: must be in BAMtoGASV default output format ($<$chr$>$ $<$start$>$ $<$end$>$). The BAMtoGASV preprocessor produces these files with the {\bf-WRITE\_CONCORDANT} option set to {\bf True}. See section 3.2 for details. {\bf This file {\em must} be sorted numerically by start coordinate.}}
+\item[] {\bf Uniqueness Files}: must provide a directory in which uniqueness track files (of format $<$start$>$ $<$end$>$ $<$unique$>$) are named chr1\ldots chr$N$. {\bf These files also {\em must} be sorted numerically by start coordinate.}
+\end{description}}
+
+
+
+\item[] {\bf Numerical Parameters} {
+\begin {description}
+\item[] {\bf Average Fragment Length [Lavg] \& Average Read Length [ReadLen]}: {\em follow from sequencing libraries. In the event of multiple libraries, use the average over all datasets.}
+\item[] {\bf Lambda \& Perr}: {\em parameters for probabilistic model, see manuscript.}
+\item[] {\bf Minimum Fragment Size Limit}: this value is the smallest variant that GASVPro will use concordant coverage on.
+\item[] {\bf Tolerance}: Tolerance is used to remove regions that have abnormally high
+concordant coverage and, thus, can be eliminated from consideration
+as a structural variant. A tolerance of $t$ will eliminate from further consideration as a potential structural variant a prediction with $N$ concordant fragments provided $P(\ge N$ $|$ no variant$) > t$.
+\item[] {\bf Max Chromosome Number}: this is the highest {\em numerical value label} of all the chromosomes in the Clusters File.
+\item[] {\bf Max Uniqueness Value}: this parameter is the value assigned to the most mappable regions in the uniqueness files. 
+\item[] {\bf Minimum Scaled Uniqueness}: this parameter is the minimum value to which GASVPro will scale the uniqueness values for each variant. {\bf NOTE:} When this parameter is set to 1, all regions will have the same uniqueness value. 
+\item[] {\bf Verbose}: specifying Y will print information for each cluster processed. 
+\end{description}}
+\end{description}
+\subsection{Running GASVPro}
+
+There are two ways to run GASVPro: via command-line arguments or via a parameters file. We have provided a parameters file for running GASVPro, and highly recommend its use for convenience and to ensure input accuracy. The parameters file also allows for clean record-keeping and can be annotated.
+\begin{figure}[H]
+\begin{Verbatim}[frame=single]
+# A Sample GASVPro parameters file
+# Annotation can appear on any line beginning with a hash mark (#).
+clusterFile: <ClusterFile>
+ConcordantFile: <ConcordanceFile>
+UNIQUEFile: <UniquenessFile/Directory>
+Lavg: <value>
+ReadLen: <value>
+Lambda: <value>
+Perr: <value>
+Limit: <value>
+Tolerance: <value>
+MaxChrNumber: <value>
+MaxUniqueValue: <value>
+MinScaledUniqueness: <value>
+Verbose: Y
+\end{Verbatim}
+\caption{\bf A Sample GASVPro Parameters File}
+\end{figure}
+\noindent Using a parameters file allows the user to run GASVPro with the following command:
+	\begin{Verbatim}[frame=single]
+% ./GASVPro {ParametersFile}
+	\end{Verbatim}
+%\noindent Alternatively, it is possible to run GASVPro using only command line arguments, as follows. This method is not preferred, however, as it can easily lead to input errors. 
+%\begin{Verbatim}[frame=single]
+%% ./GASVPro {ClusterFile} {ConcordanceFile} {UniquenessFile/Directory} {Lavg} 
+%{ReadLen} {Lambda} {Perr} {Limit} {Tolerance} {MaxChrNumber} { MaxUniqueValue} 
+%{MinScaledUniqueness} {Verbose}
+%\end{Verbatim}
+
+\subsection{GASVPro Output}
+After successful completion GASVPro will output two files, a \verb+.clusters+ file and a \verb+.coverage+ file. Input parameters relevant to subsequent steps in the GASV pipeline will also be included in the filenames. The \verb+.clusters+ file contains the variance probabilities that GASVPro calculated. Here is an example GASVPro output, contained in the \verb+.clusters+ file:
+\begin{table}[htbp]\footnotesize
+   \centering
+   %\topcaption{Table captions are better up top} % requires the topcapt package
+   \begin{tabular}{llllllll} % Column formatting, @{} suppresses leading/trailing space
+ \#Cluster\_ID \& Variance:  &  NumPRS:   &  Localization: & Type:  &  List of PRS:   &     $\cdots$  & $\cdots$  &  $\cdots$ \\
+		\verb+c521_-650.01_-297.342+  &  \verb+1+  &    \verb+189+   &    \verb+D+     &  \verb+chr17_41883_42105_0:0:0_2:0:0_15789d3+   &    $\cdots$  &     $\cdots$&    $\cdots$
+    \end{tabular}
+   \caption{An Example GASVPro Output Cluster}
+   \label{tab:booktabs}
+\end{table}
+
+\noindent The field \verb+c1_-650.01_-297.342+ has the cluster name `c1' appended with 
+the likelihood c1 is a variant (\verb+-650.01+) and the likelihood that c1
+is not a variant (\verb+-297.342+). The rest of the information in the \verb+.clusters+ file is carried over from the input file. 
 
 
 \end{document}  
