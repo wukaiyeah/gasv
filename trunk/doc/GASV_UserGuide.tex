@@ -47,6 +47,7 @@
 \date{}                                           % Activate to display a given date or no date
 
 \begin{document}
+\bibliographystyle{plain}
 \maketitle
 
 \tableofcontents
@@ -86,14 +87,6 @@ S. Sindi, S. Onal, L. Peng, H. Wu, B.J. Raphael. An Integrative Probabilistic Mo
 
 
 
-\begin{wrapfigure}{r}{0.5\textwidth}
-  \begin{center}
-    \includegraphics[width=0.5\textwidth]{Figures/GASV_Workflow.pdf}
-  \end{center}
-  \caption{\textbf{GASV Workflow}}
-  \label{fig:GASVWorkflow}
-\end{wrapfigure}
-
 
 \subsection{Summary}
 
@@ -104,8 +97,15 @@ Requires: Perl, Java 5 (or higher), *nix OS, \\
 \noindent Tested with: Perl v5.10.0, Java 6, Linux 2.6.26 \\
 
 \noindent Building GASV from the source requires ant, available at: 
-http://ant.apache.org/
+http://ant.apache.org/ \clearpage
 
+\begin{wrapfigure}{r }{0.5\textwidth}
+  \begin{center}
+    \includegraphics[width=0.5\textwidth]{Figures/GASV_Workflow.pdf}
+  \end{center}
+  \caption{\textbf{GASV Workflow}}
+  \label{fig:GASVWorkflow}
+\end{wrapfigure}
 
 \subsection{GASV Workflow}
 
@@ -230,9 +230,9 @@ $ java -jar GASV.jar --batch Example.bam.gasv.in
 
 Below is the contents of the *\verb+.clusters+ file created, \verb+Example.bam.gasv.in.clusters+:
 
-\begin{framed}
+%\begin{framed}
 { \scriptsize
-\begin{Verbatim}
+\begin{Verbatim}[frame=single]
 #Cluster_ID: LeftChr: LeftBreakPoint:    RightChr: RightBreakPoint:   Num PRS: Localization: Type:
 c99          17       660077,660155      17        660177,660255      4        39.8          D
 c106         17       685625,685815      17        685996,686186      4        100.6         D
@@ -241,7 +241,7 @@ c5262        17       40566182,40566317  17        40567335,40567462  4        6
 c6367        17       50617507,50617679  17        50617548,50617720  4        87.8          D
 \end{Verbatim}
 }
-\end{framed}
+%\end{framed}
 The tab separated fields indicate that there are 5 predictions, 4 deletions and 1 
 inversion structural variant on chromosome 17. Examining the fourth line more carefully, cluster c5262 supports an inversion with left breakpoint occurs between positions 40566182, 40566316 and the 
 right breakpoint between positions 40567335, 40567462.
@@ -729,118 +729,156 @@ GASV provides two additional formatting options for the clusters file. These opt
 \section{GASVPro}
 
 \subsection{Running GASVPro}
-GASVPro is a probabilistic version of our original GASV algorithm, designed to be run after GASV. GASVPro combines read depth information along with discordant paired-read mappings into a single probabilistic model. 
-%When multiple alignments of a read are given, GASVPro utilizes a Markov Chain Monte Carlo procedure to sample over the space of possible alignments.
 
-GASVPro can be run with a PARAMETERS file (put code). There are many different options available, detailed below; however, for ease of use a PARAMETERS file is created with the execution of BAMToGASV when {\bf-WRITE\_CONCORDANT} option set to {\bf True} (see Example above). Users are encouraged to begin with this default parameters file and to add/modify options as needed by their specific application.
+GASVPro is a probabilistic version of our original GASV algorithm, designed to be run after GASV. GASVPro combines read depth information along with discordant paired-read mappings into a single probabilistic model. The program is run by passing a parameters file and a \verb+.clusters+ file on the command line as follows:
+\begin{Verbatim}[frame=single]
+$ ./GASVPro <parametersFile> <clustersFile>
+\end{Verbatim}
+%%CHANGE TO GASVPRO OPTION
+ There are many different options available, detailed below; however, for ease of use a parameters file is created with the execution of BAMToGASV when the {\bf-WRITE\_CONCORDANT} option set to {\bf True} (see Example above). Users are encouraged to begin with this default parameters file and to add/modify options as needed by their specific application.
 
 \subsection{GASVPro Parameters} 
 
-Put the full parameters file; mention that you can comment things in the file and that in the figure shown we separate the required from the optional parameters. 
-%##REQUIRED
-
-%##OPTIONAL
-
-\subsubsection{Input Files}
-Because GASVPro was designed to be run after BAMtoGASV and GASV, the input files to GASVPro will appear familiar to those who have experience with the GASV pipeline. There are also a number of parameters needed by the probabilistic model of GASVPro.
-
-\begin{description}
-\item[{\bf Clusters File}:] must be in GASV Regions Clusters Format (see section~\ref{sec:BTGCLO}). 
-\begin{itemize}
-\item {\bf NOTE:} The \verb+--output regions+ parameter must be passed to GASV to produce a clusters file of the correct format. 
-\item {\bf NOTE:} The current version of GASVPro does not support divergent variants. They can be included in cluster files but will be ignored. 
-\end{itemize}
-\item[{\bf Concordant File}:]  must be in BAMtoGASV default output format ($<$chr$>$ $<$start$>$ $<$end$>$). 
-\begin{itemize}
-\item The BAMtoGASV preprocessor produces these files with the {\bf-WRITE\_CONCORDANT} option set to {\bf True}. See Section 3.2 for details. 
-\item {\bf NOTE:} If users provide their own concordant file it must follow the same format and {\bf must} be sorted numerically by start coordinate.
-\end{itemize}
-\item[{\bf Uniqueness File}:]  Because GASVPro's model is based on read depth, users may want to incorporate biases in the expected coverage (such as GC content or local mapability). A uniqueness file is a {\bf single file} of format $<$chr$>$ $<$start$>$ $<$end$>$ $<$unique$>$. (See below for more information.) The uniqueness file {\bf must} be sorted numerically by start coordinate.
-\end{description}
-
-\subsubsection{Probability Model Parameters}
-\begin {description}
-\item[Average Fragment Length (Lavg) \& {\bf Average Read Length (ReadLen)}:] {\em follow from sequencing libraries. In the event of multiple libraries, use the average over all datasets.}
-\item[{\bf Lambda \& Perr}:] {\em parameters for probabilistic model, see manuscript.}
-\item[\bf Minimum Fragment Size (Limit):] this value is the smallest variant that GASVPro will use concordant coverage on.
-\item[{\bf Tolerance}: ] Tolerance is used to remove regions that have abnormally high
-concordant coverage and, thus, can be eliminated from consideration
-as a structural variant. A tolerance of $t$ will eliminate from further consideration as a potential structural variant a prediction with $N$ concordant fragments provided $P(\ge N$ $|$ no variant$) > t$.
-\item[{\bf Max Uniqueness Value}:]  this parameter is the value assigned to the most mappable regions in the uniqueness files. 
-\item[{\bf Minimum Scaled Uniqueness}:]  this parameter is the minimum value to which GASVPro will scale the uniqueness values for each variant. {\bf NOTE:} When this parameter is set to 1, all regions will have the same uniqueness value. 
-\end{description}
-
-\subsubsection{Formatting Output}
-\begin{description}
-\item[{\bf Max Chromosome Number}:]  this is the highest {\em numerical value label} of all the chromosomes in the Clusters File.
-\item[Translocations Mode:] running GASVPro in translocations mode will enable the processing of translocation clusters along with deletions and inversions (see page~\pageref{structvartypes} for accepted translocation types). {\bf WARNING: Processing translocations takes exponentially more time than processing deletions and inversions alone.} If possible, we recommend running Translocations Only mode on datasets with large numbers of translocations and possibly running two copies of GASVPro in parallel (one for translocations, another for inversions and deletions).
-\item[Translocations Only (TransOnly):] setting this value to \verb+true+ will process translocations ONLY, ignoring all other types. {\bf WARNING: This operation will take hours.}
-\item[Likelihood Ratio Threshold (LRThreshold):] Users can input a numerical value or the string \verb+all+. GASVPro will only return clusters with a LR greater than or equal to the input value (See section~\ref{LRexp} for explanation of LR). If \verb+all+ is given, all clusters will be printed.
-\item[{\bf Verbose}:] specifying \verb+Y+ will print information for each cluster processed. 
-\end{description}
-
-\subsection{Running GASVPro}
-
-GASVPro runs by providing a parameters file to the program. We have provided a parameters file for running GASVPro, and highly recommend its use for convenience and to ensure input accuracy. The parameters file also allows for clean record-keeping and can be annotated.
+Here we provide a sample parameters file. 
 \begin{figure}[H]
 \begin{Verbatim}[frame=single]
 # A Sample GASVPro parameters file
 # Annotation can appear on any line beginning with a hash mark (#).
-clusterFile: <ClusterFile>
+# REQUIRED PARAMETERS:
 ConcordantFile: <ConcordanceFile>
-UNIQUEFile: <UniquenessFile>
 Lavg: <value>
 ReadLen: <value>
 Lambda: <value>
 Perr: <value>
 Limit: <value>
 Tolerance: <value>
+LRThreshold: <value/all>
 MaxChrNumber: <value>
+# OPTIONAL PARAMETERS: 
+UNIQUEFile: <UniquenessFile>
 MaxUniqueValue: <value>
 MinScaledUniqueness: <value>
-LRThreshold: <value/all>
 Translocations: <true/false>
 TransOnly: <true/false>
 Verbose: Y
 \end{Verbatim}
 \caption{\bf A Sample GASVPro Parameters File}
 \end{figure}
-\noindent We have preprogrammed default values for some of these parameters. These hard-coded values are as follows:
-\begin{framed}
-\noindent Perr = \verb+0.01+\\
-Limit = \verb+1000+\\
-Tolerance = \verb+.0001+\\
-MaxChrNumber = \verb+100+ {\scriptsize NOTE: It is highly advisable to lower this value to reduce runtime, if possible.} $More \Downarrow$ \\
-TranslocationsMode = \verb+false+\\
-TransOnly = \verb+false+\\
-LRThreshold: \verb+all+
-\end{framed}
-\noindent Finally, using a parameters file allows the user to run GASVPro with the following command:
-	\begin{Verbatim}[frame=single]
-$ ./GASVPro {ParametersFile}
-	\end{Verbatim}
-%\noindent Alternatively, it is possible to run GASVPro using only command line arguments, as follows. This method is not preferred, however, as it can easily lead to input errors. 
-%\begin{Verbatim}[frame=single]
-%% ./GASVPro {ClusterFile} {ConcordanceFile} {UniquenessFile/Directory} {Lavg} 
-%{ReadLen} {Lambda} {Perr} {Limit} {Tolerance} {MaxChrNumber} { MaxUniqueValue} 
-%{MinScaledUniqueness} {Verbose}
-%\end{Verbatim}
+
+
+\subsubsection{Input Files}
+Because GASVPro was designed to be run after BAMtoGASV and GASV, the input files to GASVPro will appear familiar to those who have experience with the GASV pipeline. There are also a number of parameters needed by the probabilistic model of GASVPro.
+
+\begin{description}
+\item{\bf Clusters File}: must be in GASV Regions Clusters Format (see section~\ref{sec:BTGCLO}). 
+\begin{itemize}
+\item {\bf NOTE:} The \verb+--output regions+ parameter must be passed to GASV to produce a clusters file of the correct format. 
+\item {\bf NOTE:} The current version of GASVPro does not support divergent variants. They can be included in cluster files but will be ignored. 
+\end{itemize}
+\item{\bf Concordant File}: must be in BAMtoGASV default output format ($<$chr$>$ $<$start$>$ $<$end$>$). 
+\begin{itemize}
+\item The BAMtoGASV preprocessor produces these files with the {\bf-WRITE\_CONCORDANT} option set to {\bf True}. See Section 3.2 for details. 
+\item {\bf NOTE:} If users provide their own concordant file it must follow the same format and {\bf must} be sorted numerically by start coordinate.
+\end{itemize}
+\item{\bf Uniqueness File}:  Because GASVPro's model is based on read depth, users may want to incorporate biases in the expected coverage (such as GC content or local mapability). A uniqueness file is a {\bf single file} of format $<$chr$>$ $<$start$>$ $<$end$>$ $<$unique$>$. (See Section~\ref{sec:modeloverview} for more information.) The uniqueness file {\bf must} be sorted numerically by start coordinate.
+\end{description}
+
+\subsubsection{Probability Model Parameters}
+\begin {description}
+\item {\bf Average Fragment Length (Lavg) \& Average Read Length (ReadLen)}: {\em follow from sequencing libraries. In the event of multiple libraries, use the average over all datasets.}
+\item{\bf Lambda \& Perr}: {\em parameters for probabilistic model, see manuscript.}
+\begin{itemize}
+\item {\bf Perr Default Value}: \verb+0.01+
+\end{itemize}
+\item {\bf Minimum Fragment Size (Limit)}: this value is the smallest variant that GASVPro will use concordant coverage on.
+\begin{itemize}
+\item {\bf Default Value}: \verb+1000+
+\end{itemize}
+\item {\bf Tolerance}:  Tolerance is used to remove regions that have abnormally high
+concordant coverage and, thus, can be eliminated from consideration
+as a structural variant. A tolerance of $t$ will eliminate from further consideration as a potential structural variant a prediction with $N$ concordant fragments provided $P(\ge N$ $|$ no variant$) > t$.
+\begin{itemize}
+\item {\bf Default Value}: \verb+0.0001+
+\end{itemize}
+\item{\bf Max Uniqueness Value}:  this parameter is the value assigned to the most mappable regions in the uniqueness files. 
+\item{\bf Minimum Scaled Uniqueness}:  this parameter is the minimum value to which GASVPro will scale the uniqueness values for each variant. {\bf NOTE:} When this parameter is set to 1, all regions will have the same uniqueness value. 
+\begin{itemize}
+\item {\bf Default Value}: \verb+0.3+
+\end{itemize}
+\end{description}
+
+\subsubsection{Parameters for Formatting Output}
+\begin{description}
+\item{\bf Max Chromosome Number}:  this is the highest {\em numerical value label} of all the chromosomes in the Clusters File.
+\begin{itemize}
+\item {\bf Default Value}: \verb+100+ {\scriptsize NOTE: It is highly advisable to lower this value to reduce runtime, if possible.}
+\end{itemize}
+\item {\bf Translocations Mode}: running GASVPro in translocations mode will enable the processing of translocation clusters along with deletions and inversions (see page~\pageref{structvartypes} for accepted translocation types). {\bf WARNING: Processing translocations takes exponentially more time than processing deletions and inversions alone.} If possible, we recommend running Translocations Only mode on datasets with large numbers of translocations and possibly running two copies of GASVPro in parallel (one for translocations, another for inversions and deletions).
+\begin{itemize}
+\item {\bf Default Value}: \verb+false+
+\end{itemize}
+\item {\bf Translocations Only (TransOnly)}: setting this value to \verb+true+ will process translocations ONLY, ignoring all other types. {\bf WARNING: This operation can take hours.}
+\begin{itemize}
+\item {\bf Default Value}: \verb+false+
+\end{itemize}
+\item {\bf Likelihood Ratio Threshold (LRThreshold)}: Users can input a numerical value or the string \verb+all+. GASVPro will only return clusters with a LR greater than or equal to the input value (See section~\ref{LRexp} for explanation of LR). If \verb+all+ is given, all clusters will be printed.
+\begin{itemize}
+\item {\bf Default Value}: \verb+all+
+\end{itemize}
+\item {\bf Verbose}: specifying \verb+Y+ will print information for each cluster processed. 
+\end{description}
 
 \subsection{GASVPro Model Overview}
+\label{sec:modeloverview}
 
 We provide a brief overview of the GASVPro model, a full description of our model and algorithm is available in (cite manuscript).
 
 \subsubsection{Poisson Coverage Model}
-What is Lambda, what is perr.
-How is read depth integrated
+%CITATIONS
+ A full description of the GASVPro model is available in our manuscript (cite). To assist users in selecting meaningful parameter values we detail here the read depth model used to predict deletion SVs.  A deletion SV leaves a strong signal of reduced coverage, as shown in Figure. That is, for a true deletion coverage by concordant fragments should be reduced throughout the entire deleted segment. 
+ 
+Let $B$ be a prediction deletion breakend region defined by $k$ discordant fragments.  Define $a_{\max} = \argmax_{a} \{(a,b) \in B\}$, the maximum choice for $a$ and $b_{\min} = \argmin_{b} \{(a,b) \in B\}$, the minimum choice for $b$. For any choice of mated breakends $(a,b) \in B$, the interval $I(B) = [a_{\max},b_{\min}]$ will be deleted.  Let $n(I)$ be the number of concordant fragments whose mappings overlap the interval $I(B)$.  
+
+We follow the Poisson model for coverage as described in (CITE). If $N$ fragments with average size $L_{avg}$ have been sequenced from a genome of size $G$. Then the number of fragments containing an arbitrary position in the genome is Poisson with mean $\lambda = NL/G$. Thus, we expect the number of fragments $k$ covering a single point to be Poisson with mean $\lambda$ and overlapping an interval $n(I)$ to be Poisson with mean $\lambda_{I}$ where
+
+$$\lambda_{I} = \lambda( (b_{\min} - a_{\max}) + L_{avg}).$$
+
+GASVPro considers the probability of three events: 
+\begin{itemize}
+\item Prob(B is a homozygous deletion); $P(2) = \left( p_{err}^{n(I)} \right) Pois(\lambda, k)$,
+\item Prob(B is a heterozygous deletion) $P(1) = Pois\left(\lambda_I/2, n(I) \right) Pois(\lambda/2, k)$, 
+\item Prob(B is an error); $P(0)  = Pois\left(\lambda_I, n(I) \right) \left( p_{err}^{k}\right),$
+\end{itemize}
+
+\noindent where $p_{err}$ is the probability of an erroneous mapping. The final log-likelihood ratio output is the 
+\begin{equation}
+\log \Lambda(V) = \frac{\max \{\log( P(2) ), \log(P(1)) \}}{ \log(P(0))}.
+\end{equation}
+
 
 \subsubsection{Uniqueness Scaling}
-How uniqueness scaling is done. 
+In addition to structural variants, there are several local factors that will affect coverage by concordant fragments. Reads originating from duplications present in both the test and reference genome can not be mapped to a unique position. Thus, such regions will have low coverage due to restrictions in local mapability. Further, some technologies have biases due to sequence composition. To account for these differences, we allow scaling of $n(I)$ to more accurately reflect these biases. (In the GASVPro manuscript we used the The Rosetta Uniqueness Track; however, users may supply their own track.) 
+
+An uniqueness file contains genomic intervals along with a numerical value describing their uniqueness. As mentioned above, this is a single file formatted: $<$chr$>$ $<$start$>$ $<$end$>$ $<$uniqueness$>$. 
+
+Internally, GASVPro uses this information to scale the number $n(I)$ of concordant fragments mapping to $I(B)$. The scaled  concordant coverage is $\hat{n}(I)$, where
+\begin{equation}
+\hat{n}(I)= \frac{n(I)}{\alpha + (1-\alpha) \overline{U}(I)},
+\end{equation}
+\noindent where $\overline{U}(I)$ is the average uniqueness value of a point in interval $I(B)$ divided by the maximum possible uniqueness track and by default  $\alpha = 0.3$. Notice, when the interval $I$ does not have compromised mapability, i.e., $\overline{U}(I) = 1$, we do not adjust the number of observed fragments, $\hat{n}(I) = n(I)$.
+
+\begin{itemize}
+\item When a uniqueness file is not specified, all regions are taken to have scaled uniqueness value 1.
+\item Users must specify a ``maxUniqueValue'' to use the track because we assume all genomic intervals not listed in a uniqueness file to have this uniqueness. (As such, users may only list regions of the genome with low-mapability.)
+\item The parameter $\alpha$ can be changed with the ``minScaledUniqueness'' parameter.
+\item As described in our manuscript, we only scale concordant coverage in the case of deletions.  
+\end{itemize}
+\clearpage
 
 
 \subsection{GASVPro Output}
 After successful completion GASVPro will output two files, a \verb+.clusters+ file and a \verb+.coverage+ file. Input parameters relevant to subsequent steps in the GASV pipeline will also be included in the filenames. The \verb+.clusters+ file contains the variance probabilities that GASVPro calculated. Here is an example GASVPro output, contained in the \verb+.clusters+ file:
-\begin{table}[htbp]\small
+\begin{table}[h]\small
    \centering
    %\topcaption{Table captions are better up top} % requires the topcapt package
    \begin{tabular}{lllllllll} % Column formatting, @{} suppresses leading/trailing space
@@ -870,5 +908,7 @@ Additionally, GASVPro will output another file which offers more information gen
 	\item[] Algorithm Code: {\small indicates which process was used to calculate these values.}
 	\end{itemize}
 \end{framed}
+
+
 
 \end{document}  
