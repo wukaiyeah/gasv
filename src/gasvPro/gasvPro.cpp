@@ -617,99 +617,101 @@ int main(int argc, char* argv[]){
 		cout << "done." << endl;
 
 		
-		uFile.open(UNIQUEINPUT.c_str(),ios::in);
-		cout << "\t\tAnalyzing Uniqueness...." << endl;
-		int numDone = 0;
-		int count = 0;
-		while(uFile >> tmpChr >> tmpStart >> tmpEnd >> uniqueVal)
-		{
-			
-			if(count%200000 == 0){cout << "\t\t\tProcessed " << count << " fragments." << endl;}
-			count++;
-			if(tmpChr > chrNumber)
-				break;
-			if(tmpChr != chrNumber)
-				continue;
-			vector<Interval<uInt*>* > overlap;
-			
-			uniquenessTree.findOverlapping(tmpStart, tmpEnd, overlap);
-			//LASTSTREAMPOS = uFile.tellg();
-			for(int a = 0; a < overlap.size(); a++)
+		if(IS_UNIQUE){
+			uFile.open(UNIQUEINPUT.c_str(),ios::in);
+			cout << "\t\tAnalyzing Uniqueness...." << endl;
+			int numDone = 0;
+			int count = 0;
+			while(uFile >> tmpChr >> tmpStart >> tmpEnd >> uniqueVal)
 			{
-				//deal with overlap here.
-				if(tmpStart >= overlap[a]->value->start && tmpEnd >= overlap[a]->value->end)
+				
+				if(count%200000 == 0){cout << "\t\t\tProcessed " << count << " fragments." << endl;}
+				count++;
+				if(tmpChr > chrNumber)
+					break;
+				if(tmpChr != chrNumber)
+					continue;
+				vector<Interval<uInt*>* > overlap;
+				
+				uniquenessTree.findOverlapping(tmpStart, tmpEnd, overlap);
+				//LASTSTREAMPOS = uFile.tellg();
+				for(int a = 0; a < overlap.size(); a++)
 				{
-					overlap[a]->value->bases += overlap[a]->value->end - tmpStart;
-					overlap[a]->value->uniqueness += (uniqueVal*(overlap[a]->value->end - tmpStart));
-					if(overlap[a]->value->bases == overlap[a]->value->length)
+					//deal with overlap here.
+					if(tmpStart >= overlap[a]->value->start && tmpEnd >= overlap[a]->value->end)
 					{
-						double preUnique = overlap[a]->value->uniqueness;
-						int length = overlap[a]->value->length;
-						overlap[a]->value->uniqueness = preUnique/length;
-						numDone++;
-						//cout << "completed1A" << endl;
+						overlap[a]->value->bases += overlap[a]->value->end - tmpStart;
+						overlap[a]->value->uniqueness += (uniqueVal*(overlap[a]->value->end - tmpStart));
+						if(overlap[a]->value->bases == overlap[a]->value->length)
+						{
+							double preUnique = overlap[a]->value->uniqueness;
+							int length = overlap[a]->value->length;
+							overlap[a]->value->uniqueness = preUnique/length;
+							numDone++;
+							//cout << "completed1A" << endl;
+						}
+						continue;
 					}
-					continue;
-				}
-				if(tmpStart <= overlap[a]->value->start && tmpEnd >= overlap[a]->value->end)
-				{
-					int length = overlap[a]->value->length;
-					overlap[a]->value->bases = length;
-					overlap[a]->value->uniqueness = uniqueVal;
-					numDone++;
-					//cout << "Completed2" << endl;
-					continue;
-				}
-				if(tmpStart <= overlap[a]->value->start && tmpEnd <= overlap[a]->value->end)
-				{
-					int overlapVal = tmpEnd - overlap[a]->value->start;
-					overlap[a]->value->bases += overlapVal;
-					overlap[a]->value->uniqueness += (uniqueVal*overlapVal);
-					if(overlap[a]->value->bases == overlap[a]->value->length)
+					if(tmpStart <= overlap[a]->value->start && tmpEnd >= overlap[a]->value->end)
 					{
-						double preUnique = overlap[a]->value->uniqueness;
 						int length = overlap[a]->value->length;
-						overlap[a]->value->uniqueness = preUnique/length;
+						overlap[a]->value->bases = length;
+						overlap[a]->value->uniqueness = uniqueVal;
 						numDone++;
-						//cout << "completed3A" << endl;
+						//cout << "Completed2" << endl;
+						continue;
 					}
-					continue;
+					if(tmpStart <= overlap[a]->value->start && tmpEnd <= overlap[a]->value->end)
+					{
+						int overlapVal = tmpEnd - overlap[a]->value->start;
+						overlap[a]->value->bases += overlapVal;
+						overlap[a]->value->uniqueness += (uniqueVal*overlapVal);
+						if(overlap[a]->value->bases == overlap[a]->value->length)
+						{
+							double preUnique = overlap[a]->value->uniqueness;
+							int length = overlap[a]->value->length;
+							overlap[a]->value->uniqueness = preUnique/length;
+							numDone++;
+							//cout << "completed3A" << endl;
+						}
+						continue;
+					}	
+					if(tmpStart >= overlap[a]->value->start && tmpEnd <= overlap[a]->value->end)
+					{
+						int overlapVal = tmpEnd-tmpStart;
+						overlap[a]->value->bases += overlapVal;
+						overlap[a]->value->uniqueness += (uniqueVal*overlapVal);
+						if(overlap[a]->value->bases == overlap[a]->value->length)
+						{
+							double preUnique = overlap[a]->value->uniqueness;
+							int length = overlap[a]->value->length;
+							overlap[a]->value->uniqueness = preUnique/length;
+							numDone++;
+							//cout << "completed4A" << endl;
+						}
+					}
+				}			
+				i++; 
+			}
+			
+			uFile.close();
+			
+			if(allIntervals.size() != numDone)
+			{
+				vector<Interval<uInt*>* > overlap;
+				uniquenessTree.findOverlapping(0, LARGESTPOS, overlap);
+				for(int i = 0; i < overlap.size(); i++)
+				{
+					if(overlap[i]->value->bases != overlap[i]->value->length)
+					{	
+						//cout << overlap[i]->value->bases << " " << overlap[i]->value->length << endl;
+						double notCovered = overlap[i]->value->length - overlap[i]->value->bases;
+						overlap[i]->value->uniqueness += (notCovered*MAX_UNIQUE_VALUE);
+						double preUnique = overlap[i]->value->uniqueness;
+						overlap[i]->value->uniqueness = preUnique/overlap[i]->value->length;
+					}
 				}	
-				if(tmpStart >= overlap[a]->value->start && tmpEnd <= overlap[a]->value->end)
-				{
-					int overlapVal = tmpEnd-tmpStart;
-					overlap[a]->value->bases += overlapVal;
-					overlap[a]->value->uniqueness += (uniqueVal*overlapVal);
-					if(overlap[a]->value->bases == overlap[a]->value->length)
-					{
-						double preUnique = overlap[a]->value->uniqueness;
-						int length = overlap[a]->value->length;
-						overlap[a]->value->uniqueness = preUnique/length;
-						numDone++;
-						//cout << "completed4A" << endl;
-					}
-				}
-			}			
-			i++; 
-		}
-		
-		uFile.close();
-		
-		if(allIntervals.size() != numDone)
-		{
-			vector<Interval<uInt*>* > overlap;
-			uniquenessTree.findOverlapping(0, LARGESTPOS, overlap);
-			for(int i = 0; i < overlap.size(); i++)
-			{
-				if(overlap[i]->value->bases != overlap[i]->value->length)
-				{	
-					//cout << overlap[i]->value->bases << " " << overlap[i]->value->length << endl;
-					double notCovered = overlap[i]->value->length - overlap[i]->value->bases;
-					overlap[i]->value->uniqueness += (notCovered*MAX_UNIQUE_VALUE);
-					double preUnique = overlap[i]->value->uniqueness;
-					overlap[i]->value->uniqueness = preUnique/overlap[i]->value->length;
-				}
-			}	
+			}
 		}
 		int uniqErrors = allIntervals.size() - numDone;
 		numDone = 0;
@@ -718,7 +720,7 @@ int main(int argc, char* argv[]){
 		
 		
 		inFile.open(ESPINPUT.c_str(), ios::in);
-		count = 0;
+		int count = 0;
 		cout << "\t\tAnalyzing Concordance...." << endl;
 		while( inFile >> tmpChr >> tmpStart >> tmpEnd)
 		{

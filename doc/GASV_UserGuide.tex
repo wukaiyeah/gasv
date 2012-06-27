@@ -13,6 +13,13 @@
 \usepackage{tabularx}
 \usepackage{framed}
 \usepackage{float}
+\usepackage{hyperref}
+
+\newcommand{\sectionline}{
+  \nointerlineskip \vspace{\baselineskip}
+  \hspace{\fill}\rule{0.3\linewidth}{.7pt}\hspace{\fill}
+  \par\nointerlineskip \vspace{\baselineskip}
+}
 
 \usepackage{graphicx,amsmath,amsthm,url,color,amsfonts}
 \DeclareMathOperator*{\argmax}{arg\,max}
@@ -55,15 +62,29 @@ Classification and Comparison of Structural Variants. Joint: 17th
 Annual International Conference on Intelligent Systems in Molecular
 Biology and 8th Annual International European Conference on
 Computational Biology (ISMB/ECCB 09).  Bioinformatics 2009
-25(12):i222-i230.\\
+25(12):i222-i230. \href{http://dx.doi.org/10.1093/bioinformatics/btp208}{doi:10.1093/bioinformatics/btp208}\\
 
 \noindent This product includes software developed by the Solution Engineering,
-Inc. (http://www.seisw.com/). \\
+Inc. (\url{http://www.seisw.com/}).\\
 
-\noindent Contact: Benjamin Raphael at gasv@cs.brown.edu \\
+\noindent Contact: Benjamin Raphael at \href{mailto:gasv@cs.brown.edu}{\nolinkurl{gasv@cs.brown.edu}}\\
 
 \noindent Version: 2.0 \\
-\noindent Version Date: May 30 2012
+\noindent Version Date: May 30 2012 
+
+\sectionline
+
+\noindent GASVPro is a probabilistic version of the GASV algorithm, combining read depth information with discordant paired-read mappings into a single model. \\
+
+\noindent If you use GASVPro in your research, please cite: \\ \\ 
+S. Sindi, S. Onal, L. Peng, H. Wu, B.J. Raphael. An Integrative Probabilistic Model for Identification of Structural Variation in Sequencing Data. Genome Biology 2012 13(3):R22. \href{http://dx.doi.org/10.1186/gb-2012-13-3-r22}{doi:10.1186/gb-2012-13-3-r22}.\\
+
+\noindent This product contains software developed by Erik Garrison (\url{http://github.com/ekg}), see license.\\ \\ 
+\
+\noindent Version: 1.0\\
+\noindent Version Date: June 21 2012
+
+
 
 \begin{wrapfigure}{r}{0.5\textwidth}
   \begin{center}
@@ -110,32 +131,33 @@ L_{\min} \le \text{sign}(x)(a - x) + \text{sign}(y) (b - y) \le L_{\max}, \nonum
 
 You may either download executable jar files from\\
 
-\noindent http://code.google.com/p/gasv/downloads/ \\
+\noindent \url{http://code.google.com/p/gasv/downloads/}\\
 
 \noindent or build our code directly from the source.  
 
-Building GASV from the source requires ant, available at: http://ant.apache.org/. To install from the source check out a read-only working copy from 
+Building GASV from the source requires ant, available at: \url{http://ant.apache.org/}. To install from the source check out a read-only working copy from 
 
 \begin{framed}
 {\normalsize
-\noindent \texttt{\% svn checkout http://gasv.googlecode.com/svn/trunk/ gasv-read-only}
+\noindent \texttt{\$ svn checkout http://gasv.googlecode.com/svn/trunk/ gasv-read-only}
 }
 \end{framed}
 
-\noindent and install from the command line with ant
+\noindent and install from the command line with the following command:
 
 \begin{framed}
 {\normalsize
-\noindent \texttt{\% ant}
+\noindent \texttt{\$ ./install}
 }
 \end{framed}
 
-\noindent During installation the java *class files are built into the build subdirectory. After installation the following executable jar files are created:
+\noindent During installation the java *\verb+.class+ files for BAMToGASV and GASV are built into the \verb+/build+ subdirectory. After installation the following executable files are created:
 	
 \begin{framed}
 {\normalsize
 \noindent \texttt{bin/GASV.jar }\\
-\noindent \texttt{bin/BAMToGASV.jar }
+\noindent \texttt{bin/BAMToGASV.jar }\\
+\noindent \texttt{bin/GASVPro}
 }
 \end{framed}
 
@@ -147,11 +169,9 @@ are encoded in a BAM file.
 
 To demonstrate using BAMToGASV preprocessor in conjunction with GASV, we will use the file ``Example.bam'' available as a separate download from the GASV website:
 
-\begin{framed}
-\begin{Verbatim}
+\begin{Verbatim}[frame=single]
 http://code.google.com/p/gasv
 \end{Verbatim}
-\end{framed}
 
 More documentation is available for both GASV and BAMToGASV Preprocessor 
 in sections below.  
@@ -160,32 +180,26 @@ in sections below.
 
 The following command creates GASV input files by considering paired-reads (PRs) 
 from the BAM file ``Example.bam" (this particular BAM file contains no library information and contains only reads from chr17, so no translocations):
-\begin{framed}
 {\normalsize
-\begin{Verbatim}
-% java -Xms512m -Xmx2048m -jar BAMToGASV.jar Example.bam
+\begin{Verbatim}[frame=single]
+$ java -Xms512m -Xmx2048m -jar BAMToGASV.jar Example.bam
 \end{Verbatim}
 }
-\end{framed}
 
 As we detail further below, there are many options available for BAMToGASV. For example, use a minimum quality of $30$ and determine Lmin/Lmax by 3 standard deviations away from the mean, the command is
 
-\begin{framed}
 {\scriptsize
-\begin{Verbatim}
-% java -Xms512m -Xmx2048m -jar BAMToGASV.jar Example.bam -MAPPING_QUALITY 30 -CUTOFF_LMINLMAX SD=3
+\begin{Verbatim}[frame=single]
+ $ java -Xms512m -Xmx2048m -jar BAMToGASV.jar Example.bam -MAPPING_QUALITY 30 -CUTOFF_LMINLMAX SD=3
 \end{Verbatim}
 }
-\end{framed}
 
 If the BAM file contains multiple libraries, to process them as one set (rather than indvididually) the command is
-\begin{framed}
 {\small
-\begin{Verbatim}
-% java -Xms512m -Xmx2048m -jar BAMToGASV.jar Example.bam -LIBRARY_SEPARATED all
+\begin{Verbatim}[frame=single]
+$ java -Xms512m -Xmx2048m -jar BAMToGASV.jar Example.bam -LIBRARY_SEPARATED all
 \end{Verbatim}
 }
-\end{framed}
 
 \noindent Running the above command creates the following files:\\
 
@@ -206,15 +220,15 @@ The rest of the files are PR files in the GASV input format, separated by varian
 The following command will report inversion, deletion and divergent structural variants using the batch input file produced by BAMToGASV. Note the default behavior of GASV is to only report variants with at least 4 supporting fragments.  
 In addition, if GASV.jar has not been added to the PATH, then a fully qualified pathname must be used.
 
-\begin{framed}
-{\small
-\begin{Verbatim}
-% java -jar GASV.jar --batch Example.bam.gasv.in
+%\begin{framed}
+{
+\begin{Verbatim}[frame=single]
+$ java -jar GASV.jar --batch Example.bam.gasv.in
 \end{Verbatim}
 }
-\end{framed}
+%\end{framed}
 
-Below is the contents of the *clusters file created, Example.bam.gasv.in.clusters:
+Below is the contents of the *\verb+.clusters+ file created, \verb+Example.bam.gasv.in.clusters+:
 
 \begin{framed}
 { \scriptsize
@@ -255,7 +269,7 @@ fragments. (By default, this parameter is set to 4.) For increased sensitivity, 
 \begin{framed}
 { \small
 \begin{Verbatim}
-% java -jar GASV.jar --minClusterSize 2 --batch Example.bam.gasv.in
+$ java -jar GASV.jar --minClusterSize 2 --batch Example.bam.gasv.in
 \end{Verbatim}
 }
 \end{framed}
@@ -274,13 +288,13 @@ the ``-{}-maxPairedEndsPerWin'' option.
 
 \item -{}-output $<$val$>$
 As we detail below, there are three different output formats
-that can be specified for *clusters file. The reads format, ``-{}-output reads'' 
+that can be specified for *\verb+.clusters+ file. The reads format, ``-{}-output reads'' 
 will list the names of the reads in a cluster. 
 
 \begin{framed}
 {\small
 \begin{Verbatim}
-% java -jar GASV.jar --output reads --batch Example.bam.gasv.in
+$ java -jar GASV.jar --output reads --batch Example.bam.gasv.in
 \end{Verbatim}
 }
 \end{framed}
@@ -301,6 +315,7 @@ BAMToGASV is currently designed to process BAM files where each read has at most
 
 
 \subsection{Command Line Options}
+\label{sec:BTGCLO}
 
 \begin{Verbatim}[frame=single]
 java -Xms512m -Xmx2048m -jar BAMToGASV.jar <BAMFile> [Options]
@@ -395,14 +410,12 @@ In addition to a GASV formatted input file, GASV requires the minimum/maximum
 allowable fragment length (Lmin/Lmax) for concordant pairs. The values of Lmin
 and Lmax are automatically computed by the BAMToGASV. The calculated values of Lmin and Lmax are output to stdout and written to OUTPUT\_PREFIX.info. In the Quickstart guide, the contents of Example.bam.info are:
 
-\begin{framed}
-{\normalsize
-\begin{Verbatim}
+{
+\begin{Verbatim}[frame=single]
 LibraryName     Lmin    Lmax
 all             153     246
 \end{Verbatim}
 }
-\end{framed}
 
 The batch input file is written to OUTPUT\_PREFIX.gasv.in.  It is a GASV input format that is described below.  All PR files except insertions are written to this file; GASV does not currently support insertions.
 
@@ -606,6 +619,7 @@ GASV outputs a clusters file named $<$InputFile$>$.clusters that lists all SV pr
 \end{description}
 \end{description}
 \end{framed}
+\label{structvartypes}
 
 \begin{figure}[htbp]
    \centering
@@ -685,6 +699,7 @@ For examples and more information on maximality, and localization
 refer to Sindi, et al. (2009).
 
 \subsubsection{Additional Output Options}
+\label{add_out_opt}
 GASV provides two additional formatting options for the clusters file. These options are accessible by using the -{}-output $<$val$>$ option.
 
 \begin{framed}
@@ -713,44 +728,67 @@ GASV provides two additional formatting options for the clusters file. These opt
 
 \section{GASVPro}
 
-GASVPro is a probabilistic version of our original GASV algorithm.  GASVPro combines read depth information along with discordant paired-read mappings into a single probabilistic model. When multiple alignments of a read are given, GASVPro utilizes a Markov Chain Monte Carlo procedure to sample over the space of possible alignments.
+\subsection{Running GASVPro}
+GASVPro is a probabilistic version of our original GASV algorithm, designed to be run after GASV. GASVPro combines read depth information along with discordant paired-read mappings into a single probabilistic model. 
+%When multiple alignments of a read are given, GASVPro utilizes a Markov Chain Monte Carlo procedure to sample over the space of possible alignments.
 
-\subsection{GASVPro Input Parameters}
-Because GASVPro was designed to be run after BAMtoGASV and GASV, the input files to GASVPro will appear familiar to those who have experience with the GASV pipeline. There are also a number of probabilistic and statistical parameters that GASVPro requires.
+GASVPro can be run with a PARAMETERS file (put code). There are many different options available, detailed below; however, for ease of use a PARAMETERS file is created with the execution of BAMToGASV when {\bf-WRITE\_CONCORDANT} option set to {\bf True} (see Example above). Users are encouraged to begin with this default parameters file and to add/modify options as needed by their specific application.
+
+\subsection{GASVPro Parameters} 
+
+Put the full parameters file; mention that you can comment things in the file and that in the figure shown we separate the required from the optional parameters. 
+%##REQUIRED
+
+%##OPTIONAL
+
+\subsubsection{Input Files}
+Because GASVPro was designed to be run after BAMtoGASV and GASV, the input files to GASVPro will appear familiar to those who have experience with the GASV pipeline. There are also a number of parameters needed by the probabilistic model of GASVPro.
+
 \begin{description}
-\item[] {\bf Input Files}{
-\begin{description}
-\item[] {\bf Clusters File}: must be in GASV Default Clusters Format (see section 4.3.2). {\bf NOTE:} The \verb+--output regions+ parameter must be passed to GASV to produce a clusters file of the correct format.
-\item[] {{\bf Concordant File}: must be in BAMtoGASV default output format ($<$chr$>$ $<$start$>$ $<$end$>$). The BAMtoGASV preprocessor produces these files with the {\bf-WRITE\_CONCORDANT} option set to {\bf True}. See section 3.2 for details. {\bf This file {\em must} be sorted numerically by start coordinate.}}
-\item[] {\bf Uniqueness Files}: must provide a directory in which uniqueness track files (of format $<$start$>$ $<$end$>$ $<$unique$>$) are named chr1\ldots chr$N$. {\bf These files also {\em must} be sorted numerically by start coordinate.}
-\end{description}}
+\item[{\bf Clusters File}:] must be in GASV Regions Clusters Format (see section~\ref{sec:BTGCLO}). 
+\begin{itemize}
+\item {\bf NOTE:} The \verb+--output regions+ parameter must be passed to GASV to produce a clusters file of the correct format. 
+\item {\bf NOTE:} The current version of GASVPro does not support divergent variants. They can be included in cluster files but will be ignored. 
+\end{itemize}
+\item[{\bf Concordant File}:]  must be in BAMtoGASV default output format ($<$chr$>$ $<$start$>$ $<$end$>$). 
+\begin{itemize}
+\item The BAMtoGASV preprocessor produces these files with the {\bf-WRITE\_CONCORDANT} option set to {\bf True}. See Section 3.2 for details. 
+\item {\bf NOTE:} If users provide their own concordant file it must follow the same format and {\bf must} be sorted numerically by start coordinate.
+\end{itemize}
+\item[{\bf Uniqueness File}:]  Because GASVPro's model is based on read depth, users may want to incorporate biases in the expected coverage (such as GC content or local mapability). A uniqueness file is a {\bf single file} of format $<$chr$>$ $<$start$>$ $<$end$>$ $<$unique$>$. (See below for more information.) The uniqueness file {\bf must} be sorted numerically by start coordinate.
+\end{description}
 
-
-
-\item[] {\bf Numerical Parameters} {
+\subsubsection{Probability Model Parameters}
 \begin {description}
-\item[] {\bf Average Fragment Length [Lavg] \& Average Read Length [ReadLen]}: {\em follow from sequencing libraries. In the event of multiple libraries, use the average over all datasets.}
-\item[] {\bf Lambda \& Perr}: {\em parameters for probabilistic model, see manuscript.}
-\item[] {\bf Minimum Fragment Size Limit}: this value is the smallest variant that GASVPro will use concordant coverage on.
-\item[] {\bf Tolerance}: Tolerance is used to remove regions that have abnormally high
+\item[Average Fragment Length (Lavg) \& {\bf Average Read Length (ReadLen)}:] {\em follow from sequencing libraries. In the event of multiple libraries, use the average over all datasets.}
+\item[{\bf Lambda \& Perr}:] {\em parameters for probabilistic model, see manuscript.}
+\item[\bf Minimum Fragment Size (Limit):] this value is the smallest variant that GASVPro will use concordant coverage on.
+\item[{\bf Tolerance}: ] Tolerance is used to remove regions that have abnormally high
 concordant coverage and, thus, can be eliminated from consideration
 as a structural variant. A tolerance of $t$ will eliminate from further consideration as a potential structural variant a prediction with $N$ concordant fragments provided $P(\ge N$ $|$ no variant$) > t$.
-\item[] {\bf Max Chromosome Number}: this is the highest {\em numerical value label} of all the chromosomes in the Clusters File.
-\item[] {\bf Max Uniqueness Value}: this parameter is the value assigned to the most mappable regions in the uniqueness files. 
-\item[] {\bf Minimum Scaled Uniqueness}: this parameter is the minimum value to which GASVPro will scale the uniqueness values for each variant. {\bf NOTE:} When this parameter is set to 1, all regions will have the same uniqueness value. 
-\item[] {\bf Verbose}: specifying Y will print information for each cluster processed. 
-\end{description}}
+\item[{\bf Max Uniqueness Value}:]  this parameter is the value assigned to the most mappable regions in the uniqueness files. 
+\item[{\bf Minimum Scaled Uniqueness}:]  this parameter is the minimum value to which GASVPro will scale the uniqueness values for each variant. {\bf NOTE:} When this parameter is set to 1, all regions will have the same uniqueness value. 
 \end{description}
+
+\subsubsection{Formatting Output}
+\begin{description}
+\item[{\bf Max Chromosome Number}:]  this is the highest {\em numerical value label} of all the chromosomes in the Clusters File.
+\item[Translocations Mode:] running GASVPro in translocations mode will enable the processing of translocation clusters along with deletions and inversions (see page~\pageref{structvartypes} for accepted translocation types). {\bf WARNING: Processing translocations takes exponentially more time than processing deletions and inversions alone.} If possible, we recommend running Translocations Only mode on datasets with large numbers of translocations and possibly running two copies of GASVPro in parallel (one for translocations, another for inversions and deletions).
+\item[Translocations Only (TransOnly):] setting this value to \verb+true+ will process translocations ONLY, ignoring all other types. {\bf WARNING: This operation will take hours.}
+\item[Likelihood Ratio Threshold (LRThreshold):] Users can input a numerical value or the string \verb+all+. GASVPro will only return clusters with a LR greater than or equal to the input value (See section~\ref{LRexp} for explanation of LR). If \verb+all+ is given, all clusters will be printed.
+\item[{\bf Verbose}:] specifying \verb+Y+ will print information for each cluster processed. 
+\end{description}
+
 \subsection{Running GASVPro}
 
-There are two ways to run GASVPro: via command-line arguments or via a parameters file. We have provided a parameters file for running GASVPro, and highly recommend its use for convenience and to ensure input accuracy. The parameters file also allows for clean record-keeping and can be annotated.
+GASVPro runs by providing a parameters file to the program. We have provided a parameters file for running GASVPro, and highly recommend its use for convenience and to ensure input accuracy. The parameters file also allows for clean record-keeping and can be annotated.
 \begin{figure}[H]
 \begin{Verbatim}[frame=single]
 # A Sample GASVPro parameters file
 # Annotation can appear on any line beginning with a hash mark (#).
 clusterFile: <ClusterFile>
 ConcordantFile: <ConcordanceFile>
-UNIQUEFile: <UniquenessFile/Directory>
+UNIQUEFile: <UniquenessFile>
 Lavg: <value>
 ReadLen: <value>
 Lambda: <value>
@@ -760,13 +798,26 @@ Tolerance: <value>
 MaxChrNumber: <value>
 MaxUniqueValue: <value>
 MinScaledUniqueness: <value>
+LRThreshold: <value/all>
+Translocations: <true/false>
+TransOnly: <true/false>
 Verbose: Y
 \end{Verbatim}
 \caption{\bf A Sample GASVPro Parameters File}
 \end{figure}
-\noindent Using a parameters file allows the user to run GASVPro with the following command:
+\noindent We have preprogrammed default values for some of these parameters. These hard-coded values are as follows:
+\begin{framed}
+\noindent Perr = \verb+0.01+\\
+Limit = \verb+1000+\\
+Tolerance = \verb+.0001+\\
+MaxChrNumber = \verb+100+ {\scriptsize NOTE: It is highly advisable to lower this value to reduce runtime, if possible.} $More \Downarrow$ \\
+TranslocationsMode = \verb+false+\\
+TransOnly = \verb+false+\\
+LRThreshold: \verb+all+
+\end{framed}
+\noindent Finally, using a parameters file allows the user to run GASVPro with the following command:
 	\begin{Verbatim}[frame=single]
-% ./GASVPro {ParametersFile}
+$ ./GASVPro {ParametersFile}
 	\end{Verbatim}
 %\noindent Alternatively, it is possible to run GASVPro using only command line arguments, as follows. This method is not preferred, however, as it can easily lead to input errors. 
 %\begin{Verbatim}[frame=single]
@@ -775,22 +826,49 @@ Verbose: Y
 %{MinScaledUniqueness} {Verbose}
 %\end{Verbatim}
 
+\subsection{GASVPro Model Overview}
+
+We provide a brief overview of the GASVPro model, a full description of our model and algorithm is available in (cite manuscript).
+
+\subsubsection{Poisson Coverage Model}
+What is Lambda, what is perr.
+How is read depth integrated
+
+\subsubsection{Uniqueness Scaling}
+How uniqueness scaling is done. 
+
+
 \subsection{GASVPro Output}
 After successful completion GASVPro will output two files, a \verb+.clusters+ file and a \verb+.coverage+ file. Input parameters relevant to subsequent steps in the GASV pipeline will also be included in the filenames. The \verb+.clusters+ file contains the variance probabilities that GASVPro calculated. Here is an example GASVPro output, contained in the \verb+.clusters+ file:
-\begin{table}[htbp]\footnotesize
+\begin{table}[htbp]\small
    \centering
    %\topcaption{Table captions are better up top} % requires the topcapt package
-   \begin{tabular}{llllllll} % Column formatting, @{} suppresses leading/trailing space
- \#Cluster\_ID \& Variance:  &  NumPRS:   &  Localization: & Type:  &  List of PRS:   &     $\cdots$  & $\cdots$  &  $\cdots$ \\
-		\verb+c521_-650.01_-297.342+  &  \verb+1+  &    \verb+189+   &    \verb+D+     &  \verb+chr17_41883_42105_0:0:0_2:0:0_15789d3+   &    $\cdots$  &     $\cdots$&    $\cdots$
+   \begin{tabular}{lllllllll} % Column formatting, @{} suppresses leading/trailing space
+ \#Cluster\_ID:  &  NumPRS:   &  Localization: & Type:  &  $\cdots$    &     $\cdots$  & $\cdots$  &  $\cdots$ & Likelihood Ratio:\\
+		\verb+c19+  &  \verb+1+  &    \verb+212+   &    \verb+TNR-+     & $\cdots$   &    $\cdots$  &     $\cdots$&    $\cdots$ & \verb+620.355+
     \end{tabular}
-   \caption{An Example GASVPro Output Cluster}
+   \caption{An Example GASVPro Output Cluster (see Section \ref{add_out_opt} for all fields.)}
    \label{tab:booktabs}
 \end{table}
 
-\noindent The field \verb+c1_-650.01_-297.342+ has the cluster name `c1' appended with 
-the likelihood c1 is a variant (\verb+-650.01+) and the likelihood that c1
-is not a variant (\verb+-297.342+). The rest of the information in the \verb+.clusters+ file is carried over from the input file. 
+\noindent Let the probability that a given cluster $C$ {\em is} a variant be given by $P_v$ and the probability that $C$ {\em is not} a variant be given by $P_{nv}$.  The Likelihood Ratio therefore is $P_v - P_{nv}$. The rest of the information in the \verb+.clusters+ file is identical to the input file. \label{LRexp}
 
+Additionally, GASVPro will output another file which offers more information generated directly by the program. This file will have a \verb+.coverage+ extension and includes the following information:
+\begin{framed}
+\begin{itemize}
+	\item[] \#Cluster\_ID: {\small the cluster number.}
+	\item[] Type: {\small See page~\pageref{structvartypes}}. {\scriptsize NOTE: This GASVPro version currently does not support divergent variants.}
+	\item[] NumDiscordants: {\small number of discordant fragments supporting this cluster.}
+	\item[] LogVariantProbability: {\small the log probability that this cluster is a variant.}
+	\item[] LogNoVariantProbability: {\small the log probability that this cluster is not a variant.}
+	\item[] Start: {\small start coordinate.}
+	\item[] End: {\small end coordinate.}
+	\item[] ConcordantCovLeft: {\small concordant fragment coverage on left.}
+	\item[] ConcordantCovRight: {\small concordant fragment coverage on right.}
+	\item[] MapabilityLeft: {\small cluster uniqueness on left.}
+	\item[] MapabilityRight: {\small cluster uniqueness on right.}
+	\item[] Algorithm Code: {\small indicates which process was used to calculate these values.}
+	\end{itemize}
+\end{framed}
 
 \end{document}  
