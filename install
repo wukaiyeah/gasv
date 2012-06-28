@@ -1,0 +1,9 @@
+#!/bin/bash
+
+echo "Installing BAMToGASV and GASV..."
+ant
+
+echo "Installing GASVPro..."
+g++ -O2 -w src/gasvPro/gasvPro.cpp -o bin/GASVPro
+
+echo "Installation complete. Check for errors." 	
