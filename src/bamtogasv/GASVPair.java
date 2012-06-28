@@ -98,6 +98,9 @@ public class GASVPair {
 	public boolean equalStrand(){
 		return first_ori==second_ori ? true:false;
 	}
+	public Integer getChromosome(){
+		return first_chrom;
+	}
 	
 	public int parseChr(String str) {
 		if (BAMToGASV.CHR_NAMES == null) {

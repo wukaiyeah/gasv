@@ -20,6 +20,8 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.TreeMap;
+import java.util.Iterator;
+import java.util.Map;
 
 import net.sf.samtools.SAMRecord;
 
@@ -28,7 +30,8 @@ public class Library {
 	public String name;
 	public ArrayList<GASVPair> firstNreads;
 	public boolean pairedTag, mateFound, computedStats;
-	public int Lmin,Lmax,counter,total_L, minRead_L, total_C;
+	public int Lmin,Lmax,counter,total_L, minRead_L, total_C, total_RL;
+	public TreeMap<Integer, Integer> numConcord;
 	public TreeMap<Integer, Integer> lengthHist; /// TreeMap is sorted
 	public HashMap<VariantType,Integer> numTmpFilesForVariant; // <variant_type, # of tmp files written>
 	public HashMap<VariantType,ArrayList<String>> rowsForVariant; // <variant_type,lines to sort> 
@@ -38,10 +41,12 @@ public class Library {
 		mateFound=false;
 		total_L = 0;
 		total_C = 0;
+		total_RL = 0; // counting total read length
 		Lmin = Integer.MIN_VALUE;
 		Lmax = Integer.MIN_VALUE;
 		minRead_L = Integer.MAX_VALUE;
 		lengthHist = new TreeMap<Integer, Integer>();
+		numConcord = new TreeMap<Integer, Integer>();
 		counter = 0;
 		firstNreads = new ArrayList<GASVPair>();
 		pairedTag = false;
@@ -72,6 +77,43 @@ public class Library {
 				&& !s.getMateUnmappedFlag()) {
 			mateFound = true;
 		}
+	}
+	
+	private float getAverageInsertLength(){
+		return (float) (total_L)/total_C;
+	}
+
+	private float getAverageReadLength(){
+		return (float) (total_RL)/total_C;
+	}
+	public float getGlobalAvgInsertLength(){
+		return getnumConcordGenome()*getAverageInsertLength();
+	}
+	
+	public float getGlobalAvgReadLength(){
+		return getnumConcordGenome()*getAverageReadLength();
+	}
+
+	public long getnumConcordGenome(){
+		long total_genome = 0L;
+		Iterator<Map.Entry<Integer, Integer>> iter = numConcord.entrySet().iterator();
+		while(iter.hasNext()){
+			Map.Entry<Integer,Integer> libtmp = iter.next();
+			total_genome += libtmp.getValue().intValue();
+		}
+		return total_genome;
+	}
+
+	public String getConcordDist(){
+		StringBuffer buffer = new StringBuffer();
+		Iterator<Map.Entry<Integer, Integer>> iter = numConcord.entrySet().iterator();
+		while(iter.hasNext()){
+			Map.Entry<Integer,Integer> libtmp = iter.next();
+			buffer.append(libtmp.getKey().toString()+"-"+libtmp.getValue().toString());
+			if(iter.hasNext())
+				buffer.append("\t");
+		}
+		return buffer.toString();
 	}
 	
 }
