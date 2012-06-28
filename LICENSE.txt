@@ -70,6 +70,9 @@ is licensed as follows. GASVPro.cpp utilizes this implementation.
  * THE SOFTWARE.
  **/
 
+This product includes software developed by the Solution Engineering,
+Inc. (http://www.seisw.com/). 
+
 ------------------------------------------------------------------------------
                   GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007

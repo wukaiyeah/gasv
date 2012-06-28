@@ -92,12 +92,39 @@ public class GASVMain{
 	}
 
 	static int overlap(Clone Clone1,Clone Clone2){
-		//if in --noreciprocal mode, orientations much match in order for overlap to be true!
+		//Note: If in --noreciprocal mode, orientations much match in order for overlap to be true!
 		if (GASVMain.NORECIPROCAL_MODE) {
 			if (!GASVMain.orientationsMatch(Clone1, Clone2)) {
 				return 0;
 			}
 		}
+		
+		//Note: Want to forbid creating combination deletion and divergent clusters.
+		//      Orientations are gone through similarly in clusterESP.java printType function.
+
+		boolean diffChrom = false;		
+		if (Clone1.getChrX() != Clone2.getChrY()) {
+			diffChrom = true;
+		}
+		
+		if(diffChrom == false){
+			int numDeletion = 0;
+			int numDivergent = 0;
+			
+			//Classify Clone1:
+			if(Clone1.getX() < 0 && Clone1.getY() > 0){ numDivergent++; }
+			else if(Clone1.getX() > 0 && Clone1.getY() < 0){ numDeletion++; }
+	
+			//Classify Clone2:
+			if(Clone2.getX() < 0 && Clone2.getY() > 0){  numDivergent++; }
+			else if(Clone2.getX() > 0 && Clone2.getY() < 0){ numDeletion++;  }
+			
+			if(numDeletion > 0 && numDivergent > 0){
+				return 0;
+			}
+		}	
+
+	
 		int bmin1 =(int)Clone1.getBmin(); int bmax1 =(int)Clone1.getBmax();
 		int bmin2 =(int)Clone2.getBmin(); int bmax2 =(int)Clone2.getBmax();
 	
