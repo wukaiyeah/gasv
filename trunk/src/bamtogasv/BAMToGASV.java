@@ -67,6 +67,7 @@ public class BAMToGASV {
 	public boolean WRITE_CONCORDANT = false;
 	public boolean WRITE_LOWQ = false;
 	public ValidationStringency STRINGENCY = ValidationStringency.SILENT; 
+	public boolean GASVPRO_OUTPUT = false; // GASVPro
 	public boolean BATCH = false;
 
 	/* Additional Variables */
@@ -74,6 +75,7 @@ public class BAMToGASV {
 	public boolean IS_URL; // true if the BAM file is a URL, false otherwise.
 	public final int NUM_LINES_FOR_EXTERNAL_SORT = 500000; // number of lines for external sort.
 	public int BAD_RECORD_COUNTER; // counts the # of poorly-formatted records.
+	public long GL = 3000000000L; // default genome size
 
 	/* Patterns for CUTOFF_LMINLMAX flag */
 	public Pattern pct = Pattern.compile("PCT=(\\d+)%");
@@ -128,6 +130,7 @@ public class BAMToGASV {
 		// Write .info and .gasv.in files.
 		b2g.writeInfoFile();
 		b2g.writeGASVInputFile();
+		b2g.writeGASVPROInputFile();
 
 		// Report output files and any skipped records.
 		System.out.println("BAMToGASV complete.\n");
@@ -302,7 +305,16 @@ public class BAMToGASV {
 					System.out.println("ERROR: VALIDATION_STRINGENCY option can only be 'Silent','Lenient', or 'Strict'.");
 					return false;
 				}
-			} else {
+			} else if(args[i].equalsIgnoreCase("-GASVPRO")) { // GASVPro
+				if(args[i+1].equalsIgnoreCase("true")){
+					WRITE_CONCORDANT = true;
+					LIBRARY_SEPARATED = "sep";
+					GASVPRO_OUTPUT = true; 
+				}
+				else if (args[i+1].equalsIgnoreCase("false")){
+					GASVPRO_OUTPUT = false;
+				}
+			}else {
 				System.out.println("Error! Option " + args[i] + " does not exist.");
 				return false;
 			}
@@ -355,6 +367,8 @@ public class BAMToGASV {
 				"\tsilent\tRead SAM records without any validation.\n"+
 				"\tlenient\tRead SAM records and emit a warning when a record is not formatted properly.\n"+
 				"\tstrict\tRead SAM records and die when a record is not formatted properly.\n"+
+				"-GASVPRO [Boolean] (Default: False)\n"+
+				"\tTrue\tGenerate GASVPro parameters file and concordant file. Warning - this will be large!\n"+
 		"Refer to the Manual for more details.");
 	}
 
@@ -437,6 +451,16 @@ public class BAMToGASV {
 		// get SAMFileHeader object
 		SAMFileHeader header = reader.getFileHeader();
 
+		// GASGPro using - getSequenceInfo in the header
+		if (GASVPRO_OUTPUT){
+			SAMSequenceDictionary SeqInfo = header.getSequenceDictionary();
+			if (SeqInfo.getReferenceLength() == 0)
+				System.out.println("  WARNING: Can't find genome length in Header, using default setting 3,000,000,000.");
+			else {
+				System.out.println("  Genome length: " + SeqInfo.getReferenceLength());
+				GL = SeqInfo.getReferenceLength();
+			}
+		}
 		// getReadGroups() returns a list of SAMReadGroupRecords.  
 		Iterator<SAMReadGroupRecord> groups = header.getReadGroups().iterator();
 
@@ -999,6 +1023,7 @@ public class BAMToGASV {
 					}
 					if(PROPER_LENGTH == 0){ // TODO: Should this be insertL == 0?
 						lib.total_L += insertL;
+						lib.total_RL += s.getReadLength();
 						lib.total_C += 1;
 						if (lib.lengthHist.containsKey(insertL)){
 							int tmp = lib.lengthHist.get(insertL).intValue();
@@ -1009,6 +1034,7 @@ public class BAMToGASV {
 					} else if(insertL <= PROPER_LENGTH){
 						lib.total_L += insertL;
 						lib.total_C += 1;
+						lib.total_RL += s.getReadLength();
 						if (lib.lengthHist.containsKey(insertL)){
 							int tmp = lib.lengthHist.get(insertL).intValue();
 							lib.lengthHist.put(insertL, new Integer(tmp+1));
@@ -1035,9 +1061,19 @@ public class BAMToGASV {
 		if(type == VariantType.LOW && !WRITE_LOWQ)
 			return;		
 
+		if(type == VariantType.CONC && GASVPRO_OUTPUT){ // GASVPro calculating avg length (insert, read) for GASVPro parameters file 
+			int conc_chrom = pobj.getChromosome().intValue();
+			if (lib.numConcord.containsKey(conc_chrom)){
+				int tmp = lib.numConcord.get(conc_chrom).intValue();
+				lib.numConcord.put(conc_chrom, new Integer(tmp+1));
+			} else{
+				lib.numConcord.put(conc_chrom, 1);
+			}
+		}
+
 		// Add line to variant list for this library.
 		lib.addLine(type,pobj.createOutput(type));
-
+				
 		// Check to see if we should sort and write tmp file here.
 		// Now, sort and write ALL tmp files (all libraries, all types)
 		if(lib.rowsForVariant.get(type).size() >= NUM_LINES_FOR_EXTERNAL_SORT) {
@@ -1368,6 +1404,7 @@ public class BAMToGASV {
 					continue;
 				
 				writer.write(libname + "\t" + LIBRARY_INFO.get(libname).Lmin+"\t"+LIBRARY_INFO.get(libname).Lmax+"\n");
+				//writerpro.write(libname+"\t"+LIBRARY_INFO.get(libname).getAverageInsertLength()+"\t"+LIBRARY_INFO.get(libname).getAverageReadLength()+"\t"+LIBRARY_INFO.get(libname).getConcordDist()+"\n");
 			}
 
 			writer.close();
@@ -1385,6 +1422,7 @@ public class BAMToGASV {
 			String libname;
 			Library lib;
 			VariantType type;
+
 			for(int i=0;i<LIBRARY_NAMES.size();i++) {
 				libname = LIBRARY_NAMES.get(i);
 				lib = LIBRARY_INFO.get(libname);
@@ -1405,6 +1443,41 @@ public class BAMToGASV {
 			writer.close();
 		} catch (Exception e) {
 			System.out.println("Error writing .gasvInput file. Continuing.");
+		}
+	}
+
+	/**
+	 * Writes the .gasvpro.in file. // GASVPro - Output GASVPro parameters file
+	 */
+	public void writeGASVPROInputFile() {
+		try {
+			if (!GASVPRO_OUTPUT)
+				return;
+			BufferedWriter writerpro = new BufferedWriter(new FileWriter(OUTPUT_PREFIX+".gasvpro.in"));
+			String libname;
+			Library lib;
+			VariantType type;
+
+			int totalNC = 0;
+			float totalGAvgRead = 0;
+			float totalGAvgInsert = 0;
+			for(int i=0;i<LIBRARY_NAMES.size();i++) {
+				libname = LIBRARY_NAMES.get(i);
+				lib = LIBRARY_INFO.get(libname);
+				if(lib.Lmin == Integer.MIN_VALUE || lib.Lmax == Integer.MIN_VALUE)
+					continue;
+				totalGAvgRead += lib.getGlobalAvgReadLength();
+				totalGAvgInsert += lib.getGlobalAvgInsertLength();
+				totalNC += lib.getnumConcordGenome();
+			}
+			writerpro.write("# Generated by BamToGASV\n");
+			writerpro.write("ConcordantFile: "+OUTPUT_PREFIX+"_all.concordant\n");
+			writerpro.write("Lavg: "+totalGAvgInsert/totalNC+"\n");
+			writerpro.write("ReadLen: "+totalGAvgRead/totalNC+"\n");
+			writerpro.write("Lambda: "+totalGAvgInsert/GL+"\n");
+			writerpro.close();
+		} catch (Exception e) {
+				System.out.println("Error writing .gasvproInput file. Continuing.");
 		}
 	}
 
@@ -1446,6 +1519,11 @@ public class BAMToGASV {
 		System.out.println("Output files are:");
 		System.out.println("  "+OUTPUT_PREFIX+".info"); // always written
 		System.out.println("  "+OUTPUT_PREFIX+".gasv.in"); // always written
+		if (GASVPRO_OUTPUT){
+			System.out.println("  "+OUTPUT_PREFIX+".gasvpro.in"); // GASVPro
+			System.out.println("  "+OUTPUT_PREFIX+"_all.concordant");// GASVPro 
+		}
+			
 
 		for(int i=0;i<LIBRARY_NAMES.size();i++) {
 			for(int j=0;j<VARIANTS.length;j++) {
@@ -1453,6 +1531,8 @@ public class BAMToGASV {
 				if(VARIANTS[j] == VariantType.CONC && !WRITE_CONCORDANT)
 					continue;
 				if(VARIANTS[j] == VariantType.LOW && !WRITE_LOWQ)
+					continue;
+				if(VARIANTS[j] == VariantType.CONC && GASVPRO_OUTPUT) // GASVPro
 					continue;
 
 				System.out.println("  "+getFinalFileName(LIBRARY_NAMES.get(i),VARIANTS[j]));
