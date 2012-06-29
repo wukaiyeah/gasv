@@ -1,6 +1,7 @@
 #!/bin/bash
 
 echo "Installing BAMToGASV and GASV..."
+mkdir bin
 ant
 
 echo "Installing GASVPro..."

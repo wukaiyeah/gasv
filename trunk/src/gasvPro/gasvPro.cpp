@@ -1577,7 +1577,7 @@ int main(int argc, char* argv[]){
 				//*****uniqueness calculation for ******//
 				//**********translocations.*************//
 				
-				cout << "\t\tBuilding uniqueness tree....";
+				/*cout << "\t\tBuilding uniqueness tree....";
 				IntervalTree<uInt*> uniquenessTreeLEFT = IntervalTree<uInt*>(allIntervalsLEFT);
 				IntervalTree<uInt*> uniquenessTreeRIGHT = IntervalTree<uInt*>(allIntervalsRIGHT);
 				cout << "done." << endl;
@@ -1762,7 +1762,7 @@ int main(int argc, char* argv[]){
 							overlap[i]->value->uniqueness = preUnique/overlap[i]->value->length;
 						}
 					}	
-				}
+				}*/
 				
 						
 				clusterFile.open(clusterFileName,ios::in);
