@@ -124,12 +124,12 @@ int main(int argc, char* argv[]){
 
  	 int PRINT_FLAG = 0;
 
-     if(argc != 10 && argc != 3){
+     if(argc != 10 && argc != 3 && argc != 2){
                 //                 0        1              2                      3              4       5         6       7        8       9           // 10
-				cout << "GASVPro: Geometric Analysis of Structural Variants, Probabilistic" << endl;
+				cout << "\nGASVPro: Geometric Analysis of Structural Variants, Probabilistic" << endl;
 				cout << "Version: 1.0" << endl << endl;
 				cout << "Usage: Pass parameter file of the following format AND a clusters file:" << endl;
-                cout << "       \tclusterFile: {path/to/file}\n\tConcordantFile: {path/to/file}\n\tUNIQUEFile: {path/to/file}\n\tLavg: {value} \n\tReadLen: {value}\n\tLambda: {value}\n\tPerr: {value}\n\tLimit: {value}\n\tTolerance: {value}\n\tVerbose: {value}\n\tMaxChrNumber: {Value}\n\tMaxUniqueValue: {value}\n\tMinScaledUniqueness: {Value}\n";
+                cout << "       \tConcordantFile: {path/to/file}\n\tUNIQUEFile: {path/to/file}\n\tLavg: {value} \n\tReadLen: {value}\n\tLambda: {value}\n\tPerr: {value}\n\tLimit: {value}\n\tTolerance: {value}\n\tVerbose: {value}\n\tMaxChrNumber: {Value}\n\tMaxUniqueValue: {value}\n\tMinScaledUniqueness: {Value}\n";
                 cout << "      ./exe {parametersfile} {clusterfile} " << endl;
                 exit(-1);
 	 }
@@ -524,7 +524,7 @@ int main(int argc, char* argv[]){
 		ifstream inFile(ESPINPUT.c_str(),ios::in);
 		if(!inFile.is_open())
 		{
-			cout << "Error, cannot open ESP file " << INPUT << endl;
+			cout << "Error, cannot open concordant file " << INPUT << endl;
 			continue;
 		}
 		
@@ -642,15 +642,16 @@ int main(int argc, char* argv[]){
 				token1 = strtok(NULL,"\t");
 			}
 			
-			//Note: We can only support clusters that are deletions or inversions!
+			//Note: We can only support clusters that are deletions, inversions, or translocations!
 			if(strcmp(type,"D") == 0){ localType = 0; }
 			else if(strcmp(type,"I+") == 0 || strcmp(type,"I-") == 0 || strcmp(type,"IR") == 0){ localType = 1;}
 			else if(type[0] == 'T'){ localType = 2; translocationCount++; }
+			else if(strcmp(type, "V") == 0 || strcmp(type, "DV") == 0) {localType = 3;}
 			else{ 
 				if(numIgnored == 0)
 					cout << "WARNING: Found first cluster (cluster " << clusterName << ") of non-supported type \"" << type << "\", it will be ignored." << endl;
 				numIgnored++;
-				localType = 3;
+				localType = 4;
 			}
 			
 			//cout << "Cluster:\t" << CLUSTER_FOR_OUTPUT << endl;
@@ -658,7 +659,7 @@ int main(int argc, char* argv[]){
 			
 
 			
-			if(localChr == chrNumber && localType <=1 ){
+			if(localChr == chrNumber && (localType <=1 || localType == 3)){
 				clustersSeen++;
 				int minX, maxX, minY, maxY;
 				minX = maxX = X_COORDS[0];
@@ -671,13 +672,14 @@ int main(int argc, char* argv[]){
 				}
 			
 					
-				if(localType == 0) 		//i.e. Deletion
+				if(localType == 0 || localType == 3) 		//i.e. Deletion or Divergent
 				{
 					bool flag = false;
 					if((minY - maxX) < Limit)
 					{
 						flag = true;
-						if(PRINT_FLAG == 1) {cout << "\tNOTE: Small deletion stored as inversion. " << endl << flush;}
+						if(PRINT_FLAG == 1 && localType == 0) {cout << "\tNOTE: Small deletion stored as inversion. " << endl << flush;}
+						if(PRINT_FLAG == 1 && localType == 3) {cout << "\tNOTE: Small divergent stored as inversion." << endl << flush;}
 						inversionIntervals.push_back(make_pair(maxX, minY));
 					}
 					if(!flag)	
@@ -741,7 +743,7 @@ int main(int argc, char* argv[]){
 
 		if(clustersSeen == 0)
 		{
-			cout << "\tNOTE: No clusters at chr " << chrNumber << "." << endl;
+			cout << "\tNOTE: No clusters at chr " << chrNumber << " (not including translocations)." << endl;
 			continue;
 		}
 		
@@ -974,12 +976,12 @@ int main(int argc, char* argv[]){
 			//Note: We can only support clusters that are deletions or inversions!
 			if(strcmp(type,"D") == 0){ localType = 0; }
 			else if(strcmp(type,"I+") == 0 || strcmp(type,"I-") == 0 || strcmp(type,"IR") == 0){ localType = 1;}
-			else{ localType = 2; }
+			else if(strcmp(type, "DV") == 0 || strcmp(type, "V") == 0) { localType = 2; }
 			
 			//cout << "Cluster:\t" << CLUSTER_FOR_OUTPUT << endl;
 			//cout << "LocalType:\t" << localType << endl;
 			
-			if(localChr == chrNumber && localType <=1 ){
+			if(localChr == chrNumber && localType <=2 ){
 				numClustersProcessed++;
 				int minX, maxX, minY, maxY;
 				minX = maxX = X_COORDS[0];
@@ -1071,9 +1073,11 @@ int main(int argc, char* argv[]){
 					//A2: YES (or are we inversions!)
 					//if( ( ( (minY - maxX) < Limit) && ( (minY-maxX) > 0) ) || localType == 1){
 					
+					
 					if( ( (minY - maxX) < Limit ) || localType == 1)
 					{
-						if(localType == 0) {cout << "\t\t\t\tNOTICE: Small deletion at cluster " << clusterName << " is being processed using inversion algorithm." << endl;}
+						if(localType == 2){ cout << "TESTINGNOTE: Skipping SMALL divergent." << endl; continue;}
+						if(localType == 0) {cout << "\t\t\t\tNOTICE: Small deletion at cluster " << clusterName << " is being processed using breakend read depth algorithm." << endl;}
 						code = 0;
 						
 						//Store the coverage values;
@@ -1190,7 +1194,7 @@ int main(int argc, char* argv[]){
 					//End if Bigger than Limit
 					//A2: NO
 					else if( (minY - maxX) >= Limit){
-												
+						if(localType == 2){cout << "TESTINGNOTE: Skipping REGULAR divergent at " << clusterName << endl; continue;}				
 						code = 1;
 						double combinedUniqueness = -1;
 						double scaledUniqueness = 1;
@@ -1339,7 +1343,7 @@ int main(int argc, char* argv[]){
 	inversionIntervals.clear();
 	relevantGenome.clear();
 	cout << "\nDONE w/ Chromosome; Processed --> " << numClustersProcessed << endl << flush;
-	if(IS_UNIQUE && uniqErrors > 0){cout << "***NOTICE: There were " << uniqErrors << " uniqueness coverage errors. The missing values were replaced with the Max Unique Value parameter." << endl;}
+	if(IS_UNIQUE && uniqErrors > 0){cout << "***NOTICE: There were " << uniqErrors << " uniqueness coverage errors. The missing values were replaced with the Max Unique Value parameter and scaled." << endl;}
 
 	}//End For
 	char clusterFileName[150];
@@ -1885,12 +1889,6 @@ int main(int argc, char* argv[]){
 						bestHeterozygousScore = -2*INT_MAX1;
 						bestErrorScore = -2*INT_MAX1;
 						
-						//NEW CODE: Want to scale the discordant fragments by uniqueness as well!
-						//Begin --> Comment out to remove scaling of discordants by mapability;
-						//double xLeftUnique  = getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,minX-Lavg,minX);
-						//double xRightUnique = getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,maxX,maxX+Lavg);
-						//double yLeftUnique  = getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,minY-Lavg,minY);
-						//double yRightUnique = getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,maxY,maxY+Lavg);
 						
 						int scaledNumDiscordants;
 						/*if(IS_UNIQUE){
@@ -2142,8 +2140,8 @@ int main(int argc, char* argv[]){
 	outFile1.close();
 	outFile2.close();
 	
-	cout << "***NOTICE: Ignored " << numIgnored << " clusters of non-supported types. See GASVPro documentation. " << endl;
-	if(!TRANSLOCATIONS_ON){cout << "***Including " << translocationCount << " translocations. Enable translocation mode to include those translocations. " << endl;}
+	cout << "\n***NOTICE: Ignored " << numIgnored << " clusters of non-supported types. See GASVPro documentation. " << endl;
+	if(!TRANSLOCATIONS_ON){cout << "***NOTICE: Found " << translocationCount << " translocations. Enable translocation mode or TransOnly mode to process them. " << endl;}
 	return 0;
 }
 
