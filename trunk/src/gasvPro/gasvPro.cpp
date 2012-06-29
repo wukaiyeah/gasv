@@ -678,8 +678,8 @@ int main(int argc, char* argv[]){
 					if((minY - maxX) < Limit)
 					{
 						flag = true;
-						if(PRINT_FLAG == 1 && localType == 0) {cout << "\tNOTE: Small deletion stored as inversion. " << endl << flush;}
-						if(PRINT_FLAG == 1 && localType == 3) {cout << "\tNOTE: Small divergent stored as inversion." << endl << flush;}
+						if(PRINT_FLAG == 1 && localType == 0) {cout << "\tNOTE: Small deletion, using BeRD model. " << endl << flush;}
+						if(PRINT_FLAG == 1 && localType == 3) {cout << "\tNOTE: Small divergent, using BeRD model." << endl << flush;}
 						inversionIntervals.push_back(make_pair(maxX, minY));
 					}
 					if(!flag)	
@@ -976,7 +976,7 @@ int main(int argc, char* argv[]){
 			//Note: We can only support clusters that are deletions or inversions!
 			if(strcmp(type,"D") == 0){ localType = 0; }
 			else if(strcmp(type,"I+") == 0 || strcmp(type,"I-") == 0 || strcmp(type,"IR") == 0){ localType = 1;}
-			else if(strcmp(type, "DV") == 0 || strcmp(type, "V") == 0) { localType = 2; }
+			else if(strcmp(type, "V") == 0) { localType = 2; }
 			
 			//cout << "Cluster:\t" << CLUSTER_FOR_OUTPUT << endl;
 			//cout << "LocalType:\t" << localType << endl;
@@ -1045,9 +1045,10 @@ int main(int argc, char* argv[]){
 					double discordantUniqueness = (xLeftUnique + xRightUnique + yLeftUnique + yRightUnique)/4.0;
 					scaledNumDiscordants = (int) (floor)((1.0*numDiscordants)/((MIN_SCALED_UNIQUE)+(1-MIN_SCALED_UNIQUE)*discordantUniqueness));
 				}
-				else
+				else{
 					scaledNumDiscordants = 1;
-					
+				}
+				
 				scaledNumDiscordants = numDiscordants;	//this line resets the above calculation.
 				
 				discordantProbNoVariant     = probError(Perr,numDiscordants);
@@ -1135,6 +1136,12 @@ int main(int argc, char* argv[]){
 									scaledCovLeft = covLeft;   //
 									scaledCovRight = covRight; //these two lines reset the above calculations
 									
+									//Here need to check for deletion, divergent inversion
+									//if(divergent){ 
+									
+									//}
+									//else if(deletion, inversions )
+									
 									double localHomozygous   = probError(Perr,scaledCovLeft) + probError(Perr,scaledCovRight);
 									//double localHeterozygous = probVariant(Lambda/2,Lavg,scaledCovLeft,covArray,MAX_COV) + probVariant(Lambda/2,Lavg,scaledCovRight,covArray,MAX_COV); 
 									//double localError        = probVariant(Lambda,Lavg,scaledCovLeft,covArray,MAX_COV) + probVariant(Lambda,Lavg,scaledCovRight,covArray,MAX_COV);
@@ -1194,7 +1201,82 @@ int main(int argc, char* argv[]){
 					//End if Bigger than Limit
 					//A2: NO
 					else if( (minY - maxX) >= Limit){
-						if(localType == 2){cout << "TESTINGNOTE: Skipping REGULAR divergent at " << clusterName << endl; continue;}				
+						
+						//Note: We should only have deletions and divergents at this point.
+						if(localType == 2){
+							cout << "TESTINGNOTE: Skipping REGULAR divergent at " << clusterName << endl; 
+						
+							//Need to get coverage, only strict contaimnent;
+							int combinedCoverage = 1; 
+							int lengthConcordant = minY - maxX; //Think!
+
+							double combinedUniqueness = -1;
+							double scaledUniqueness = 1;
+							if(IS_UNIQUE){combinedUniqueness     = getUniqueness(maxX, minY, &uniquenessTree, MAX_UNIQUE_VALUE);}
+							if(IS_UNIQUE){scaledUniqueness       = ((1-MIN_SCALED_UNIQUE)*combinedUniqueness+(MIN_SCALED_UNIQUE));}
+							int combinedScaledCoverage           = combinedCoverage/scaledUniqueness; 
+							
+							int validC = validCoverage(Lambda*(lengthConcordant), combinedScaledCoverage, Tolerance);
+							
+							//Note: We should be rounding combinedScaledCoverage to the nearest int.
+							//Round --> newNum = floor(num+0.5);
+							
+							double  prob0Copies, prob1Copy, prob2Copies, probGe2Copies;
+							
+							//NumDiscordants -> scaledNumDiscordants;
+							
+							//Prob0Copies --> Everything is an error;
+							prob0Copies = probError(Perr,combinedScaledCoverage+scaledNumDiscordants);
+							
+							//Prob1Copy   --> Discordants are an error; concordants are half coverage
+							prob1Copy = probError(Perr,scaledNumDiscordants) + probVariant(Lambda/2,lengthConcordant,combinedScaledCoverage);
+							
+							//Prob2Copies --> Discordants are error; concordants are at full coverage;
+							prob2Copies =  probError(Perr,scaledNumDiscordants) + probVariant(Lambda,lengthConcordant,combinedScaledCoverage);
+							
+							//probGe2Copies = 1 - prob0Copies -prob1Copy - prob2Copies
+							probGe2Copies = 1 - prob0Copies -prob1Copy - prob2Copies;
+							
+							
+							if(validC == 0){
+								numBeyondTolerance++;
+								PROB_NO_VARIANT = 0;
+								PROB_VARIANT = -2*INT_MAX1;
+								variantCopyNumber = -1;
+								bestA = maxX;
+								bestB = minY;
+								NUMCC_L = combinedCoverage;
+								MAP_L = combinedUniqueness; //0.7*combinedUniqueness+0.3;
+								NUMCC_R = 0;
+								MAP_R = 0;
+								//outFile << clusterName << "\t" << numDiscordants << "\t" << type << "\t" << 0				<< "\t" << -2*INT_MAX1	<< "\t" << -1				<< "\t" << -1		<< "\t" << -1 << endl;
+							}
+							else{
+								
+								//Need to define differently?
+								PROB_VARIANT = probGe2Copies;
+								PROB_NO_VARIANT = prob2Copies;
+								
+								double combinedDiff = PROB_VARIANT - PROB_NO_VARIANT;
+								if(combinedDiff > bestOverall){
+									bestA = maxX; bestB = minY;
+									NUMCC_L = combinedCoverage;
+									NUMCC_R = 0;
+									MAP_L   = combinedUniqueness;
+									MAP_R = 0;
+									bestCopyNum = 3; //Really want to say >2
+									bestOverall = combinedDiff;
+								
+								}
+								variantCopyNumber = 3;
+								PROB_VARIANT = probGe2Copies;
+								PROB_NO_VARIANT = prob2Copies;
+				
+								
+							}
+							
+							continue; 
+						}				
 						code = 1;
 						double combinedUniqueness = -1;
 						double scaledUniqueness = 1;
