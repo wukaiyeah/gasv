@@ -786,45 +786,22 @@ Because GASVPro was designed to be run after BAMtoGASV and GASV, the input files
 \subsubsection{Probability Model Parameters}
 \begin {description}
 \item {\bf Average Fragment Length (Lavg) \& Average Read Length (ReadLen)}: {\em follow from sequencing libraries. In the event of multiple libraries, use the average over all datasets.}
-\item{\bf Lambda \& Perr}: {\em parameters for probabilistic model, see manuscript.}
-\begin{itemize}
-\item {\bf Perr Default Value}: \verb+0.01+
-\end{itemize}
-\item {\bf Minimum Fragment Size (Limit)}: this value is the smallest variant that GASVPro will use concordant coverage on.
-\begin{itemize}
-\item {\bf Default Value}: \verb+1000+
-\end{itemize}
+\item{\bf Lambda \& Perr}: {\em parameters for probabilistic model, see manuscript.} {\bf Perr Default Value}: \verb+0.01+
+\item {\bf Minimum Fragment Size (Limit)}: this value is the smallest variant that GASVPro will use concordant coverage on. {\bf Default Value}: \verb+1000+
 \item {\bf Tolerance}:  Tolerance is used to remove regions that have abnormally high
 concordant coverage and, thus, can be eliminated from consideration
-as a structural variant. A tolerance of $t$ will eliminate from further consideration as a potential structural variant a prediction with $N$ concordant fragments provided $P(\ge N$ $|$ no variant$) > t$.
-\begin{itemize}
-\item {\bf Default Value}: \verb+0.0001+
-\end{itemize}
+as a structural variant. A tolerance of $t$ will eliminate from further consideration as a potential structural variant a prediction with $N$ concordant fragments provided $P(\ge N$ $|$ no variant$) > t$. {\bf Default Value}: \verb+0.0001+
 \item{\bf Max Uniqueness Value}:  this parameter is the value assigned to the most mappable regions in the uniqueness files. 
-\item{\bf Minimum Scaled Uniqueness}:  this parameter is the minimum value to which GASVPro will scale the uniqueness values for each variant. {\bf NOTE:} When this parameter is set to 1, all regions will have the same uniqueness value. 
-\begin{itemize}
-\item {\bf Default Value}: \verb+0.3+
-\end{itemize}
+\item{\bf Minimum Scaled Uniqueness}:  this parameter is the minimum value to which GASVPro will scale the uniqueness values for each variant. {\bf NOTE:} When this parameter is set to 1, all regions will have the same uniqueness value. {\bf Default Value}: \verb+0.3+
 \end{description}
 
 \subsubsection{Parameters for Formatting Output}
 \begin{description}
-\item{\bf Max Chromosome Number}:  this is the highest {\em numerical value label} of all the chromosomes in the Clusters File.
-\begin{itemize}
-\item {\bf Default Value}: \verb+100+ {\scriptsize NOTE: It is highly advisable to lower this value to reduce runtime, if possible.}
-\end{itemize}
-\item {\bf Translocations Mode}: running GASVPro in translocations mode will enable the processing of translocation clusters along with deletions and inversions (see page~\pageref{structvartypes} for accepted translocation types). {\bf WARNING: Processing translocations takes exponentially more time than processing deletions and inversions alone.} If possible, we recommend running Translocations Only mode on datasets with large numbers of translocations and possibly running two copies of GASVPro in parallel (one for translocations, another for inversions and deletions).
-\begin{itemize}
-\item {\bf Default Value}: \verb+false+
-\end{itemize}
-\item {\bf Translocations Only (TransOnly)}: setting this value to \verb+true+ will process translocations ONLY, ignoring all other types. {\bf WARNING: This operation can take hours.}
-\begin{itemize}
-\item {\bf Default Value}: \verb+false+
-\end{itemize}
-\item {\bf Likelihood Ratio Threshold (LRThreshold)}: Users can input a numerical value or the string \verb+all+. GASVPro will only return clusters with a LR greater than or equal to the input value (See section~\ref{LRexp} for explanation of LR). If \verb+all+ is given, all clusters will be printed.
-\begin{itemize}
-\item {\bf Default Value}: \verb+all+
-\end{itemize}
+\item{\bf Max Chromosome Number}:  this is the highest {\em numerical value label} of all the chromosomes in the Clusters File. {\bf Default Value}: \verb+100+ {\scriptsize NOTE: It is highly advisable to lower this value to reduce runtime, if possible.}
+\item {\bf Translocations Mode}: running GASVPro in translocations mode will enable the processing of translocation clusters along with deletions and inversions (see page~\pageref{structvartypes} for accepted translocation types). {\bf WARNING: Processing translocations takes exponentially more time than processing deletions and inversions alone.} If possible, we recommend running Translocations Only mode on datasets with large numbers of translocations and possibly running two copies of GASVPro in parallel (one for translocations, another for inversions and deletions). {\bf Default Value}: \verb+false+
+
+\item {\bf Translocations Only (TransOnly)}: setting this value to \verb+true+ will process translocations ONLY, ignoring all other types. {\bf WARNING: This operation can take hours.} {\bf Default Value}: \verb+false+
+\item {\bf Likelihood Ratio Threshold (LRThreshold)}: Users can input a numerical value or the string \verb+all+. GASVPro will only return clusters with a LR greater than or equal to the input value (See section~\ref{LRexp} for explanation of LR). If \verb+all+ is given, all clusters will be printed. {\bf Default Value}: \verb+all+
 \item {\bf Verbose}: specifying \verb+Y+ will print information for each cluster processed. 
 \end{description}
 
@@ -873,7 +850,8 @@ Internally, GASVPro uses this information to scale the number $n(I)$ of concorda
 \item The parameter $\alpha$ can be changed with the ``minScaledUniqueness'' parameter.
 \item As described in our manuscript, we only scale concordant coverage in the case of deletions.  
 \end{itemize}
-\clearpage
+
+
 
 
 \subsection{GASVPro Output}
@@ -905,7 +883,7 @@ Additionally, GASVPro will output another file which offers more information gen
 	\item[] ConcordantCovRight: {\small concordant fragment coverage on right.}
 	\item[] MapabilityLeft: {\small cluster uniqueness on left.}
 	\item[] MapabilityRight: {\small cluster uniqueness on right.}
-	\item[] Algorithm Code: {\small indicates which process was used to calculate these values.}
+	\item[] Algorithm Code: {\small indicates which process was used to calculate these values. \verb+0+ indicates the breakend read-depth model, and \verb+1+ indicates the interval read-depth model.}
 	\end{itemize}
 \end{framed}
 
