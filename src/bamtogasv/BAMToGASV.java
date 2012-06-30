@@ -1409,14 +1409,17 @@ public class BAMToGASV {
 		String libname;
 		for(int i=0;i<LIBRARY_NAMES.size();i++) {
 			libname = LIBRARY_NAMES.get(i);
-			concordantfiles.add(getFinalFileName(libname,VariantType.CONC));
+			String fname = getFinalFileName(libname,VariantType.CONC);
+			if(new File(fname).exists())
+				concordantfiles.add(fname);
 		}
 		// if there are no concordant files, print a warning.
 		if(concordantfiles.size()==0)
-			System.out.println("WARNING: " + concordantFile + " was not created because there are no concordant files for the libraries.");
+			System.out.println("\nWARNING: " + concordantFile + " was not created because there are no concordant files for the libraries.\n");
 		
 		// if this list has only one file, we're done.
 		if(concordantfiles.size()==1) {
+			System.out.println("\nMoving single concordant file to one with the correct name.\n");
 			File old = new File(concordantfiles.get(0));
 			boolean success = old.renameTo(new File(concordantFile));
 			if(!success) 
@@ -1426,6 +1429,7 @@ public class BAMToGASV {
 		// Otherwise, merge the multiple concordant files.
 		if(concordantfiles.size() > 1) {
 			// (2) Merge all concordant files using Sorter.merge() function. Write to OUTPUT_PREFIX+"_all.concordant
+			System.out.println("\nMerging " +concordantfiles.size()+" concordant files for all libraries into a single one.  This might take a while...\n");
 			concordantSorter.merge(concordantfiles,concordantFile);
 		}
 	}
