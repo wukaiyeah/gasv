@@ -127,6 +127,14 @@ public class BAMToGASV {
 		if(!b2g.someLibPassed) 
 			System.out.println("After Running fixMates, reading the BAM file resulted in errors.  Consult the FAQ for troubleshooting solutions.");
 
+		// MERGE CONCORDANT FILES (Anna - new June 30,2012)
+		// Only when GASVPRO_FLAG is set AND LIBRARY_SEPARATED is not 'all'
+		if(b2g.GASVPRO_OUTPUT) 
+			b2g.mergeConcordantFiles();
+		// (1) Get list of all concordant files.
+		// (2) Merge all concordant files using Sorter.merge() function. Write to OUTPUT_PREFIX+"_all.concordant
+		// (3) Delete all other concordant files
+
 		// Write .info and .gasv.in files.
 		b2g.writeInfoFile();
 		b2g.writeGASVInputFile();
@@ -398,6 +406,11 @@ public class BAMToGASV {
 		else
 			System.out.println("true");
 		System.out.println("  Validation Stringency: " + STRINGENCY);
+		System.out.print("  Prepare GASVPro Output? ");
+		if(GASVPRO_OUTPUT)
+			System.out.println("true");
+		else
+			System.out.println("false");
 		System.out.println("===================================\n");
 	}
 
@@ -1385,6 +1398,37 @@ public class BAMToGASV {
 		System.exit(-1);
 		return "";
 	}
+	
+	public void mergeConcordantFiles() {
+		String concordantFile = OUTPUT_PREFIX+"_all.concordant"; // from writeGASVPROInputFile()
+		
+		// MERGE CONCORDANT FILES (Anna - new June 30,2012)
+		// Only when GASVPRO_FLAG is set AND LIBRARY_SEPARATED is not 'all'
+		// (1) Get list of all concordant files.
+		ArrayList<String> concordantfiles = new ArrayList<String>();
+		String libname;
+		for(int i=0;i<LIBRARY_NAMES.size();i++) {
+			libname = LIBRARY_NAMES.get(i);
+			concordantfiles.add(getFinalFileName(libname,VariantType.CONC));
+		}
+		// if there are no concordant files, print a warning.
+		if(concordantfiles.size()==0)
+			System.out.println("WARNING: " + concordantFile + " was not created because there are no concordant files for the libraries.");
+		
+		// if this list has only one file, we're done.
+		if(concordantfiles.size()==1) {
+			File old = new File(concordantfiles.get(0));
+			boolean success = old.renameTo(new File(concordantFile));
+			if(!success) 
+				System.out.println("WARNING: " + concordantFile + " was not created by moving " + old.getName());
+		}
+		
+		// Otherwise, merge the multiple concordant files.
+		if(concordantfiles.size() > 1) {
+			// (2) Merge all concordant files using Sorter.merge() function. Write to OUTPUT_PREFIX+"_all.concordant
+			concordantSorter.merge(concordantfiles,concordantFile);
+		}
+	}
 
 	/**
 	 * Writes the .info file, which lists all the Lmin/Lmax values for each library.
@@ -1456,7 +1500,6 @@ public class BAMToGASV {
 			BufferedWriter writerpro = new BufferedWriter(new FileWriter(OUTPUT_PREFIX+".gasvpro.in"));
 			String libname;
 			Library lib;
-			VariantType type;
 
 			int totalNC = 0;
 			float totalGAvgRead = 0;
