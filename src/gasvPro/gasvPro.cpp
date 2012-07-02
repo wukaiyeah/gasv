@@ -27,13 +27,19 @@ struct uInt
 	float uniqueness;
 };
 
+struct CHelper
+{
+	int coverage;
+	bool divergent;
+};
+
 
 int pointInPoly(int *STARTS, int *ENDS, int npoints, unsigned int xt, unsigned int yt);
 int findLocation(int *STARTS, int NUM_FRAGMENTS, int START); 
 double getUniqueness(int* START_UNIQUE,int* END_UNIQUE,int *VALUE_UNIQUE,int NUM_UNIQUE,int startpoint,int endpoint);
 int getCoverage(int *STARTS, int *ENDS,int NUM_SEGMENTS, int startpoint, int endpoint, int BUFFER);
 int getCoverage(int *STARTS, int *ENDS,int NUM_SEGMENTS, int point, int BUFFER);
-int getCoverage(int start, int end, IntervalTree<int> *tree);
+int getCoverage(int start, int end, IntervalTree<CHelper*> *tree);
 int getCoverage(int point, vector<pair<int,int> >* genome);
 void pushInversionInterval(int start, int end, vector<pair<int,int > >* intervalVector);
 bool intervalCompare(pair<int,int> intervalA, pair<int,int> intervalB);
@@ -139,9 +145,9 @@ int main(int argc, char* argv[]){
 	string CLUSTERINPUT;
 	string ESPINPUT;
 	string UNIQUEINPUT;
-	int Lavg;
-	int ReadLen;
-	double Lambda;
+	int Lavg = 0;
+	int ReadLen = 0;
+	double Lambda = 0;
 	double Perr = 0.01;
 	int Limit = 1000;
 	double Tolerance = .0001;
@@ -150,10 +156,11 @@ int main(int argc, char* argv[]){
 	double MAX_UNIQUE_VALUE = -1;
 	double MIN_SCALED_UNIQUE = 0.3;
 	double LRTHRESHOLD = 0; 
-	bool PRINTALL = true;
+	bool PRINTALL = false;
 	bool IS_UNIQUE = true;
 	bool TRANSLOCATIONS_ON = false;
 	bool TRANS_ONLY = false;
+	bool AMBIG_MODE = false;
 	int translocationCount = 0;
 	
 
@@ -170,8 +177,8 @@ int main(int argc, char* argv[]){
 	
 	int *STARTS = new int[120000000];
 	int *ENDS   = new int[120000000];
-	vector<Interval<int> > deletions;			//*** NEW deletion intervals for tree;
-	IntervalTree<int> deletionTree;
+	vector<Interval<CHelper*> > deletions;			//*** NEW deletion intervals for tree;
+	IntervalTree<CHelper*> deletionTree;
 	
 	vector<pair<int,int> > inversionIntervals;			//for inversions
 	vector<pair<int,int> > relevantGenome;				//for inversions + concordant covg.
@@ -192,6 +199,7 @@ int main(int argc, char* argv[]){
 	
 	if(argc == 2)
 	{
+		cout << "|||INPUT PARAMETERS|||" << endl;
 		string temp;
 		ifstream p_file(argv[1], ios::in);
 		if(p_file.is_open()){cout << "   Parameters file found." << endl;}
@@ -311,7 +319,7 @@ int main(int argc, char* argv[]){
 			}
 		}
 	}
-	cout << "|||INPUT PARAMETERS|||" << endl << endl;
+	cout << "|||INPUT PARAMETERS|||" << endl;
 	
 	if(argc == 3)
 	{
@@ -431,6 +439,10 @@ int main(int argc, char* argv[]){
 						cout << "   LR Threshold: " << LRTHRESHOLD << endl;
 					}
 				}
+				if(term == "Ambiguous:"){
+					if(value == "True" || value == "true")
+						AMBIG_MODE = true;
+				}
 			}
 		}
 		CLUSTERINPUT = argv[2];
@@ -467,7 +479,7 @@ int main(int argc, char* argv[]){
 	}
 		
 	cout << "Checking for input errors...";
-	if(Lavg <= 0){ cerr << "\n\t\tERROR: Lmax must be positive\n"; exit(-1); }
+	if(Lavg <= 0){ cerr << "\n\t\tERROR: Lavg must be positive\n"; exit(-1); }
 	if(ReadLen <= 0){ cerr << "\n\t\tERROR: ReadLen must be positive\n"; exit(-1); }
 	if(Lambda <= 0){ cerr << "\n\t\tERROR: Lambda must be positive\n"; exit(-1); }
 	if(Perr <= 0){ cerr << "\n\t\tERROR: Perr must be positive\n"; exit(-1); }
@@ -478,16 +490,26 @@ int main(int argc, char* argv[]){
 
 	
 	char *BPOUT1 = new char[200];
-	sprintf(BPOUT1,"%s.gasvCC.Lavg_%i.Lambda_%8f.Perr_%8f.Limit_%i.Tolerance_%8f.coverage",CLUSTERINPUT.c_str(),Lavg,Lambda,Perr,Limit,Tolerance);
+	
+	
+	sprintf(BPOUT1,"%s.GASVPro.coverage",CLUSTERINPUT.c_str());
 	ofstream outFile1(BPOUT1,ios::out);
 	
+	
 	char *BPOUT2 = new char[200];
-	sprintf(BPOUT2,"%s.gasvCC.Lavg_%i.Lambda_%8f.Perr_%8f.Limit_%i.Tolerance_%8f.clusters",CLUSTERINPUT.c_str(),Lavg,Lambda,Perr,Limit,Tolerance);
-	ofstream outFile2(BPOUT2,ios::out);
+	ofstream outFile2;
+	ofstream graph;
+	if(!AMBIG_MODE){
+		sprintf(BPOUT2,"%s.GASVPro.clusters",CLUSTERINPUT.c_str());
+		outFile2.open(BPOUT2,ios::out);
+	}
+	if(AMBIG_MODE){
+		graph.open("graphArgs",ios::out);
+	}
 	
 	//Max Cluster Size:
 	//Note: Have a maximum line length of 15000000; should change this to a string; 
-	char* Y1_INIT = new char[15000000];
+	char* Y1_INIT = new char[15000000];	
 //	string Y1_INIT;
 	char* CLUSTER_FOR_OUTPUT = new char[15000000];
 	char* clusterName = new char[20];
@@ -682,8 +704,15 @@ int main(int argc, char* argv[]){
 						if(PRINT_FLAG == 1 && localType == 3) {cout << "\tNOTE: Small divergent, using BeRD model." << endl << flush;}
 						inversionIntervals.push_back(make_pair(maxX, minY));
 					}
-					if(!flag)	
-						deletions.push_back(Interval<int>(maxX, minY, 0));
+					if(!flag){
+						CHelper* temp = new CHelper;
+						temp->coverage = 0;
+						if(localType == 0){temp->divergent = false; deletions.push_back(Interval<CHelper*>(maxX, minY, temp));}
+						if(localType == 3){
+							temp->divergent = true;
+							deletions.push_back(Interval<CHelper*>(maxX, minY, temp));
+						}
+					}
 						
 					uInt* temp = new uInt;
 					temp->start = maxX;
@@ -783,7 +812,7 @@ int main(int argc, char* argv[]){
 		
 		
 		cout << "\t\tBuilding Deletion Interval tree....";
-		deletionTree = IntervalTree<int>(deletions);
+		deletionTree = IntervalTree<CHelper*>(deletions);
 		cout << "done." << endl;
 		clusterFile.close();
 		
@@ -904,12 +933,18 @@ int main(int argc, char* argv[]){
 				continue;
 			if(count%200000 == 0){cout << "\t\t\tProcessed " << count << " fragments." << endl;}
 			count++;
-			vector<Interval<int>* > overlap;
+			vector<Interval<CHelper*>* > overlap;
 			deletionTree.findOverlapping(tmpStart,tmpEnd,overlap);
 			//cout << overlap.size() << endl;
 			for(int i = 0; i < overlap.size(); i++)
 			{
-				overlap[i]->value++;
+				if(!(overlap[i]->value->divergent)){overlap[i]->value->coverage++;}
+				else{
+					if(tmpStart >= overlap[i]->start && tmpEnd <= overlap[i]->stop)
+					{
+						 overlap[i]->value->coverage++;
+					}
+				}
 			}	
 			overlap.clear();
 			
@@ -1077,9 +1112,11 @@ int main(int argc, char* argv[]){
 					
 					if( ( (minY - maxX) < Limit ) || localType == 1)
 					{
-						if(localType == 2){ cout << "TESTINGNOTE: Skipping SMALL divergent." << endl; continue;}
-						if(localType == 0) {cout << "\t\t\t\tNOTICE: Small deletion at cluster " << clusterName << " is being processed using breakend read depth algorithm." << endl;}
-						code = 0;
+						if(localType == 2){ cout << ":\t\t\t\tNOTICE: SMALL divergent." << endl; code = 3;}
+						if(localType == 0) {
+							cout << "\t\t\t\tNOTICE: Small deletion at cluster " << clusterName << " is being processed using beRD algorithm." << endl;
+							code = 0;
+						}
 						
 						//Store the coverage values;
 						for(a = minX; a<=maxX; a++){
@@ -1122,8 +1159,8 @@ int main(int argc, char* argv[]){
 										scaledUniqRight = ((1-MIN_SCALED_UNIQUE)*UNIQ_RIGHT[b-minY]+(MIN_SCALED_UNIQUE));
 									}	
 									
-									scaledCovLeft  = COUNTS_LEFT[a-minX]/scaledUniqLeft;
-									scaledCovRight = COUNTS_RIGHT[b-minY]/scaledUniqRight; 
+									scaledCovLeft  = (int) floor((COUNTS_LEFT[a-minX]/scaledUniqLeft)+.5);
+									scaledCovRight = (int) floor((COUNTS_RIGHT[b-minY]/scaledUniqRight)+.5); 
 							
 									/*if(scaledCovLeft + scaledCovRight >= 1000000){
 										//cerr << "HUGE Concordant Coverage at:\t" << a << b << endl;
@@ -1201,20 +1238,18 @@ int main(int argc, char* argv[]){
 					//End if Bigger than Limit
 					//A2: NO
 					else if( (minY - maxX) >= Limit){
-						
+						code = 2;
 						//Note: We should only have deletions and divergents at this point.
-						if(localType == 2){
-							cout << "TESTINGNOTE: Skipping REGULAR divergent at " << clusterName << endl; 
-						
+						if(localType == 2){						
 							//Need to get coverage, only strict contaimnent;
-							int combinedCoverage = 1; 
+							int combinedCoverage = getCoverage(maxX, minY, &deletionTree); 
 							int lengthConcordant = minY - maxX; //Think!
 
 							double combinedUniqueness = -1;
 							double scaledUniqueness = 1;
 							if(IS_UNIQUE){combinedUniqueness     = getUniqueness(maxX, minY, &uniquenessTree, MAX_UNIQUE_VALUE);}
 							if(IS_UNIQUE){scaledUniqueness       = ((1-MIN_SCALED_UNIQUE)*combinedUniqueness+(MIN_SCALED_UNIQUE));}
-							int combinedScaledCoverage           = combinedCoverage/scaledUniqueness; 
+							int combinedScaledCoverage           = (int) floor((combinedCoverage/scaledUniqueness)+.5); 
 							
 							int validC = validCoverage(Lambda*(lengthConcordant), combinedScaledCoverage, Tolerance);
 							
@@ -1284,7 +1319,7 @@ int main(int argc, char* argv[]){
 						int combinedCoverage = getCoverage(maxX, minY, &deletionTree);
 						if(IS_UNIQUE){combinedUniqueness     = getUniqueness(maxX, minY, &uniquenessTree, MAX_UNIQUE_VALUE);}
 						if(IS_UNIQUE){scaledUniqueness = ((1-MIN_SCALED_UNIQUE)*combinedUniqueness+(MIN_SCALED_UNIQUE));}
-						int combinedScaledCoverage    = combinedCoverage/scaledUniqueness;
+						int combinedScaledCoverage    = (int) floor((combinedCoverage/scaledUniqueness)+.5);
 						
 						//int validC = validCoverage(Lambda*(minY-maxX-Lavg), combinedScaledCoverage, Tolerance);
 						int lengthConcordant = minY - maxX + Lavg;
@@ -1380,9 +1415,11 @@ int main(int argc, char* argv[]){
 				//outFile2 is the clusters file
 				
 				if(LRCLUSTER >= LRTHRESHOLD || PRINTALL){
-				outFile1 << clusterName << "\t" << type  << "\t" << numDiscordants << "\t" << PROB_VARIANT << "\t" << PROB_NO_VARIANT << "\t" << LRCLUSTER << "\t" << bestA << "\t" << bestB << "\t" << NUMCC_L << "\t" << NUMCC_R << "\t" << MAP_L << "\t" << MAP_R << "\t" << code << endl;
-				outFile2 << CLUSTER_FOR_OUTPUT << "\t" << LRCLUSTER;
-				outFile2 << endl;
+				outFile1 << clusterName << "\t" << type  << "\t" << numDiscordants << "\t" << PROB_VARIANT << "\t" << PROB_NO_VARIANT << "\t" << bestA << "\t" << bestB << "\t" << NUMCC_L << "\t" << NUMCC_R << "\t" << MAP_L << "\t" << MAP_R << "\t" << code << endl;
+				if(!AMBIG_MODE){
+					outFile2 << CLUSTER_FOR_OUTPUT << "\t" << LRCLUSTER << "\t" << variantCopyNumber;
+					outFile2 << endl;
+				}
 				}
 				
 				//cout << clusterName << "\t" << variantCopyNumber << endl;
@@ -2169,8 +2206,10 @@ int main(int argc, char* argv[]){
 						
 						if(LRCLUSTER >= LRTHRESHOLD || PRINTALL){
 						outFile1 << clusterName << "\t" << type  << "\t" << numDiscordants << "\t" << PROB_VARIANT << "\t" << PROB_NO_VARIANT << "\t" << bestA << "\t" << bestB << "\t" << NUMCC_L << "\t" << NUMCC_R << "\t" << MAP_L << "\t" << MAP_R << "\t" << code << endl;
-						outFile2 << CLUSTER_FOR_OUTPUT << "\t" << LRCLUSTER;
-						outFile2 << endl;
+						if(!AMBIG_MODE){
+							outFile2 << CLUSTER_FOR_OUTPUT << "\t" << LRCLUSTER;
+							outFile2 << endl;
+						}
 						}
 						//cout << clusterName << "\t" << variantCopyNumber << endl;
 			
@@ -2216,11 +2255,14 @@ int main(int argc, char* argv[]){
 		}//endifor
 	} 
 	
-	
-	
+	if(AMBIG_MODE){
+		graph << CLUSTERINPUT << endl;
+		graph << BPOUT1 << endl;
+		graph.close();
+	}
 	
 	outFile1.close();
-	outFile2.close();
+	if(!AMBIG_MODE){ outFile2.close(); }
 	
 	cout << "\n***NOTICE: Ignored " << numIgnored << " clusters of non-supported types. See GASVPro documentation. " << endl;
 	if(!TRANSLOCATIONS_ON){cout << "***NOTICE: Found " << translocationCount << " translocations. Enable translocation mode or TransOnly mode to process them. " << endl;}
@@ -2411,15 +2453,15 @@ int getCoverage(int *STARTS, int *ENDS,int NUM_SEGMENTS, int startpoint, int end
 	return total;
 }
 
-int getCoverage(int start, int end, IntervalTree<int> *tree)
+int getCoverage(int start, int end, IntervalTree<CHelper*> *tree)
 {
-	vector<Interval<int> > results;
+	vector<Interval<CHelper*> > results;
 	tree->findContained(start, end, results);
 	if(results.size() == 0){return 010101010;}
 	for(int i = 0; i < results.size(); i++)
 	{
 		if(results[i].start == start && results[i].stop == end)
-			return results[i].value;
+			return results[i].value->coverage;
 	}
 	return 0101010101;
 }
