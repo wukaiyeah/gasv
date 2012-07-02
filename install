@@ -10,4 +10,7 @@ g++ -O2 -w src/gasvPro/gasvPro.cpp -o bin/GASVPro
 echo "Installing GASVPro-graph..."
 g++ -O2 -w src/gasvPro/GASVPro-graph.cpp -o bin/GASVPro-graph
 
+echo "Installing GASVPro-mcmc..."
+g++ -O2 -w src/gasvPro/GASVPro-mcmc.cpp -o bin/GASVPro-mcmc
+
 echo "Installation complete. Check for errors." 	
