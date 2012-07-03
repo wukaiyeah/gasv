@@ -1,3 +1,23 @@
+/**
+ * Copyright 2012 Benjamin Raphael, Suzanne Sindi, Anthony Cannistra, Hsin-Ta Wu, Luke Peng, Selim Onal
+ *
+ *  This file is part of the GASVPro code distribution.
+ * 
+ *  GASVPro is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  GASVPro is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU General Public License
+ *  along with gasv.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -203,6 +223,7 @@ int main(int argn, char* argv []){
 	if(clus_inp_del1.fail()){ cerr<<"Input failed - 1"<<endl; }
 	
 	string cluster, inp_f_n = clusters_file + ".new";
+	string inp_f_n_orig = inp_f_n;
 	double loc;
 	ofstream output_inp_del1;
 	output_inp_del1.open(inp_f_n.c_str());
@@ -568,6 +589,17 @@ int main(int argn, char* argv []){
 	delete [] frgs_supporting_sv;
 
 	//Remove temporary files:
+	string clean0 = "rm -rf " + inp_f_n_orig; 
+	string clean1 = "rm -rf " + inp_f_n;
+	string clean2 = "rm -rf " + coverage_file_new;
+	string clean3 = "rm -rf new_sv.clusters";
+	string clean4 = "rm -rf new_con.coverage";
+	system(clean0.c_str());
+	system(clean1.c_str());
+	system(clean2.c_str());
+	system(clean3.c_str());
+	system(clean4.c_str());
+	
 	
 	cerr << "GASVPro-graph finished successfully.\n";
 	
