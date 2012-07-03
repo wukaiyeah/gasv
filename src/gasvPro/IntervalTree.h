@@ -1,5 +1,5 @@
 /**
- * Copyright 2012 Benjamin Raphael, Suzanne Sindi, Anthony Cannistra, Hsin-Ta Wu, Luke Peng, Selim Onal
+ * Copyright 2012 Erik Garrison
  *
  *  This file is part of the GASVPro code distribution.
  * 
@@ -16,6 +16,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with gasv.  If not, see <http://www.gnu.org/licenses/>.
  *
+ *  This file, IntervalTree.h, is licensed under the MIT license.
+ *  see <http://www.opensource.org/licenses/mit-license.html>
  */
 
 #ifndef __INTERVAL_TREE_H

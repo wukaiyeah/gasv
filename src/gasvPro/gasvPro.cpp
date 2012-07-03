@@ -30,10 +30,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
-#include "IntervalTree.h"  //INTERVALTREE Courtesy of Erik Garrison (https://github.com/ekg/intervaltree)
-#include <vector>		   //for deletions and inversions
+#include "IntervalTree.h"  //INTERVALTREE Courtesy of Erik Garrison <https://github.com/ekg/intervaltree>
+#include <vector>		   
 #include <algorithm>
-#include <map>
 
 using namespace std;
 
@@ -61,7 +60,6 @@ int getCoverage(int *STARTS, int *ENDS,int NUM_SEGMENTS, int startpoint, int end
 int getCoverage(int *STARTS, int *ENDS,int NUM_SEGMENTS, int point, int BUFFER);
 int getCoverage(int start, int end, IntervalTree<CHelper*> *tree);
 int getCoverage(int point, vector<pair<int,int> >* genome);
-void pushInversionInterval(int start, int end, vector<pair<int,int > >* intervalVector);
 bool intervalCompare(pair<int,int> intervalA, pair<int,int> intervalB);
 bool genomeCompare(pair<int,int> pointA, pair<int,int> pointB);
 double getUniqueness(int start, int end, IntervalTree<uInt*>* tree, double MAX_UNIQUE_VAL);
@@ -752,7 +750,6 @@ int main(int argc, char* argv[]){
 					
 				if(localType == 1)
 				{
-					//pushInversionInterval(minX, maxX, &inversionIntervals);
 					inversionIntervals.push_back(pair<int,int>(minX,maxX));
 					uInt* temp = new uInt;
 					temp->start = minX;
@@ -763,7 +760,6 @@ int main(int argc, char* argv[]){
 					allIntervals.push_back(Interval<uInt*>(minX, maxX, temp));
 										
 					
-					//pushInversionInterval(minY, maxY, &inversionIntervals);
 					inversionIntervals.push_back(pair<int,int>(minY,maxY));
 					temp = new uInt;
 					temp->start = minY;
@@ -1032,6 +1028,7 @@ int main(int argc, char* argv[]){
 			if(strcmp(type,"D") == 0){ localType = 0; }
 			else if(strcmp(type,"I+") == 0 || strcmp(type,"I-") == 0 || strcmp(type,"IR") == 0){ localType = 1;}
 			else if(strcmp(type, "V") == 0) { localType = 2; }
+            else if(type[0] == "T"){ localType = 3; }
 			
 			//cout << "Cluster:\t" << CLUSTER_FOR_OUTPUT << endl;
 			//cout << "LocalType:\t" << localType << endl;
@@ -2276,8 +2273,10 @@ int main(int argc, char* argv[]){
 	} 
 	
 	if(AMBIG_MODE){
+		string dirname = CLUSTERINPUT + ".GASVPro.graphdir";
 		graph << CLUSTERINPUT << endl;
 		graph << BPOUT1 << endl;
+		graph << dirname << endl;
 		graph.close();
 	}
 	
@@ -2484,133 +2483,6 @@ int getCoverage(int start, int end, IntervalTree<CHelper*> *tree)
 			return results[i].value->coverage;
 	}
 	return 0101010101;
-}
-
-void pushInversionInterval(int start, int end, vector<pair<int,int > >* intervalVector)
-{
-	//if vector is empty, add interval.
-	
-	if(intervalVector->size() == 0)
-	{
-		cout << "init.." << endl;
-		intervalVector->push_back(make_pair(start,end));
-		return;
-	}
-	
-	//look to see that it doesn't belong at very end
-	
-	int lastStart = (intervalVector->back()).first;
-	int lastEnd   = (intervalVector->back()).second;
-	
-	if(start > lastEnd)
-	{
-		cout << "added new interval, as " << lastEnd << " < " <<  start << endl << endl;
-		intervalVector->push_back(make_pair(start,end));
-		return;
-	}
-	if(start < lastEnd && start >= lastStart)
-	{
-		cout << "there" << endl;
-		(intervalVector->back()).second = end;
-		return;
-	}
-	if(start >= lastStart && end <= lastEnd)
-	{
-		cout << "nothing" << endl;
-		return;
-	}
-	
-	//binary search through vector to find element/where element should be.
-	//all elements with iterators LESS THAN iterator "low" have a smaller start postion. 
-	
-	vector<pair<int,int> >::iterator low;
-	pair<int,int> testPair = make_pair(start, end);
-	low = lower_bound(intervalVector->begin(), intervalVector->end(), testPair, intervalCompare);
-	
-	vector<pair<int,int> >::iterator location = low;
-	
-	if(start < (*low).first && end < (*low).first)
-	{
-		cout << "found that it's less than point at iterator " << int(low - intervalVector->begin());
-		cout << " (" << (*low).first << " " << (*low).second << ")" << endl;
-		if(start > (*(--location)).second)
-		{
-			cout << "	found also that it is greater than previous interval. " << endl;
-			cout << "	prev interval:  " << (*location).first << " " << (*location).second << endl;
-			cout << "	adding interval " << start << " " << end << endl << endl << endl;
-			return;
-		}
-		
-		if(start <= (*location).second)
-		{
-			cout << "	found also that it extends previous interval" << endl;
-			cout << "	extended --location from " << (*location).second << " to " << end << endl << endl;
-			(*location).second = end;
-			return;
-		}
-		
-	}
-	
-	if(start < (*low).first && end > (*low).first)	//if new int starts before [low] and ends after 
-	{												//the start of [low]
-		cout << "found that it starts before low.start and ends after low.start" << endl;
-		
-		if(end <= (*low).second)					//if new int ends before the end of [low]
-		{
-			cout << "	found also that it ends before low.end" << endl;
-			(*low).first = start;
-			cout << "	extended low to start at start" << endl << endl;
-			return;
-		}
-		if(end > (*low).second)
-		{
-			cout << "	found also that it ends after low.end" << endl;
-			for(++location; location != intervalVector->end(); ++location)
-			{
-					if(start > (*location).second)
-						continue;
-					if(start <= (*location).second)
-					{
-						cout << "			found an inside end location." << endl;
-						vector<pair<int,int> >::iterator newPos = intervalVector->erase(low, location);
-						if(start < (*low).first)
-							(*newPos).first = start;
-						else
-							(*newPos).first = (*low).first;
-						return;
-					}
-					if(end < (*location).first)
-					{
-						cout << "		found an inside start location. " << endl;
-						vector<pair<int,int> >::iterator newPos = intervalVector->erase(low, --location);
-						if(start < (*low).first)
-							(*newPos).first = start;
-						else
-							(*newPos).first = (*low).first;
-						(*newPos).second = end;
-						return;
-					}
-					if(end == (*location).first)
-					{
-						cout << "		found an equal start location." << endl;
-						vector<pair<int,int> >::iterator newPos = intervalVector->erase(low, location);
-						if(start < (*low).first)
-							(*newPos).first = start;
-						else
-							(*newPos).first = (*low).first;
-						return;
-					}
-			
-		}
-		
-	}
-}
-	
-	
-	cout << "*************************CAUTION***************************" << endl;
-	cout << "		Looking at " << start << " " << end << endl;
-	cout << "		Iterator at " << int(low - intervalVector->begin()) << "with points " << (*low).first << " " << (*low).second << endl;
-	cout << "		Previous start is " << (*(--low)).first << endl;
 }
 
 bool intervalCompare(pair<int,int> intervalA, pair<int,int> intervalB)
