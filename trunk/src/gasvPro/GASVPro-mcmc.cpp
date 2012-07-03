@@ -18,7 +18,6 @@
  *
  */
 
-
 // % given a set of clusters  - samples over ambigously mapped fragments 
 #define DEBUGGING
 #undef DEBUGGING   // comment out to enable outputs to console
@@ -109,7 +108,7 @@ int main(int argc, char* argv[] ){
 	int MAX_SIZE_OF_CLUSTER = -1;
 	string SUFFIX;
 	
-	bool SAMPLE_UNIQUE = false;
+	int DO_UNIQUE = 0;
 	
 	if(argc < 2){
 		cerr << "GASVPro-mcmc: MCMC sampling of assignments for PR with multiple mappigns\n";
@@ -125,7 +124,7 @@ int main(int argc, char* argv[] ){
 		cerr << "\t\tStart                     Cluster ID to start with (-1 to do all)\n";
 		cerr << "\t\tEnd                       Cluster ID to end with (-1 to do all)\n";
 		cerr << "\t\tNote: Start and End allow for parallel processing.\n\n";
-		cerr << "\t\tSampleUnique              Sample over unique mappings (Default: False)\n";
+		//cerr << "\t\tSampleUnique              Sample over unique mappings (Default: False)\n";
 		/*
 		cerr<<"number or arguments!!"<<endl;
 		cerr << "./mcmcAdv {PARAMETERS FILE} {START_CLUSTER} {END_CLUSTER} {UNIQUE_FLAG}\n";
@@ -141,6 +140,7 @@ int main(int argc, char* argv[] ){
 			END   = atoi(argv[3]);
 		}
 		
+		/*
 		if(argc>=5){ 
 			DO_UNIQUE = atoi(argv[4]);
 			if(! (DO_UNIQUE == 0 || DO_UNIQUE == 1) ){ 
@@ -149,6 +149,7 @@ int main(int argc, char* argv[] ){
 				return -1;
 			}
 		}
+		*/
 	}
 	
 	/*
