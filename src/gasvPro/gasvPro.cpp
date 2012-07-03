@@ -1028,7 +1028,7 @@ int main(int argc, char* argv[]){
 			if(strcmp(type,"D") == 0){ localType = 0; }
 			else if(strcmp(type,"I+") == 0 || strcmp(type,"I-") == 0 || strcmp(type,"IR") == 0){ localType = 1;}
 			else if(strcmp(type, "V") == 0) { localType = 2; }
-            else if(type[0] == "T"){ localType = 3; }
+            else if(type[0] == 'T'){ localType = 3; }
 			
 			//cout << "Cluster:\t" << CLUSTER_FOR_OUTPUT << endl;
 			//cout << "LocalType:\t" << localType << endl;
