@@ -1,3 +1,24 @@
+/**
+ * Copyright 2012 Benjamin Raphael, Suzanne Sindi, Anthony Cannistra, Hsin-Ta Wu, Luke Peng, Selim Onal
+ *
+ *  This file is part of the GASVPro code distribution.
+ * 
+ *  GASVPro is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  GASVPro is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU General Public License
+ *  along with gasv.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+
 // % given a set of clusters  - samples over ambigously mapped fragments 
 #define DEBUGGING
 #undef DEBUGGING   // comment out to enable outputs to console
@@ -88,7 +109,7 @@ int main(int argc, char* argv[] ){
 	int MAX_SIZE_OF_CLUSTER = -1;
 	string SUFFIX;
 	
-	int DO_UNIQUE = 0;
+	bool SAMPLE_UNIQUE = false;
 	
 	if(argc < 2){
 		cerr << "GASVPro-mcmc: MCMC sampling of assignments for PR with multiple mappigns\n";
@@ -101,9 +122,10 @@ int main(int argc, char* argv[] ){
 		cerr << "\t\t<dir>                     GASVPro-graph Output Directory\n";
 				
 		cerr << "Optional Parameters:\n";
-		cerr << "\t\tStart                     Cluster ID to start with\n";
-		cerr << "\t\tEnd                       Cluster ID to end with\n";
+		cerr << "\t\tStart                     Cluster ID to start with (-1 to do all)\n";
+		cerr << "\t\tEnd                       Cluster ID to end with (-1 to do all)\n";
 		cerr << "\t\tNote: Start and End allow for parallel processing.\n\n";
+		cerr << "\t\tSampleUnique              Sample over unique mappings (Default: False)\n";
 		/*
 		cerr<<"number or arguments!!"<<endl;
 		cerr << "./mcmcAdv {PARAMETERS FILE} {START_CLUSTER} {END_CLUSTER} {UNIQUE_FLAG}\n";
@@ -119,7 +141,6 @@ int main(int argc, char* argv[] ){
 			END   = atoi(argv[3]);
 		}
 		
-		/*
 		if(argc>=5){ 
 			DO_UNIQUE = atoi(argv[4]);
 			if(! (DO_UNIQUE == 0 || DO_UNIQUE == 1) ){ 
@@ -127,7 +148,7 @@ int main(int argc, char* argv[] ){
 				cerr << "Proposed Unique Flag is --> " << DO_UNIQUE << endl;
 				return -1;
 			}
-		}*/
+		}
 	}
 	
 	/*
