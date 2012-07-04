@@ -157,7 +157,7 @@ public class ExternalSort {
 					// It has a header if the value is NOT parsed as a double.
 					if(firstLine) {
 						SortElement e = new SortElement(line);
-						if(header.isEmpty())
+						if(header.equals(""))
 							rows.add(e);
 						firstLine = false;
 					} else {
@@ -190,12 +190,12 @@ public class ExternalSort {
 	public void sort(ArrayList<String> lines,String outputname) throws IOException {
 		ArrayList<SortElement> rows = new ArrayList<SortElement>();
 		SortElement e;
-		
+				
 		for(int i=0;i<lines.size();i++) {
 			
 			// First, create SortElement from lines.get(i)
 			e = new SortElement(lines.get(i));
-			if(!e.line.isEmpty() && !e.line.contains("null")) {
+			if(!e.line.equals("") && !e.line.contains("null")) {
 				rows.add(e);
 			}
 			
@@ -222,7 +222,7 @@ public class ExternalSort {
 			ArrayList<SortElement> filerows = new ArrayList<SortElement>();
 			BufferedWriter out = new BufferedWriter(new FileWriter(outfile));
 
-			if(!header.isEmpty()) 
+			if(!header.equals("")) 
 				out.write(header+"\n");
 
 			boolean someFileStillHasRows = false;

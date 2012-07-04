@@ -90,6 +90,12 @@ public class BAMToGASV {
 	public HashMap<String,Integer> HIGHQ_INDICATOR; // <full_library_name,#of reads>
 	public HashSet<String> LOWQ_INDICATOR; // <full_library_name,#of reads>
 
+	/*
+	 * (1) Make HIGHQ and LOWQ indicator data structures HashMaps (key; fragmentname), values are SAMRecord strings.
+	 *     We can do this with getSAMString()
+	 * (2) As parsing, write the the pairs out as a sam file.
+	 */
+	
 	/* Sorters for ESPs and for Concordants */
 	public ExternalSort discordantSorter,concordantSorter;
 
@@ -1208,6 +1214,7 @@ public class BAMToGASV {
 				}
 
 			} else if (WRITE_LOWQ && LOWQ_INDICATOR.contains(readname)) {
+				//Current read has high quality, but the other read was: (1) already seen; (2) has low-quality.
 				// NOTE: if write_lowq is set, then LOWQ_ind is populated. 
 
 				// remove PAIR counting of this read
