@@ -140,6 +140,17 @@ public class GASVPair {
 		}
 	}
 	
+	// output need to transfer 'X' and 'Y' into 23 and 24, respectively.
+	// adds '_counter_0_0' to read name.
+	public String createOutputAmbig(VariantType t,int counter){
+		if (t == VariantType.CONC){
+			return first_chrom+"\t"+first_start+"\t"+second_end;
+		} else{
+			return readname+"_"+counter+"_0_0\t"+first_chrom+"\t"+first_start+"\t"+first_end+"\t"+first_ori+"\t"+
+					second_chrom+"\t"+second_start+"\t"+second_end+"\t"+second_ori;
+		}
+	}
+	
 	public void printPair() {
 		// can use any variant type except concordant to get ESP format.
 		System.out.println(createOutput(VariantType.DEL));
