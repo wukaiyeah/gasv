@@ -163,13 +163,13 @@ int main(int argn, char* argv []){
 	/* Step 0: Processing Arguments */
 	/********************************/
 
-	if(argn != 2){ 
+	if(argn < 4 ){ 
 		cerr << "GASVPro-Graph: Separates Ambiguous Clusters in to Dependent Components\n";
 		cerr << "Version:       1.0\n\n";
 		
-		cerr << "Usage: ./GASVPro-Graph {ParametersFile}\n";
+		cerr << "Usage: ./GASVPro-Graph {ClustersFile} {CoverageFile} {OutputDir} {MinimimSupport}\n";
 		
-		cerr << "ParametersFile:\n";
+		cerr << "\n";
 		cerr << "\t\t*gasv.in.clusters         \\\\GASV ClustersFile\n";
 		cerr << "\t\t*gasvPro-CC.in.coverage   \\\\GASVPro-CC Coverage File\n";
 		cerr << "\t\t<dir>                     \\\\Desired Output Directory\n";
@@ -179,26 +179,22 @@ int main(int argn, char* argv []){
 	
 	string clusters_file, coverage_file, output_path, summary_out, strtemp;
 	string esp_file_list;
-	string infos_fn = argv[1];
-	ifstream infos;
+//	string infos_fn = argv[1];
+//	ifstream infos;
 
 	int num_of_frg_threshold = 1;
 	
 	cerr << "Processing Command line arguments....\n";
-	
-	infos.open(infos_fn.c_str());
-	infos>>clusters_file;        //Read Clusters Line
-	getline(infos,strtemp);      //ReadRest
-	infos>>coverage_file;        //Read Coverage line
-	getline(infos,strtemp);      //ReadRest
-	infos>>output_path;          //Read output dir line
-	getline(infos,strtemp);      //ReadRest
-	
-	//Check if end of file: 
-	if(!infos.eof()){
-		infos>>num_of_frg_threshold; //Read minimum supporting fragments
-	}
 
+	clusters_file = argv[1];
+	coverage_file = argv[2];
+	output_path   = argv[3];
+	if(argn == 5){
+		strtemp = argv[4];
+		num_of_frg_threshold = atoi(strtemp.c_str());
+		if(num_of_frg_threshold<=0){ cerr << "Error: Minimim Threshold must be positive.\n"; }
+	}
+	
 	struct stat st;
 	if(stat(output_path.c_str(),&st) == 0){
 		cerr << "\tOutput directory " << output_path << " exists.\n";
