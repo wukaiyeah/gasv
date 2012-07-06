@@ -157,9 +157,12 @@ Building GASV from the source requires ant, available at: \url{http://ant.apache
 {\normalsize
 \noindent \texttt{bin/GASV.jar }\\
 \noindent \texttt{bin/BAMToGASV.jar }\\
-\noindent \texttt{bin/GASVPro}
+\noindent \texttt{bin/GASVPro-cc}\\
+\noindent \texttt{bin/GASVPro-graph}\\
+\noindent \texttt{bin/GASVPro-mcmc}
 }
 \end{framed}
+
 
 \section{Quickstart Guide to GASV}
 
@@ -302,6 +305,41 @@ $ java -jar GASV.jar --output reads --batch Example.bam.gasv.in
 \end{enumerate}
 
 \clearpage
+
+\section{Running the GASV Pipeline with Scripts}
+Due to the number of steps within the GASV pipeline and the various options available at each step, we have provided paramaterized scripts to simplify the process. They are designed to take as input a \verb+.bam+ file, plus other optional parameters, and run the entire GASV pipeline outlined above. Please note that these scripts exist simply to simplify the first run or two of the GASV pipeline and are not to be relied upon as the only method for running GASV. The scripts are stored in the \verb+\bin+ directory.
+\subsection{GASVPro High Quality}
+For data sets with very few ambiguous mappings, we have created a script called \verb+GASVPro-HQ.sh+. To use this script, it is necessary to change the top section of the script file to match desired parameters. The parameters appear as follows: 
+\begin{Verbatim}[frame=single]
+#REQUIRED:
+BAMFILE=example.bam
+                     
+#OPTIONAL (set to NULL if not being used):
+UNIQUEFILE=NULL
+MAXUNIQUEVAL=NULL		#MUST SPECIFY IF UNIQUEFILE IS GIVEN
+MINSCALEDUNIQUE=NULL             #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+LRTHRESHOLD=NULL	         #default 0
+MINCLUSTER=NULL	  	#default 4
+\end{Verbatim}
+\begin{itemize}
+\item {\bf BAMFILE:} The \verb+.bam+ file that will go through the pipeline. It is required.
+\item {\bf UNIQUEFILE:} The file containing a uniqueness track, used in GASVPro-cc. It is optional.
+\item {\bf MAXUNIQUEVAL:} The highest numerical uniqueness value given to a fragment in the unique file. REQUIRED if a unique file is given.
+\item {\bf MINSCALEDUNIQUE:} The minimum value to which the uniqueness values can be scaled. REQUIRED if a unique file is given
+\item {\bf LRTHRESHOLD:} The minimum liklihood threshold past which variants will be reported from GASVPro-cc. It is optional.
+\item {\bf MINCLUSTER: } The minimum cluster size. It is optional.
+\end{itemize}
+
+\noindent After the desired parameters are chosen, be sure to save the file. Since this file needs to be executable, run 
+\begin{Verbatim}[frame=single]
+chmod 777 GASVPro-HQ.sh
+\end{Verbatim}
+Now it is possible to run GASVPro-HQ.sh. Initiate the pipeline by running 
+\begin{Verbatim}[frame=single]
+./GASVPro-HQ.sh
+\end{Verbatim}
+
+
 \section{BAMToGASV}
 
 BAMToGASV generates GASV formatted input files from the SAM/BAM alignment format. SAM files are also accepted as input, but for clarity this manual will refer to BAM files only.  Picard, a Java tool for processing BAM files, is packaged in the JAR file. Running BAMToGASV with no arguments produces basic usage information.
@@ -612,8 +650,7 @@ GASV outputs a clusters file named $<$InputFile$>$.clusters that lists all SV pr
 \item[I+] =    Inversion (++ side only)
 \item[I-] =    Inversion (-{}- side only)
 \end{description}
-\item[V] =    Divergent
-\item[DV] = Combination of divergent and deletion discordant PRs.
+\item[V] =    Divergent. {\scriptsize NOTE: Currently the GASV pipeline does not support divergent variants.}
 \item[T] = Translocation; (see below and Figure~\ref{fig:translocation})
 \begin{description}
 \item[TR] = Reciprocal Translocation
