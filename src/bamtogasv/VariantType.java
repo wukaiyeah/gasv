@@ -18,5 +18,5 @@
  *
  */
 public enum VariantType {
-	DEL,INV,DIV,TRANS,INS,CONC,LOW;
+	DEL,INV,DIV,TRANS,INS,CONC;
 }
