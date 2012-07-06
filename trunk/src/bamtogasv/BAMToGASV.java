@@ -596,6 +596,9 @@ public class BAMToGASV {
 	public void getLminLmax(Library lib) {
 		System.out.println("Getting Lmin and Lmax for library \"" + lib.name+"\"...");
 
+		// Step 0: Calculate Mean and STD
+		getMeanAndSTDForNovoalign(lib);
+		
 		// Step 1: Determine which metric to use.
 
 		/// EXACT CUTOFF_LMINLMAX ///
@@ -736,19 +739,8 @@ public class BAMToGASV {
 	 */
 	public void getLminLmaxSTD(Library lib,int stddev) {
 		//double mean = (double) (lib.total_L)/lib.counter;
-		double mean = (double) (lib.total_L)/lib.total_C;
-		double sd_up = 0;
-
-		//System.out.println(mean);
-		Iterator<Map.Entry<Integer, Integer>> libIter = lib.lengthHist.entrySet().iterator();
-		while(libIter.hasNext()){
-			Map.Entry<Integer,Integer> libtmp = libIter.next();
-			sd_up += libtmp.getValue().intValue()*Math.pow(libtmp.getKey().intValue()-mean, 2);
-		}
-		//double sd = Math.sqrt(sd_up/lib.counter);
-		double sd = Math.sqrt(sd_up/lib.total_C);
-		lib.Lmin = (int) (mean-(sd*stddev));
-		lib.Lmax = (int) (mean+(sd*stddev));
+		lib.Lmin = (int) (lib.mean-(lib.std*stddev));
+		lib.Lmax = (int) (lib.mean+(lib.std*stddev));
 	}
 
 	/**
@@ -786,6 +778,20 @@ public class BAMToGASV {
 		if(lib.Lmax == Integer.MIN_VALUE){
 			lib.Lmax = last_value;
 		}
+	}
+	
+	public void getMeanAndSTDForNovoalign(Library lib) {
+		lib.mean = (int)((double)lib.total_L/lib.total_C+0.5);
+		double sd_up = 0;
+
+		//System.out.println(mean);
+		Iterator<Map.Entry<Integer, Integer>> libIter = lib.lengthHist.entrySet().iterator();
+		while(libIter.hasNext()){
+			Map.Entry<Integer,Integer> libtmp = libIter.next();
+			sd_up += libtmp.getValue().intValue()*Math.pow(libtmp.getKey().intValue()-lib.mean, 2);
+		}
+		//double sd = Math.sqrt(sd_up/lib.counter);
+		lib.std = (int)(Math.sqrt(sd_up/lib.total_C)+0.5);
 	}
 
 	/**
@@ -1433,7 +1439,7 @@ public class BAMToGASV {
 	public void writeInfoFile() {
 		try {
 			BufferedWriter writer = new BufferedWriter(new FileWriter(OUTPUT_PREFIX+".info"));
-			writer.write("LibraryName\tLmin\tLmax\n");
+			writer.write("LibraryName\tLmin\tLmax\tMean\tStdDev\n");
 			String libname;
 			Library lib;
 			for(int i=0;i<LIBRARY_NAMES.size();i++) {
@@ -1444,7 +1450,10 @@ public class BAMToGASV {
 				if(lib.Lmin == Integer.MIN_VALUE || lib.Lmax == Integer.MIN_VALUE)
 					continue;
 				
-				writer.write(libname + "\t" + LIBRARY_INFO.get(libname).Lmin+"\t"+LIBRARY_INFO.get(libname).Lmax+"\n");
+				writer.write(libname + "\t" + LIBRARY_INFO.get(libname).Lmin+"\t"+
+						LIBRARY_INFO.get(libname).Lmax+"\t"+
+						LIBRARY_INFO.get(libname).mean+"\t"+
+						LIBRARY_INFO.get(libname).std+"\n");
 				//writerpro.write(libname+"\t"+LIBRARY_INFO.get(libname).getAverageInsertLength()+"\t"+LIBRARY_INFO.get(libname).getAverageReadLength()+"\t"+LIBRARY_INFO.get(libname).getConcordDist()+"\n");
 			}
 

@@ -30,7 +30,7 @@ public class Library {
 	public String name;
 	public ArrayList<GASVPair> firstNreads;
 	public boolean pairedTag, mateFound, computedStats;
-	public int Lmin,Lmax,counter,total_L, minRead_L, total_C, total_RL;
+	public int Lmin,Lmax,counter,total_L, minRead_L, total_C, total_RL,mean,std;
 	public TreeMap<Integer, Integer> numConcord;
 	public TreeMap<Integer, Integer> lengthHist; /// TreeMap is sorted
 	public HashMap<VariantType,Integer> numTmpFilesForVariant; // <variant_type, # of tmp files written>
