@@ -67,11 +67,11 @@ while(my $line = <BAM>){
 		#22222222222222222222222222222222222222222222222222
 
 		if($FLAG & 0x0040){
-			print READ1 "\@$name/1\n+\n$qual\n";
+			print READ1 "\@$name/1\n$seq\n+\n$qual\n";
 			$read1++;
 		}
 		elsif($FLAG & 0x0080){
-			print READ2 "\@$name/2\n+\n$qual\n";
+			print READ2 "\@$name/2\n$seq\n+\n$qual\n";
 			$read2++;
 		}
 		else{
