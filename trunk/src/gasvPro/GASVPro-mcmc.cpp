@@ -110,7 +110,7 @@ int main(int argc, char* argv[] ){
 	
 	int DO_UNIQUE = 0;
 	
-	if(argc < 2){
+	if(argc < 3){
 		cerr << "GASVPro-mcmc: MCMC sampling of assignments for PR with multiple mappigns\n";
 		cerr << "Version:       1.0\n\n";
 		
@@ -124,20 +124,13 @@ int main(int argc, char* argv[] ){
 		cerr << "\t\tStart                     Cluster ID to start with (-1 to do all)\n";
 		cerr << "\t\tEnd                       Cluster ID to end with (-1 to do all)\n";
 		cerr << "\t\tNote: Start and End allow for parallel processing.\n\n";
-		//cerr << "\t\tSampleUnique              Sample over unique mappings (Default: False)\n";
-		/*
-		cerr<<"number or arguments!!"<<endl;
-		cerr << "./mcmcAdv {PARAMETERS FILE} {START_CLUSTER} {END_CLUSTER} {UNIQUE_FLAG}\n";
-		cerr << "Optional: Start, End, Unique.\n";
-		cerr << "Start and End specifiy starting and ending SV component numbers.\n";
-		cerr << "Unique Flag = 0 (default, run mcmc), 1 (set only unique ESPs and run likelihood, do not run mcmc).\n";
-		*/
+	
 		return -1;
 	}
 	else{
-		if(argc>=4){
-			START = atoi(argv[2]);
-			END   = atoi(argv[3]);
+		if(argc>=5){
+			START = atoi(argv[3]);
+			END   = atoi(argv[4]);
 		}
 		
 		/*
@@ -157,38 +150,139 @@ int main(int argc, char* argv[] ){
 	cout << "(1) Current moves are add/remove and naive. Swap move is not presently supported.\n";
 	*/
 		
-	//Step 0: Process the Parameters File
-
+	/*
+	 Notes to Tony:
+	 
+	 When parsing parameters file there are a few differences:
+	 
+	 These need to be new parameters in the parameters file:
+	 BURN_IN
+	 SAMPLE 
+	 */
+	
+	
+	
 	//(1) Open Parameters File
 	string parameters_file = argv[1];
 	ifstream infos;
 	infos.open(parameters_file.c_str());
-		
-	//(2) Determine input path; where all the svs are
-	string input_path;  
-	infos>>input_path;
-	getline(infos,temp_str); //Clear the rest of the line;
 	
+	//(2) Determine input path; where all the svs are
+	string input_path = argv[2];  
+		
 	//(3) Get Probability Model Parameters:
 	double COVERAGE;
 	double COVERAGE_SCALED;
 	int LAVG;
 	int LDIS;
-	infos>>COVERAGE>>COVERAGE_SCALED>>LAVG>>LDIS; //Lambda, Lambda_d, Lavg, LengthDiscordant;
-	getline(infos,temp_str); //Clear the rest of the line;
+	int READLEN;
 	
+	double Tolerance;
+	int PRINT_FLAG;
+	double LRTHRESHOLD;
+	bool PRINTALL;
+		
 	//(4) Get the MCMC Iteration Steps;
-	int BURN_IN;
-	int SAMPLE;
-	infos>>BURN_IN>>SAMPLE;
-	getline(infos,temp_str); //Clear the rest of the line;
-	
+	int BURN_IN = 100000;
+	int SAMPLE = 900000;
+			
 	//(5) Get Error for the probability model
 	double p_err;
-	infos>>p_err;
-	getline(infos,temp_str); //Clear the rest of the line;
-	//double log_p_err = log(p_err);
-		 
+	
+	//Step 0: Process the Parameters File
+	cout << "|||INPUT PARAMETERS|||" << endl;
+	string temp;
+	ifstream p_file(argv[1], ios::in);
+	if(p_file.is_open()){cout << "   Parameters file found." << endl;}
+	else{cout << "WARNING: Parameters file \"" << argv[1] << "\" cannot be opened." << endl; exit(1);}
+	while(getline(p_file, temp))
+	{
+		if(temp[0] == '#')
+			continue;
+		else
+		{
+			string term;
+			string value;
+			int spacePos = temp.find(' ');
+			if(spacePos == -1)
+			{
+				spacePos = temp.find(':');
+				value = temp.substr(spacePos+1);
+				term = temp.substr(0,spacePos+1);
+				
+			}
+			else{
+				value = temp.substr(spacePos+1);
+				term = temp.substr(0,spacePos);
+			}
+			
+			if(term == "Lavg:")
+			{
+				LAVG = atoi(value.c_str());
+				cout << "   Lavg: " << LAVG << endl;
+				continue;
+			}
+			if(term == "ReadLen:"){
+				READLEN = atoi(value.c_str());
+				cout << "   Read Length: " << READLEN << endl;
+				continue;
+			}
+			if(term == "Lambda:"){
+				COVERAGE = atof(value.c_str());
+				cout << "   Lambda: " << COVERAGE << endl;
+				continue;
+			}
+			if(term == "Perr:"){
+				p_err = atof(value.c_str());
+				cout << "   Perr: " << p_err << endl;
+				continue;
+			}
+			if(term == "Tolerance:"){
+				Tolerance = atof(value.c_str());
+				cout << "   Tolerance: " << Tolerance << endl;
+				continue;
+			}
+
+			if(term == "Burnin:"){
+				BURN_IN = atoi(value.c_str());
+				cout << "   Burnin: " << BURN_IN << endl;
+				continue;
+			}
+			
+			if(term == "Sample:"){
+				SAMPLE = atoi(value.c_str());
+				cout << "   Sample: " << SAMPLE << endl;
+				continue;
+			}
+			
+			if(term == "Verbose:"){
+				if(value == "Y" || value == "y" || value == "yes"){
+					PRINT_FLAG = 1;
+				cout << "   ***Verbose Mode Enabled***" << endl;}
+				else{
+					PRINT_FLAG = 0;
+				}
+				continue;
+			}	
+			if(term == "LRThreshold:"){
+				if(value == "all" || value == "All"){
+					PRINTALL = true;
+					cout << "   LR Threshold: PRINT_ALL" << endl;
+				}
+				else{
+					LRTHRESHOLD = atof(value.c_str());
+					PRINTALL = false;
+					cout << "   LR Threshold: " << LRTHRESHOLD << endl;
+				}
+				continue;
+			}
+		}
+	}
+	
+	//Set remaining parameters;
+	LDIS = LAVG - 2*READLEN;
+	COVERAGE_SCALED = COVERAGE * (LDIS*1.0/LAVG*1.0);
+	
 	// Step 1: Read the info from p_star.summary (MAY NOT BE NEEDED ANYMORE!)
 	ifstream sum_info;
 	fn = input_path + "p_star.summary"; // file name for summary info
