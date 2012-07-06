@@ -27,7 +27,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
@@ -87,10 +86,10 @@ public class BAMToGASV {
 	public HashMap<String,String> LIBRARY_IDS; // <library_id,full_library_name>
 	public HashMap<String,Library> LIBRARY_INFO; // <full_library_name,Library Object>
 	public ArrayList<String> LIBRARY_NAMES; // list of <full_library_name>
-	public HashMap<String,Integer> HIGHQ_INDICATOR; // <full_library_name,#of reads>
-	public HashSet<String> LOWQ_INDICATOR; // <full_library_name,#of reads>
+	public HashMap<String,String> HIGHQ_INDICATOR; // <full_library_name,#of reads>
+	public HashMap<String,String> LOWQ_INDICATOR; // <full_library_name,#of reads>
 
-	/*
+	/* (Done by Anna on 5/5)
 	 * (1) Make HIGHQ and LOWQ indicator data structures HashMaps (key; fragmentname), values are SAMRecord strings.
 	 *     We can do this with getSAMString()
 	 * (2) As parsing, write the the pairs out as a sam file.
@@ -104,6 +103,8 @@ public class BAMToGASV {
 	public static HashMap<String,Integer> CHR_NAMES; // <non-default chr naming, #>
 	public static VariantType[] VARIANTS = VariantType.values(); // list of variant types
 
+	/* Output BAM File Names */
+	public BufferedWriter LOWQ_BAM_FILE;
 
 	/**
 	 * Main class.
@@ -172,11 +173,11 @@ public class BAMToGASV {
 		LIBRARY_IDS = new HashMap<String,String>();
 		LIBRARY_NAMES = new ArrayList<String>();
 		LIBRARY_INFO = new HashMap<String,Library>();
-		HIGHQ_INDICATOR = new HashMap<String, Integer>();
-		LOWQ_INDICATOR = new HashSet<String>();
+		HIGHQ_INDICATOR = new HashMap<String,String>();
+		LOWQ_INDICATOR = new HashMap<String,String>();
 		NON_DEFAULT_REFS = new HashMap<String,Boolean>();
 		BAD_RECORD_COUNTER = 0;
-
+	
 		// Try opening sorters and catch errors.
 		try {
 			discordantSorter = new ExternalSort("ESP");
@@ -838,6 +839,7 @@ public class BAMToGASV {
 
 	/**
 	 * Reads the BAM file.  For each library listed, calculate stats along the way.
+	 * @throws IOException 
 	 */
 	public void readBAMfile() {
 		System.out.println("Reading BAM file.  Once "+ USE_NUMBER_READS + " lines have been acquired for each library, stats will be calculated.");
@@ -862,6 +864,20 @@ public class BAMToGASV {
 				System.exit(-1);
 			}
 		}
+		
+		// initialize BAM file for lowquality alignments.
+		if(WRITE_LOWQ)
+			try {
+				LOWQ_BAM_FILE = new BufferedWriter(new FileWriter(new File(OUTPUT_PREFIX+"_lowqual.sam")));
+				String header = inputSam.getFileHeader().getTextHeader();
+				LOWQ_BAM_FILE.write(header);
+			} catch (IOException e) {
+				System.out.println("ERROR creating low quality SAM file.");
+				System.exit(-1);
+			}
+		else
+			LOWQ_BAM_FILE = null;
+
 
 		// Initialize Library objects
 		for(int i=0; i<LIBRARY_NAMES.size();i++) {
@@ -940,6 +956,13 @@ public class BAMToGASV {
 		} // end for (SAMRecord samRecord : inputSam)
 
 		inputSam.close();
+		if(WRITE_LOWQ)
+			try {
+				LOWQ_BAM_FILE.close();
+			} catch (IOException e) {
+				System.out.println("WARNING: Cannot close low-quality sam file.");
+			}
+		
 		System.out.println("Done reading BAM file.\n");
 
 		// finish analysis with remaining records in libraries.
@@ -992,9 +1015,7 @@ public class BAMToGASV {
 				// skip variant types that aren't flagged as "to-write"
 				if(type == VariantType.CONC && !WRITE_CONCORDANT)
 					continue;
-				if(type == VariantType.LOW && !WRITE_LOWQ)
-					continue;
-
+				
 				// (2) Write last temporary files for variants
 				if(lib.rowsForVariant.get(type).size() > 0) 				
 					sortAndWriteTempFile(lib,type);
@@ -1077,9 +1098,6 @@ public class BAMToGASV {
 		if(type == VariantType.CONC && !WRITE_CONCORDANT)
 			return;		
 
-		if(type == VariantType.LOW && !WRITE_LOWQ)
-			return;		
-
 		if(type == VariantType.CONC && GASVPRO_OUTPUT){ // GASVPro calculating avg length (insert, read) for GASVPro parameters file 
 			int conc_chrom = pobj.getChromosome().intValue();
 			if (lib.numConcord.containsKey(conc_chrom)){
@@ -1104,9 +1122,7 @@ public class BAMToGASV {
 				for(int j=0;j<VARIANTS.length;j++) {
 					if(VARIANTS[j] == VariantType.CONC && !WRITE_CONCORDANT)
 						continue;
-					if(VARIANTS[j] == VariantType.LOW && !WRITE_LOWQ)
-						continue;
-
+					
 					// if there are fewer than 1/10th of the number of reads, don't do this yet.
 					if(lib.rowsForVariant.get(VARIANTS[j]).size() < USE_NUMBER_READS/10)
 						continue;
@@ -1119,11 +1135,13 @@ public class BAMToGASV {
 
 	}
 
+	
 	/**
 	 * Add GASVPair object to the LOWQUAL list in Library's data structure.
 	 * @param pobj - GASVPair object
 	 * @param lib - library to add ESP to.
 	 */
+	/*
 	private void parseLowQualESPfromGASVPair(GASVPair pobj, Library lib){ 
 		VariantType type = VariantType.LOW;
 
@@ -1155,6 +1173,7 @@ public class BAMToGASV {
 		} // END if(lib.rowsForVariant.get(type).size() >= NUM_LINES_FOR_EXTERNAL_SORT)
 
 	}
+	*/
 
 	/**
 	 * Parse read and put the SAM record in the appropriate place.  
@@ -1213,30 +1232,17 @@ public class BAMToGASV {
 						lib.isRecordPaired(s);
 				}
 
-			} else if (WRITE_LOWQ && LOWQ_INDICATOR.contains(readname)) {
+			} else if (WRITE_LOWQ && LOWQ_INDICATOR.containsKey(readname)) {
 				//Current read has high quality, but the other read was: (1) already seen; (2) has low-quality.
 				// NOTE: if write_lowq is set, then LOWQ_ind is populated. 
 
 				// remove PAIR counting of this read
-				LOWQ_INDICATOR.remove(readname);
+				String other = LOWQ_INDICATOR.remove(readname);
 
-				// make a GASVPair object
-				GASVPair pobj = null;
-				try {
-					pobj = new GASVPair(s, PLATFORM);
-					if(pobj.badChrParse) // chromosome not recognized. skip.
-						return;
-				} catch (SAMFormatException e) {
-					BAD_RECORD_COUNTER++;
-					System.err.println("**SAMFormatException** "+e.getMessage());
-					return;
-				}
-
-				// parse ESP
-				parseLowQualESPfromGASVPair(pobj,lib);
+				writeLowQualityRecordPair(other,s.getSAMString());
 
 			} else { // haven't seen it, put it in HIGHQ 
-				HIGHQ_INDICATOR.put(readname,1);
+				HIGHQ_INDICATOR.put(readname,s.getSAMString());
 			} // END high quality read conditional 
 
 		} else { // (s.getMappingQuality() <= MAPPING_QUALITY)
@@ -1244,51 +1250,33 @@ public class BAMToGASV {
 			// Have we seen it's mate? First check HIGHQ, then check LOWQ
 			if(HIGHQ_INDICATOR.containsKey(readname)) {
 				// remove PAIR counting of this read
-				HIGHQ_INDICATOR.remove(readname);
+				String other = HIGHQ_INDICATOR.remove(readname);
 
 				// IF write_lowq, then write low qual.
-				if(WRITE_LOWQ) {
-					// make a GASVPair object
-					GASVPair pobj = null;
-					try {
-						pobj = new GASVPair(s, PLATFORM);
-						if(pobj.badChrParse) // chromosome not recognized. skip.
-							return;
-					} catch (SAMFormatException e) {
-						BAD_RECORD_COUNTER++;
-						System.err.println("**SAMFormatException** "+e.getMessage());
-						return;
-					}
-
-					// parse ESP
-					parseLowQualESPfromGASVPair(pobj,lib);
+				if(WRITE_LOWQ) {	
+					writeLowQualityRecordPair(other,s.getSAMString());
 				}
 
-			} else if (WRITE_LOWQ && LOWQ_INDICATOR.contains(readname)) {
+			} else if (WRITE_LOWQ && LOWQ_INDICATOR.containsKey(readname)) {
 				// NOTE: if write_lowq is set, then LOWQ_ind is populated. 
 
 				// remove PAIR counting of this read
-				LOWQ_INDICATOR.remove(readname);
-
-				// make a GASVPair object
-				GASVPair pobj = null;
-				try {
-					pobj = new GASVPair(s, PLATFORM);
-					if(pobj.badChrParse) // chromosome not recognized. skip.
-						return;
-				} catch (SAMFormatException e) {
-					BAD_RECORD_COUNTER++;
-					System.err.println("**SAMFormatException** "+e.getMessage());
-					return;
-				}
-
-				// parse ESP
-				parseLowQualESPfromGASVPair(pobj,lib);
+				String other = LOWQ_INDICATOR.remove(readname);
+				writeLowQualityRecordPair(other,s.getSAMString());
 
 			} else if (WRITE_LOWQ) { // we haven't seen it - add to LOWQ
-				LOWQ_INDICATOR.add(readname);
+				LOWQ_INDICATOR.put(readname,s.getSAMString());
 			} // END low quality read conditional
 		} // END mapping quality check
+	}
+	
+	public void writeLowQualityRecordPair(String record1,String record2)  {
+		try {
+			LOWQ_BAM_FILE.write(record1+record2);
+		} catch (IOException e) {
+			System.out.println("ERROR: Cannot write low-quality sam file.");
+			System.exit(-1);
+		}
 	}
 
 	/**
@@ -1398,8 +1386,6 @@ public class BAMToGASV {
 			return OUTPUT_PREFIX+"_"+lib+".divergent";
 		if(type == VariantType.TRANS)
 			return OUTPUT_PREFIX+"_"+lib+".translocation";
-		if(type == VariantType.LOW)
-			return OUTPUT_PREFIX+"_"+lib+".lowquality";
 
 		System.out.println("ERROR: type "+type+" is not one of the recognized options.");
 		System.exit(-1);
@@ -1487,7 +1473,6 @@ public class BAMToGASV {
 				for(int j=0;j<VARIANTS.length;j++) {
 					type = VARIANTS[j];
 					if(type == VariantType.CONC || 
-							type == VariantType.LOW || 
 							type == VariantType.INS)
 						continue;
 
@@ -1577,14 +1562,15 @@ public class BAMToGASV {
 			System.out.println("  "+OUTPUT_PREFIX+".gasvpro.in"); // GASVPro
 			System.out.println("  "+OUTPUT_PREFIX+"_all.concordant");// GASVPro 
 		}
+		if(WRITE_LOWQ) {
+			System.out.println("  "+OUTPUT_PREFIX+"_lowqual.sam");
+		}
 			
 
 		for(int i=0;i<LIBRARY_NAMES.size();i++) {
 			for(int j=0;j<VARIANTS.length;j++) {
 
 				if(VARIANTS[j] == VariantType.CONC && !WRITE_CONCORDANT)
-					continue;
-				if(VARIANTS[j] == VariantType.LOW && !WRITE_LOWQ)
 					continue;
 				if(VARIANTS[j] == VariantType.CONC && GASVPRO_OUTPUT) // GASVPro
 					continue;

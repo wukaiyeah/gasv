@@ -66,7 +66,7 @@ public class BAMToGASV_AMBIG {
 	public int PROPER_LENGTH = 10000;
 	public String PLATFORM="illumina"; // note lower case
 	public boolean WRITE_CONCORDANT = false;
-	public boolean WRITE_LOWQ = false;
+	//public boolean WRITE_LOWQ = false;
 	public ValidationStringency STRINGENCY = ValidationStringency.SILENT; 
 	public boolean GASVPRO_OUTPUT = false; // GASVPro
 	public boolean BATCH = false;
@@ -910,8 +910,6 @@ public class BAMToGASV_AMBIG {
 				// skip variant types that aren't flagged as "to-write"
 				if(type == VariantType.CONC)
 					continue;
-				if(type == VariantType.LOW)
-					continue;
 
 				// (2) Write last temporary files for variants
 				if(lib.rowsForVariant.get(type).size() > 0) 				
@@ -1071,9 +1069,6 @@ public class BAMToGASV_AMBIG {
 		if(type == VariantType.CONC)
 			return;		
 
-		if(type == VariantType.LOW)
-			return;		
-
 		// Add line to variant list for this library.
 		lib.addLine(type,pobj.createOutputAmbig(type,counter));
 
@@ -1087,8 +1082,6 @@ public class BAMToGASV_AMBIG {
 
 				for(int j=0;j<VARIANTS.length;j++) {
 					if(VARIANTS[j] == VariantType.CONC)
-						continue;
-					if(VARIANTS[j] == VariantType.LOW)
 						continue;
 
 					// if there are fewer than 1/10th of the number of reads, don't do this yet.
@@ -1112,9 +1105,6 @@ public class BAMToGASV_AMBIG {
 		VariantType type = getVariantType(pobj,lib);
 
 		if(type == VariantType.CONC && !WRITE_CONCORDANT)
-			return;		
-
-		if(type == VariantType.LOW && !WRITE_LOWQ)
 			return;		
 
 		if(type == VariantType.CONC && GASVPRO_OUTPUT){ // GASVPro calculating avg length (insert, read) for GASVPro parameters file 
@@ -1141,9 +1131,7 @@ public class BAMToGASV_AMBIG {
 				for(int j=0;j<VARIANTS.length;j++) {
 					if(VARIANTS[j] == VariantType.CONC && !WRITE_CONCORDANT)
 						continue;
-					if(VARIANTS[j] == VariantType.LOW && !WRITE_LOWQ)
-						continue;
-
+				
 					// if there are fewer than 1/10th of the number of reads, don't do this yet.
 					if(lib.rowsForVariant.get(VARIANTS[j]).size() < USE_NUMBER_READS/10)
 						continue;
@@ -1161,6 +1149,7 @@ public class BAMToGASV_AMBIG {
 	 * @param pobj - GASVPair object
 	 * @param lib - library to add ESP to.
 	 */
+	/*
 	private void parseLowQualESPfromGASVPair(GASVPair pobj, Library lib){ 
 		VariantType type = VariantType.LOW;
 
@@ -1192,6 +1181,7 @@ public class BAMToGASV_AMBIG {
 		} // END if(lib.rowsForVariant.get(type).size() >= NUM_LINES_FOR_EXTERNAL_SORT)
 
 	}
+	*/
 
 	/**
 	 * Parse *Special Sam record
@@ -1245,6 +1235,7 @@ public class BAMToGASV_AMBIG {
 	 * @param s - SAM record to parse
 	 * @param lib - Library to use.
 	 */
+	/*
 	private void parseSAMRecord(SAMRecord s, Library lib){
 
 		// If this record is duplicated (according to flag) OR is NOT paired, then 
@@ -1292,83 +1283,21 @@ public class BAMToGASV_AMBIG {
 						lib.isRecordPaired(s);
 				}
 
-			} else if (WRITE_LOWQ && LOWQ_INDICATOR.contains(readname)) {
-				// NOTE: if write_lowq is set, then LOWQ_ind is populated. 
-
-				// remove PAIR counting of this read
-				LOWQ_INDICATOR.remove(readname);
-
-				// make a GASVPair object
-				GASVPair pobj = null;
-				try {
-					pobj = new GASVPair(s, PLATFORM);
-					if(pobj.badChrParse) // chromosome not recognized. skip.
-						return;
-				} catch (SAMFormatException e) {
-					BAD_RECORD_COUNTER++;
-					System.err.println("**SAMFormatException** "+e.getMessage());
-					return;
-				}
-
-				// parse ESP
-				parseLowQualESPfromGASVPair(pobj,lib);
-
 			} else { // haven't seen it, put it in HIGHQ 
 				HIGHQ_INDICATOR.put(readname,1);
 			} // END high quality read conditional 
 
 		} else { // (s.getMappingQuality() <= MAPPING_QUALITY)
 
-			// Have we seen it's mate? First check HIGHQ, then check LOWQ
+			// Have we seen it's mate? First check HIGHQ, 
 			if(HIGHQ_INDICATOR.containsKey(readname)) {
 				// remove PAIR counting of this read
 				HIGHQ_INDICATOR.remove(readname);
 
-				// IF write_lowq, then write low qual.
-				if(WRITE_LOWQ) {
-					// make a GASVPair object
-					GASVPair pobj = null;
-					try {
-						pobj = new GASVPair(s, PLATFORM);
-						if(pobj.badChrParse) // chromosome not recognized. skip.
-							return;
-					} catch (SAMFormatException e) {
-						BAD_RECORD_COUNTER++;
-						System.err.println("**SAMFormatException** "+e.getMessage());
-						return;
-					}
-
-					// parse ESP
-					parseLowQualESPfromGASVPair(pobj,lib);
-				}
-
-			} else if (WRITE_LOWQ && LOWQ_INDICATOR.contains(readname)) {
-				// NOTE: if write_lowq is set, then LOWQ_ind is populated. 
-
-				// remove PAIR counting of this read
-				LOWQ_INDICATOR.remove(readname);
-
-				// make a GASVPair object
-				GASVPair pobj = null;
-				try {
-					pobj = new GASVPair(s, PLATFORM);
-					if(pobj.badChrParse) // chromosome not recognized. skip.
-						return;
-				} catch (SAMFormatException e) {
-					BAD_RECORD_COUNTER++;
-					System.err.println("**SAMFormatException** "+e.getMessage());
-					return;
-				}
-
-				// parse ESP
-				parseLowQualESPfromGASVPair(pobj,lib);
-
-			} else if (WRITE_LOWQ) { // we haven't seen it - add to LOWQ
-				LOWQ_INDICATOR.add(readname);
-			} // END low quality read conditional
+			} 
 		} // END mapping quality check
 	}
-
+*/
 	/**
 	 * Gets the variant type of a GASVPair depending on chr, orientation, and distance.
 	 * Note that LOW Variant Type is special and never returned here.
@@ -1476,8 +1405,6 @@ public class BAMToGASV_AMBIG {
 			return OUTPUT_PREFIX+"_"+lib+".divergent";
 		if(type == VariantType.TRANS)
 			return OUTPUT_PREFIX+"_"+lib+".translocation";
-		if(type == VariantType.LOW)
-			return OUTPUT_PREFIX+"_"+lib+".lowquality";
 
 		System.out.println("ERROR: type "+type+" is not one of the recognized options.");
 		System.exit(-1);
@@ -1572,7 +1499,6 @@ public class BAMToGASV_AMBIG {
 				for(int j=0;j<VARIANTS.length;j++) {
 					type = VARIANTS[j];
 					if(type == VariantType.CONC || 
-							type == VariantType.LOW || 
 							type == VariantType.INS)
 						continue;
 
@@ -1670,8 +1596,6 @@ public class BAMToGASV_AMBIG {
 			for(int j=0;j<VARIANTS.length;j++) {
 
 				if(VARIANTS[j] == VariantType.CONC && !WRITE_CONCORDANT)
-					continue;
-				if(VARIANTS[j] == VariantType.LOW && !WRITE_LOWQ)
 					continue;
 				if(VARIANTS[j] == VariantType.CONC && GASVPRO_OUTPUT) // GASVPro
 					continue;
