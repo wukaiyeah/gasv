@@ -7,14 +7,15 @@
 ###############################
 
 #REQUIRED:
-BAMFILE=example.bam                     
+BAMFILE=/home/tonyc/gasv-read-only/example.bam                     
 
 #OPTIONAL (set to NULL if not being used):
-UNIQUEFILE=/home/tonyc/Desktop/tester
-MAXUNIQUEVAL=37                 #MUST SPECIFY IF UNIQUEFILE IS GIVEN
-MINSCALEDUNIQUE=.3              #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+UNIQUEFILE=NULL
+MAXUNIQUEVAL=NULL               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL                #default 0
 MINCLUSTER=NULL                 #default 4
+MAXIMAL=TRUE			#use GASV's --maximal flag. (use TRUE or FALSE)
 
 
 ###############################
@@ -33,17 +34,20 @@ else
 fi
 if [ -r $UNIQUEFILE ]; then
     echo "      Unique file: $UNIQUEFILE"
+    if [ "$MAXUNIQUEVAL" != "NULL" -a "$MINSCALEDUNIQUE" != "NULL" ]; then
+    	echo "          Max Uniqueness Value: $MAXUNIQUEVAL"
+    	echo "          Min Scaled Uniqueness: $MINSCALEDUNIQUE"
+    else
+    	echo "      !! ERROR: Max uniqueness value and minimum scaled uniqueness value must be provided. Please edit your parameters and restart.\n"
+    	exit 1
+    fi
 else
     echo "      No unique file Provided."
 fi
 
-if [ "$MAXUNIQUEVAL" != "NULL" -a "$MINSCALEDUNIQUE" != "NULL" ]; then
-    echo "          Max Uniqueness Value: $MAXUNIQUEVAL"
-    echo "          Min Scaled Uniqueness: $MINSCALEDUNIQUE"
-else
-    echo "      !! ERROR: Max uniqueness value and minimum scaled uniqueness value must be provided. Please edit your parameters and restart.\n"
-    exit 1
-fi
+
+
+
 
 if [ "$LRTHRESHOLD" = "NULL" ]; then
     echo "      No LR Threshold Provided"
@@ -64,7 +68,7 @@ echo $S1 $S2
 ### Run BAMtoGASV ###
 
 echo "===================================\n\n *** Running BAMToGASV....*** \n\n===================================\n"
-java -jar bin/BAMToGASV.jar $BAMFILE -GASVPRO true 
+java -jar bin/BAMToGASV.jar $BAMFILE -GASVPRO true -LIBRARY_SEPARATED all
 
 ### Run GASV ###
 
@@ -76,9 +80,17 @@ else
 fi
 
 if [ "$MINCLUSTER" = "NULL" ]; then
-    java -jar bin/GASV.jar --output regions --maximal --batch $BAMFILE.gasv.in
+    if [ "$MAXIMAL" = "TRUE" ]; then
+	java -jar bin/GASV.jar --output regions --maximal --batch $BAMFILE.gasv.in
+    else
+	java -jar bin/GASV.jar --output regions --batch $BAMFILE.gasv.in
+    fi
 else
-    java -jar bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
+    if [ "$MAXIMAL" = "TRUE" ]; then
+	java -jar bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
+    else
+    	java -jar bin/GASV.jar --output regions --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
+    fi
 fi
 
 ### Run GASV-CC ###
@@ -98,6 +110,10 @@ fi
 
 if [ "$LRTHRESHOLD" != "NULL" ]; then
     echo "LRThreshold: $LRTHRESHOLD" >> $BAMFILE.gasvpro.in
+fi
+
+if [ "$MAXIMAL" = "FALSE" ]; then
+    echo "maxmode: true" >> $BAMFILE.gasvpro.in
 fi
 
 cat $BAMFILE.gasvpro.in
