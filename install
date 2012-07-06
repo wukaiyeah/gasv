@@ -5,7 +5,7 @@ mkdir bin
 ant
 
 echo "Installing GASV-CC..."
-g++ -O2 -w src/gasvPro/GASV-cc.cpp -o bin/GASV-CC
+g++ -O2 -w src/gasvPro/GASV-cc.cpp -o bin/GASVPro-CC
 
 echo "Installing GASVPro-graph..."
 g++ -O2 -w src/gasvPro/GASVPro-graph.cpp -o bin/GASVPro-graph
