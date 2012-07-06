@@ -179,7 +179,10 @@ int main(int argc, char* argv[]){
 	bool TRANSLOCATIONS_ON = false;
 	bool TRANS_ONLY = false;
 	bool AMBIG_MODE = false;
+	int READ_LEN_BUFFER = 50;
 	int translocationCount = 0;
+	bool MAXMODE= false;
+	int numbadloc = 0;
 	
 
 	//Step 0:
@@ -334,6 +337,10 @@ int main(int argc, char* argv[]){
 						cout << "   LR Threshold: " << LRTHRESHOLD << endl;
 					}
 				}
+				if(term == "Ambiguous:"){
+					if(value == "True" || value == "true")
+						AMBIG_MODE = true;
+				}
 			}
 		}
 	}
@@ -460,6 +467,10 @@ int main(int argc, char* argv[]){
 				if(term == "Ambiguous:"){
 					if(value == "True" || value == "true")
 						AMBIG_MODE = true;
+				}
+				if(term == "maxmode:"){
+					if(value == "true")
+						MAXMODE = true;
 				}
 			}
 		}
@@ -682,13 +693,13 @@ int main(int argc, char* argv[]){
 				token1 = strtok(NULL,"\t");
 			}
 			
-            if(clusterName[0] == '#'){continue;}
+            		if(clusterName[0] == '#'){continue;}
             
 			//Note: We can only support clusters that are deletions, inversions, or translocations!
 			if(strcmp(type,"D") == 0){ localType = 0; }
 			else if(strcmp(type,"I+") == 0 || strcmp(type,"I-") == 0 || strcmp(type,"IR") == 0){ localType = 1;}
 			else if(type[0] == 'T'){ localType = 2; translocationCount++; }
-			else if(strcmp(type, "V") == 0 || strcmp(type, "DV") == 0) {localType = 3;}
+			//else if(strcmp(type, "V") == 0 || strcmp(type, "DV") == 0) {localType = 3;}
 			else{ 
 				if(numIgnored == 0)
 					cout << "WARNING: Found first cluster (cluster " << clusterName << ") of non-supported type \"" << type << "\", it will be ignored." << endl;
@@ -1029,9 +1040,9 @@ int main(int argc, char* argv[]){
 			//Note: We can only support clusters that are deletions or inversions!
 			if(strcmp(type,"D") == 0){ localType = 0; }
 			else if(strcmp(type,"I+") == 0 || strcmp(type,"I-") == 0 || strcmp(type,"IR") == 0){ localType = 1;}
-			else if(strcmp(type, "V") == 0) { localType = 2; }
-            else if(type[0] == 'T'){ localType = 3; }
-			
+			else if(strcmp(type, "V") == 0) { continue;}//localType = 2; } IGNORING DIVERGENTS
+	  	        else if(type[0] == 'T'){ localType = 3; }
+		
 			//cout << "Cluster:\t" << CLUSTER_FOR_OUTPUT << endl;
 			//cout << "LocalType:\t" << localType << endl;
 			
@@ -1404,6 +1415,7 @@ int main(int argc, char* argv[]){
 				//A1: NO
 				// -1 localization;
 				else{
+					if(MAXMODE){ numbadloc++; }					
 					code = -1;
 					PROB_NO_VARIANT = 0;
 					PROB_VARIANT = -2*INT_MAX1;
@@ -2284,8 +2296,8 @@ int main(int argc, char* argv[]){
 	
 	outFile1.close();
 	if(!AMBIG_MODE){ outFile2.close(); }
-	
-	cout << "\n***NOTICE: Ignored " << numIgnored << " clusters of non-supported types. See GASVPro documentation. " << endl;
+	if(MAXMODE) {cout << "\n***NOTICE: There were " << numbadloc << " clusters with bad localization (-1). " << endl;}
+	cout << "***NOTICE: Ignored " << numIgnored << " clusters of non-supported types. See GASVPro documentation. " << endl;
 	if(!TRANSLOCATIONS_ON){cout << "***NOTICE: Found " << translocationCount << " translocations. Enable translocation mode or TransOnly mode to process them. " << endl;}
 	return 0;
 }
