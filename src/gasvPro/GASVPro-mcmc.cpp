@@ -320,11 +320,11 @@ int main(int argc, char* argv[] ){
 		//Output level -- Default: only output the MCMCThreshold.clusters
 		//Output level -- Full:    output the espFile and varFile.
 		
-		string espFile = output_path + "_sv_" + subsetString.str() + ".ESP.results";
+		string espFile = output_path + "_sv_" + subsetString.str() + ".PR.results";
 		string varFile = output_path + "_sv_" + subsetString.str() + ".Variant.results";
 		//string likeFile = output_path + "_sv_" + subsetString.str() + ".Likelihood.results";
-		string mleFile = output_path + "_sv_" + subsetString.str() + ".MCMCMLE.clusters";
-		string averageFile = output_path + "_sv_" + subsetString.str() + ".MCMCAverage.clusters";
+		//string mleFile = output_path + "_sv_" + subsetString.str() + ".MCMCMLE.clusters";
+		//string averageFile = output_path + "_sv_" + subsetString.str() + ".MCMCAverage.clusters";
 		//string avgVarOnly =  output_path + "_sv_" + subsetString.str() + ".MCMCAverageVar.clusters";
 		string thresholdFile = output_path + "_sv_" + subsetString.str() + ".MCMCThreshold.clusters";
 		
@@ -347,12 +347,12 @@ int main(int argc, char* argv[] ){
 			//ofstream outLIKE(likeFile.c_str(),ios::out);
 			
 			//(4) MCMC Results;
-			ofstream outMLE(mleFile.c_str(),ios::out);
+			//ofstream outMLE(mleFile.c_str(),ios::out);
 			
 			//(5) Thresholding Results;
 			ofstream outTHRESHOLD(thresholdFile.c_str(),ios::out);
 			
-			ofstream outAVERAGE(averageFile.c_str(),ios::out);
+			//ofstream outAVERAGE(averageFile.c_str(),ios::out);
 			
 			//ofstream outAVERAGEVAR(avgVarOnly.c_str(),ios::out);
 								   
@@ -847,10 +847,10 @@ int main(int argc, char* argv[] ){
 			for(unsigned int i = 0; i<numObservedVariants;i++){
 				//Were we ever occupied? If yes, then output!
 				if(componentVariants[i].getTimeOccupied() > 0){
-					outAVERAGE << componentVariants[i].getName() << "_" 
-								 << componentVariants[i].getRunningLogLikelihood()*1.0/(SAMPLE*1.0) << "_0"
-								 << "\t" << componentVariants[i].getPossibleAssigned() 
-								 << "\t" << componentVariants[i].getTheRest() << endl;
+					//outAVERAGE << componentVariants[i].getName() << "_" 
+					//			 << componentVariants[i].getRunningLogLikelihood()*1.0/(SAMPLE*1.0) << "_0"
+					//			 << "\t" << componentVariants[i].getPossibleAssigned() 
+					//			 << "\t" << componentVariants[i].getTheRest() << endl;
 					
 					//outAVERAGEVAR << componentVariants[i].getName() << "_" 
 					//	<< componentVariants[i].getRunningLikelihoodVar()*1.0/(SAMPLE*1.0) << "_0"
@@ -862,7 +862,7 @@ int main(int argc, char* argv[] ){
 			
 			//OUTPUT MAX_LIKELIHOOD_RESULT;
 			//cout << "Max-Likelihood-Result" << endl;
-			outMLE << MAX_LIKELIHOOD_STRING;
+			//outMLE << MAX_LIKELIHOOD_STRING;
 			
 			//BEGIN: Thresholding the results:
 
@@ -886,19 +886,23 @@ int main(int argc, char* argv[] ){
 			for(int i = 0; i<numObservedVariants; i++){ 
 				int current = componentVariants[i].getCurrentAssigned();
 				if(current > 0){
-					outTHRESHOLD << componentVariants[i].getName() 
-							<< "_" << componentVariants[i].getLikelihoodVariantGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current)
-							<< "_" << componentVariants[i].getLikelihoodErrorGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current)
-						    << "\t" << componentVariants[i].getCurrentAssigned() 
-							<< "\t" << componentVariants[i].getTheRest() << endl;
+					double LLR = componentVariants[i].getLikelihoodVariantGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current) - componentVariants[i].getLikelihoodErrorGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current);
+					if(LLR >= LRTHRESHOLD || PRINTALL ){
+						outTHRESHOLD << componentVariants[i].getName() 
+							//<< "_" << componentVariants[i].getLikelihoodVariantGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current)
+							//<< "_" << componentVariants[i].getLikelihoodErrorGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current)
+						        << "\t" << componentVariants[i].getCurrentAssigned() 
+							<< "\t" << componentVariants[i].getTheRest() 
+						        << "\t" << LLR	<< endl;
+					}
 				}
 			}
 
 			outESP.close();
 			outVAR.close();
 			//outLIKE.close();
-			outMLE.close();
-			outAVERAGE.close();
+			//outMLE.close();
+			//outAVERAGE.close();
 			//outAVERAGEVAR.close();			
 			outTHRESHOLD.close();
 		

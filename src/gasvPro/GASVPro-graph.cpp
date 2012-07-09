@@ -182,7 +182,7 @@ int main(int argn, char* argv []){
 //	string infos_fn = argv[1];
 //	ifstream infos;
 
-	int num_of_frg_threshold = 1;
+	int num_of_frg_threshold = 4; //Setting to the same default value as MIN_CLUSTER_SIZE in GASV.
 	
 	cerr << "Processing Command line arguments....\n";
 
