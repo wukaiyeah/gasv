@@ -68,7 +68,7 @@ echo $S1 $S2
 ### Run BAMtoGASV ###
 
 echo "===================================\n\n *** Running BAMToGASV....*** \n\n===================================\n"
-java -jar bin/BAMToGASV.jar $BAMFILE -GASVPRO true -LIBRARY_SEPARATED all
+java -jar -Xms512m -Xmx2048m bin/BAMToGASV.jar $BAMFILE -GASVPRO true -LIBRARY_SEPARATED all
 
 ### Run GASV ###
 
