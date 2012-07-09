@@ -121,6 +121,10 @@ echo "/n====================\n\n"
 
 bin/GASVPro-CC $BAMFILE.gasvpro.in $BAMFILE.gasv.in.clusters
 
+###Prune Clusters###
+
+../scripts/GASVPruneClusters.pl $BAMFILE.gasv.in.clusters.GASVPro.clusters
+
 
 echo "===================\n\n GASVPro-HQ Completed Successfully \n\n===================\n"
 
