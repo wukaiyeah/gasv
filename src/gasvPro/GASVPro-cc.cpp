@@ -153,8 +153,8 @@ int main(int argc, char* argv[]){
 				cout << "\nGASVPro: Geometric Analysis of Structural Variants, Probabilistic" << endl;
 				cout << "Version: 1.0" << endl << endl;
 				cout << "Usage: Pass parameter file of the following format AND a clusters file:" << endl;
-                cout << "       \tConcordantFile: {path/to/file}\n\tUNIQUEFile: {path/to/file}\n\tLavg: {value} \n\tReadLen: {value}\n\tLambda: {value}\n\tPerr: {value}\n\tLimit: {value}\n\tTolerance: {value}\n\tVerbose: {value}\n\tMaxChrNumber: {Value}\n\tMaxUniqueValue: {value}\n\tMinScaledUniqueness: {Value}\n";
-                cout << "      ./exe {parametersfile} {clusterfile} " << endl;
+                cout << "       \tConcordantFile: {path/to/file}\n\tUNIQUEFile: {path/to/file}\n\tLavg: {value} \n\tReadLen: {value}\n\tLambda: {value}\n\tPerr: {value}\n\tLimit: {value}\n\tTolerance: {value}\n\tVerbose: {value}\n\tMaxChrNumber: {Value}\n\tMaxUniqueValue: {value}\n\tMinScaledUniqueness: {Value}\n\tTranslocations: {Value}\n\tTransOnly: {value}\n\tAmbiguous: {value}\n\tLRThreshold: {value}\n\n";
+                cout << "      ./exe {parametersfile} {clusterfile}\n " << endl;
                 exit(-1);
 	 }
 
@@ -183,6 +183,7 @@ int main(int argc, char* argv[]){
 	int translocationCount = 0;
 	bool MAXMODE= false;
 	int numbadloc = 0;
+	int DIVERGENTS = 0;
 	
 
 	//Step 0:
@@ -341,6 +342,10 @@ int main(int argc, char* argv[]){
 				if(term == "Ambiguous:"){
 					if(value == "True" || value == "true")
 						AMBIG_MODE = true;
+				}
+				if(term == "maxmode:"){
+					if(value == "true")
+						MAXMODE = true;
 				}
 			}
 		}
@@ -517,8 +522,8 @@ int main(int argc, char* argv[]){
 	if(Tolerance <=0){ cerr << "\n\t\tERROR: Tolerance must be positive!\n"; exit(-1); }
 	if(Limit <=0){ cerr << "Limit on the smallest deletion allowed must be positive!\n"; exit(-1); }
 	if(MIN_SCALED_UNIQUE == 1) { cerr << "\nWARNING: A minimum scaled uniqueness value of 1 sets all regions to the same uniqueness value.\n\t"; }
-	if(!(abs(Lavg - (2*ReadLen)) >= READ_LEN_BUFFER)) {exit_flag1 = true;}
-	if(!(Lavg <= 2*ReadLen)) {exit_flag2 = true;}
+	if(abs(Lavg - (2*ReadLen)) >= READ_LEN_BUFFER) {exit_flag1 = true;}
+	if(Lavg <= (2*ReadLen)) {exit_flag2 = true;}
 	cout << "OK." << endl;
 
 	if(exit_flag1)
@@ -1053,7 +1058,7 @@ int main(int argc, char* argv[]){
 			//Note: We can only support clusters that are deletions or inversions!
 			if(strcmp(type,"D") == 0){ localType = 0; }
 			else if(strcmp(type,"I+") == 0 || strcmp(type,"I-") == 0 || strcmp(type,"IR") == 0){ localType = 1;}
-			else if(strcmp(type, "V") == 0) { continue;}//localType = 2; } IGNORING DIVERGENTS
+			else if(strcmp(type, "V") == 0) { DIVERGENTS++; continue;}//localType = 2; } IGNORING DIVERGENTS
 	  	        else if(type[0] == 'T'){ localType = 3; }
 		
 			//cout << "Cluster:\t" << CLUSTER_FOR_OUTPUT << endl;
@@ -2312,7 +2317,8 @@ int main(int argc, char* argv[]){
 	if(MAXMODE) {cout << "\n***NOTICE: There were " << numbadloc << " clusters with bad localization (-1). " << endl;}
 	cout << "***NOTICE: Ignored " << numIgnored << " clusters of non-supported types. See GASVPro documentation. " << endl;
 	if(!TRANSLOCATIONS_ON){cout << "***NOTICE: Found " << translocationCount << " translocations. Enable translocation mode or TransOnly mode to process them. " << endl;}
-	return 0;
+	if(DIVERGENTS > 0){cout << "***NOTICE: Found " << DIVERGENTS << " divergent variants that were not processed (see documentation)." << endl;}	
+	return 0;	
 }
 
 /******************************/
