@@ -1,14 +1,17 @@
 #!/bin/sh
 
-#### GASVPro High Quality #####
+########### GASVPro ###########
 
 ###############################
 ##### SET PARAMETERS HERE #####
 ###############################
 
 #REQUIRED:
-BAMFILE=/home/tonyc/gasv-read-only/example.bam   
-GASVDIR=/home/tonyc/gasv                 
+BAMFILEHQ=/home/tonyc/gasv/wgsim.bam 
+BAMFILELQ=/home/tonyc/gasv/wgsim.bam.novo.sam
+WORKINGDIR=outputdir  
+GASVDIR=/home/tonyc/gasv
+                  
 
 #OPTIONAL (set to NULL if not being used):
 UNIQUEFILE=NULL
@@ -25,14 +28,29 @@ MAXIMAL=TRUE			#use GASV's --maximal flag. (use TRUE or FALSE)
 
 ### Check Input ###
 
-echo "\n** GASVProHQ Running... **\n" 
+echo "\n** GASVPro Running... **\n" 
 echo "====Input===="
-if [ -r $BAMFILE ]; then
-    echo "      Valid .bam file: $BAMFILE"
+if [ -d $GASVDIR ]; then
+	echo "      GASVDIR...ok" 
 else
-    echo "      !! WARNING: Cannot open .BAM FILE. Aborting.\n"
-    exit 1
+	echo "!! ERROR: Please configure this script with the correct GASV directory."
+	exit 1
 fi
+
+if [ -r $BAMFILEHQ ]; then
+	echo "      .bam file 1...OK"
+else
+	echo "!! ERROR: first .bam file is not readable. Aborting."
+	exit 1
+fi
+
+if [ -r $BAMFILELQ ]; then
+	echo "      .bam file 2...OK"
+else
+	echo "!! ERROR: second .bam file is not readable. Aborting."
+	exit 1
+fi
+
 if [ -r $UNIQUEFILE ]; then
     echo "      Unique file: $UNIQUEFILE"
     if [ "$MAXUNIQUEVAL" != "NULL" -a "$MINSCALEDUNIQUE" != "NULL" ]; then
@@ -46,34 +64,29 @@ else
     echo "      No unique file Provided."
 fi
 
-
-
-
-
 if [ "$LRTHRESHOLD" = "NULL" ]; then
-    echo "      No LR Threshold Provided"
+    echo "      No LR Threshold Provided."
 else
     echo "      LR Threshold: " $LRTHRESHOLD
 fi
 if [ "$MINCLUSTER" = "NULL" ]; then
-    echo "      No Min Cluster Size provided"
+    echo "      No Min Cluster Size provided."
 else
     echo "      Min Cluster Size: " $MINCLUSTER
 fi
 echo "=============\n"
 
-echo $S1 $S2
-
-
-
-### Run BAMtoGASV ###
+### Run BAMToGASV and BAMToGASV_AMBIG ###
 
 echo "===================================\n\n *** Running BAMToGASV....*** \n\n===================================\n"
-java -jar -Xms512m -Xmx2048m $GASVDIR/bin/BAMToGASV.jar $BAMFILE -GASVPRO true -LIBRARY_SEPARATED all
+java -jar $GASVDIR/bin/BAMToGASV.jar $BAMFILEHQ -GASVPRO true -LIBRARY_SEPARATED all
 
-### Run GASV ###
+echo "===================================\n\n *** Running BAMToGASV_AMBIG....*** \n\n===================================\n"
+java -jar $GASVDIR/bin/BAMToGASV_AMBIG.jar $BAMFILELQ $BAMFILEHQ.gasv.in
 
-if [ -r $BAMFILE.gasv.in ]; then
+### Run GASV ### 
+
+if [ -r $BAMFILEHQ.gasv.in ]; then
     echo "====================\n\n *** Running GASV....*** \n\n===================="
 else
     echo "\n\n!! ERROR: necessary parameters file \"$BAMFILE.gasv.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
@@ -82,21 +95,21 @@ fi
 
 if [ "$MINCLUSTER" = "NULL" ]; then
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar  --output regions --maximal --batch $BAMFILE.gasv.in
+	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar  --output regions --maximal --batch $BAMFILEHQ.gasv.in
     else
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --output regions --batch $BAMFILE.gasv.in
+	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --output regions --batch $BAMFILEHQ.gasv.in
     fi
 else
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
+	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $BAMFILEHQ.gasv.in
     else
-    	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar  --output regions --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
+    	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar  --output regions --minClusterSize $MINCLUSTER --batch $BAMFILEHQ.gasv.in
     fi
 fi
 
 ### Run GASV-CC ###
 
-if [ -r $BAMFILE.gasvpro.in ]; then
+if [ -r $BAMFILEHQ.gasvpro.in ]; then
     echo "====================\n\n *** Running GASV-CC with the following parameters...***"
 else
     echo "\n\n!! ERROR: necessary parameters file \"$BAMFILE.gasvpro.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
@@ -104,38 +117,21 @@ else
 fi
 
 if [ -r $UNIQUEFILE ]; then
-    echo "UNIQUEFile: $UNIQUEFILE" >> $BAMFILE.gasvpro.in
-    echo "MaxUniqueValue: $MAXUNIQUEVAL" >> $BAMFILE.gasvpro.in
-    echo "MinScaledUniqueness: $MINSCALEDUNIQUE" >> $BAMFILE.gasvpro.in
+    echo "UNIQUEFile: $UNIQUEFILE" >> $BAMFILEHQ.gasvpro.in
+    echo "MaxUniqueValue: $MAXUNIQUEVAL" >> $BAMFILEHQ.gasvpro.in
+    echo "MinScaledUniqueness: $MINSCALEDUNIQUE" >> $BAMFILEHQ.gasvpro.in
 fi
 
 if [ "$LRTHRESHOLD" != "NULL" ]; then
-    echo "LRThreshold: $LRTHRESHOLD" >> $BAMFILE.gasvpro.in
+    echo "LRThreshold: $LRTHRESHOLD" >> $BAMFILEHQ.gasvpro.in
 fi
 
 if [ "$MAXIMAL" = "FALSE" ]; then
-    echo "maxmode: true" >> $BAMFILE.gasvpro.in
+    echo "maxmode: true" >> $BAMFILEHQ.gasvpro.in
 fi
 
-cat $BAMFILE.gasvpro.in
+cat $BAMFILEHQ.gasvpro.in
 echo "====================\n\n"
 
-$GASVDIR/bin/GASVPro-CC $BAMFILE.gasvpro.in $BAMFILE.gasv.in.clusters
-
-###Prune Clusters###
-
-echo "\n===================================\n\n *** Pruning Clusters... *** \n\n===================================\n"
-
-$GASVDIR/scripts/GASVPruneClusters.pl $BAMFILE.gasv.in.clusters.GASVPro.clusters
-
-
-echo "===================\n\n GASVPro-HQ Completed Successfully \n\n===================\n"
-
-
-
-
-
-
-
-
+$GASVDIR/bin/GASVPro-CC $BAMFILEHQ.gasvpro.in $BAMFILEHQ.gasv.in.clusters
 
