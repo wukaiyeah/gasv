@@ -522,17 +522,17 @@ int main(int argc, char* argv[]){
 	if(Tolerance <=0){ cerr << "\n\t\tERROR: Tolerance must be positive!\n"; exit(-1); }
 	if(Limit <=0){ cerr << "Limit on the smallest deletion allowed must be positive!\n"; exit(-1); }
 	if(MIN_SCALED_UNIQUE == 1) { cerr << "\nWARNING: A minimum scaled uniqueness value of 1 sets all regions to the same uniqueness value.\n\t"; }
-	if(abs(Lavg - (2*ReadLen)) >= READ_LEN_BUFFER) {exit_flag1 = true;}
-	if(Lavg <= (2*ReadLen)) {exit_flag2 = true;}
+	if(!(Lavg >= 2*ReadLen + READ_LEN_BUFFER)) {exit_flag1 = true;}
+	if(!(Lavg >= 2*ReadLen)) {exit_flag2 = true;}
 	cout << "OK." << endl;
 
 	if(exit_flag1)
 	{
-		cout << "\n\t\tERROR: We require Lavg - (2*ReadLength) >= a buffer of 50bp.\n";
+		cout << "\n\t\tERROR: We require Lavg >= 2*ReadLen + (50bp). You may change this 50bp buffer (READ_LEN_BUFFER) in the source.\n";
 	}
 	if(exit_flag2)
 	{
-		cout << "\n\t\tERROR: Lavg must be >= 2*ReadLength. Please check your math. If BAMToGASV generated ReadLength and Lavg, please recompute them manually.\n" << endl;
+		cout << "\n\t\tERROR: We require that Lavg >= 2*ReadLength. Please check your calculations. If BAMToGASV generated ReadLength and Lavg, please recompute them manually.\n" << endl;
 	}
 	if(exit_flag1 || exit_flag2){exit(-1);}
 	
