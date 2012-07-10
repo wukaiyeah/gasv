@@ -203,6 +203,10 @@ public class BAMToGASV_AMBIG {
 	 */
 	public boolean parseArguments(String[] args) {
 
+		/*
+		 * Need to change the number of arguments for proper usage information.
+		 */
+		
 		// Arguments come in pairs AND 1 bam file, so there should be an odd number of parameters.
 		if(args.length % 2 == 1) {
 			System.out.println("Error! Incorrect number of arguments (perhaps an option is missing a value).");
@@ -789,7 +793,6 @@ public class BAMToGASV_AMBIG {
 		VariantType type;
 		int recordCounter = 0; // for printing lines
 		ArrayList<String> tmpFilenames = new ArrayList<String>();
-		int FRAGMENT_COUNT = 1;
 
 		// set validation stringency for SAMFileReader.
 		SAMFileReader.setDefaultValidationStringency(STRINGENCY);
@@ -807,12 +810,61 @@ public class BAMToGASV_AMBIG {
 
 		Iterator<SAMRecord> itr = inputSam.iterator();
 		String currentname = "";
-		String nextname;
+
+		/*
+		 *  
+		 */
+		
+		ArrayList<SAMRecord> read1Records = new ArrayList<SAMRecord>();
+		ArrayList<SAMRecord> read2Records = new ArrayList<SAMRecord>();
+		Integer read1Count = 0;
+		Integer read2Count = 0;
+		
+		while(itr.hasNext()){
+			SAMRecord samRecord = itr.next();
+			
+			if(!samRecord.getReadName().equals(currentname)) {
+
+				int FRAGMENT_COUNT = 0;
+				for(Integer i = 0; i<read1Count; i++){
+					for(Integer j =0; j<read2Count; j++){
+						SAMRecord samRecord1 = read1Records.get(i);
+						SAMRecord samRecord2 = read2Records.get(j);
+						parseSAMRecordAmbi(samRecord1,samRecord2,lib,FRAGMENT_COUNT);
+						FRAGMENT_COUNT++;
+					}
+				}
+				
+				read1Records.clear();
+				read2Records.clear();
+				read1Count = 0;
+				read2Count = 0;
+				currentname = samRecord.getReadName();
+			}
+			
+			if(samRecord.getFirstOfPairFlag()){
+				read1Records.add(samRecord);
+				read1Count++;
+			}
+			else if(samRecord.getSecondOfPairFlag()){
+				read2Records.add(samRecord);
+				read2Count++;
+			}
+			
+		}
+		
+		//Process the last record:
+	/*	
 		while(itr.hasNext()){
 			SAMRecord samRecord1 = itr.next();
 			SAMRecord samRecord2 = itr.next();
+			
+			System.out.println("Reading Read Name --> " + samRecord1.getReadName() + "\t" + samRecord2.getReadName());
+
+			
 			if(!samRecord1.getReadName().equals(samRecord2.getReadName())) {
 				System.out.println("ERROR! SAM file may not be sorted.");
+				System.out.println("Suspicious Read Names:\n" + samRecord1.getReadName() + "\n" + samRecord2.getReadName());
 				System.exit(-1);
 			}
 			if(!samRecord1.getReadName().equals(currentname)) {
@@ -824,7 +876,7 @@ public class BAMToGASV_AMBIG {
 			parseSAMRecordAmbi(samRecord1,samRecord2,lib,FRAGMENT_COUNT);
 		}
 
-
+*/
 		/*
 		// Iterate through each Record and store relevant information.
 		for (SAMRecord samRecord : inputSam) {
