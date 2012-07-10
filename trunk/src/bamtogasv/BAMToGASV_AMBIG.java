@@ -207,8 +207,12 @@ public class BAMToGASV_AMBIG {
 		 * Need to change the number of arguments for proper usage information.
 		 */
 		
-		// Arguments come in pairs AND 1 bam file, so there should be an odd number of parameters.
-		if(args.length % 2 == 1) {
+		//Need at least ./exe {BAM} {IN}
+		if(args.length < 2){
+			return false;
+		}
+		
+		if( (args.length - 2) % 2 == 1) {
 			System.out.println("Error! Incorrect number of arguments (perhaps an option is missing a value).");
 			System.out.println("We have " + args.length + " arguments.");
 
@@ -822,9 +826,7 @@ public class BAMToGASV_AMBIG {
 		
 		while(itr.hasNext()){
 			SAMRecord samRecord = itr.next();
-			
 			if(!samRecord.getReadName().equals(currentname)) {
-
 				int FRAGMENT_COUNT = 0;
 				for(Integer i = 0; i<read1Count; i++){
 					for(Integer j =0; j<read2Count; j++){
@@ -834,7 +836,6 @@ public class BAMToGASV_AMBIG {
 						FRAGMENT_COUNT++;
 					}
 				}
-				
 				read1Records.clear();
 				read2Records.clear();
 				read1Count = 0;
@@ -854,7 +855,17 @@ public class BAMToGASV_AMBIG {
 		}
 		
 		//Process the last record:
-	/*	
+		int FRAGMENT_COUNT = 0;
+		for(Integer i = 0; i<read1Count; i++){
+			for(Integer j =0; j<read2Count; j++){
+				SAMRecord samRecord1 = read1Records.get(i);
+				SAMRecord samRecord2 = read2Records.get(j);
+				parseSAMRecordAmbi(samRecord1,samRecord2,lib,FRAGMENT_COUNT);
+				FRAGMENT_COUNT++;
+			}
+		}
+		
+		/*	
 		while(itr.hasNext()){
 			SAMRecord samRecord1 = itr.next();
 			SAMRecord samRecord2 = itr.next();
@@ -877,78 +888,6 @@ public class BAMToGASV_AMBIG {
 		}
 
 */
-		/*
-		// Iterate through each Record and store relevant information.
-		for (SAMRecord samRecord : inputSam) {
-
-			// print information every 500,000 lines.
-			recordCounter++;
-			if(recordCounter % 500000 == 0 || recordCounter == 1) {
-				System.out.println("  processing BAM line " + recordCounter + ": ");
-				for(int i=0;i<LIBRARY_NAMES.size();i++) {
-					int numinmem = 0;
-
-					String tmp = "";
-					for(int v=0;v<VARIANTS.length;v++) { 
-						numinmem+=LIBRARY_INFO.get(LIBRARY_NAMES.get(i)).rowsForVariant.get(VARIANTS[v]).size();
-						tmp+=VARIANTS[v]+":"+LIBRARY_INFO.get(LIBRARY_NAMES.get(i)).rowsForVariant.get(VARIANTS[v]).size()+" ";
-					}
-
-					if(LIBRARY_INFO.get(LIBRARY_NAMES.get(i)).firstNreads != null) 
-						System.out.println("\t\""+LIBRARY_NAMES.get(i)+"\" has " + numinmem + " lines in memory and " + 
-								LIBRARY_INFO.get(LIBRARY_NAMES.get(i)).firstNreads.size() + " records in the first N reads.");
-					else
-						System.out.println("\t\""+LIBRARY_NAMES.get(i)+"\" has " + numinmem + " lines in memory ("+tmp+")");
-				}
-			}
-
-			// get Record's ID
-			if(samRecord.getReadGroup() != null)
-				id = samRecord.getReadGroup().getId();
-			else // no reading group information
-				id = "all";
-
-			// From ID, determine library name.
-			if (LIBRARY_IDS.containsKey(id)){
-				libname = LIBRARY_IDS.get(id);
-			} else{ // Reading group id does not exist in the header.
-				System.out.println("ERROR: Reading group id at read " + samRecord.getReadName()+ "does not exist in the header!!");
-				inputSam.close();
-				System.exit(-1);
-			}
-
-			// get Library object.
-			lib = LIBRARY_INFO.get(libname);
-
-			// If we've already computed stats, just parse the record.
-			// Otherwise, keep track of insert length and store in memory.
-			parseSAMRecord(samRecord,lib);
-		 */
-		// If we haven't computed stats yet AND we have enough reads, compute stats! 
-		/*if(!lib.computedStats && lib.counter >= USE_NUMBER_READS) {
-
-				// check pairInfo
-				checkPairingInfo(lib);        			
-
-				// get LminLmax
-				getLminLmax(lib);
-
-				// check variantTypes
-				checkVariantTypes(lib);
-
-				// First N reads are in memory. We must go through them and store them 
-				// in their respective types.  Afterwards, sets pairs to null for memory 
-				// efficiency.
-				for(GASVPair p : lib.firstNreads){
-					parseESPfromGASVPair(p, lib);
-					lib.firstNreads = null;
-				}
-				lib.computedStats = true;
-
-			} // END haven't computed stats yet && lib.counter >= USE_NUMBER_READS
-		 */
-		//	} // end for (SAMRecord samRecord : inputSam)
-
 		inputSam.close();
 		System.out.println("Done reading BAM file.\n");
 
