@@ -69,7 +69,7 @@ echo $S1 $S2
 ### Run BAMtoGASV ###
 
 echo "===================================\n\n *** Running BAMToGASV....*** \n\n===================================\n"
-java -jar -Xms512m -Xmx2048m $GASVDIR/bin/BAMToGASV.jar $BAMFILE -GASVPRO true -LIBRARY_SEPARATED all
+java -jar -Xms512m -Xmx4g $GASVDIR/bin/BAMToGASV.jar $BAMFILE -GASVPRO true -LIBRARY_SEPARATED all
 
 ### Run GASV ###
 
@@ -82,15 +82,15 @@ fi
 
 if [ "$MINCLUSTER" = "NULL" ]; then
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar  --output regions --maximal --batch $BAMFILE.gasv.in
+	java -jar -Xms512m -Xmx4g $GASVDIR/bin/GASV.jar  --output regions --maximal --batch $BAMFILE.gasv.in
     else
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --output regions --batch $BAMFILE.gasv.in
+	java -jar -Xms512m -Xmx4g $GASVDIR/bin/GASV.jar --output regions --batch $BAMFILE.gasv.in
     fi
 else
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
+	java -jar -Xms512m -Xmx4g $GASVDIR/bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
     else
-    	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar  --output regions --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
+    	java -jar -Xms512m -Xmx4g $GASVDIR/bin/GASV.jar  --output regions --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
     fi
 fi
 
