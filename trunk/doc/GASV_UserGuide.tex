@@ -313,7 +313,8 @@ For data sets with very few ambiguous mappings, we have created a script called 
 \begin{Verbatim}[frame=single]
 #REQUIRED:
 BAMFILE=example.bam
-                     
+GASVDIR=/home/gasv
+
 #OPTIONAL (set to NULL if not being used):
 UNIQUEFILE=NULL
 MAXUNIQUEVAL=NULL		#MUST SPECIFY IF UNIQUEFILE IS GIVEN
@@ -323,6 +324,7 @@ MINCLUSTER=NULL	  	#default 4
 \end{Verbatim}
 \begin{itemize}
 \item {\bf BAMFILE:} The \verb+.bam+ file that will go through the pipeline. It is required.
+\item {\bf GASVDIR:} The directory that contains all of the gasv files.
 \item {\bf UNIQUEFILE:} The file containing a uniqueness track, used in GASVPro-cc. It is optional.
 \item {\bf MAXUNIQUEVAL:} The highest numerical uniqueness value given to a fragment in the unique file. REQUIRED if a unique file is given.
 \item {\bf MINSCALEDUNIQUE:} The minimum value to which the uniqueness values can be scaled. REQUIRED if a unique file is given

@@ -7,8 +7,8 @@
 ###############################
 
 #REQUIRED:
-BAMFILEHQ=/home/tonyc/gasv/wgsim.bam 
-BAMFILELQ=/home/tonyc/gasv/wgsim.bam.novo.sam
+BAMFILEHQ=/home/tonyc/gasv/example.bam
+BAMFILELQ=/home/tonyc/gasv/protest_smallbam_venterbwa/VenterBWA.AMBI.short.bam
 WORKINGDIR=outputdir  
 GASVDIR=/home/tonyc/gasv
                   
@@ -19,7 +19,7 @@ MAXUNIQUEVAL=NULL               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL                #default 0
 MINCLUSTER=NULL                 #default 4
-MAXIMAL=TRUE			#use GASV's --maximal flag. (use TRUE or FALSE)
+MAXIMAL=FALSE			#use GASV's --maximal flag. (use TRUE or FALSE)
 
 
 ###############################
@@ -38,14 +38,14 @@ else
 fi
 
 if [ -r $BAMFILEHQ ]; then
-	echo "      .bam file 1...OK"
+	echo "      $BAMFILEHQ...OK"
 else
 	echo "!! ERROR: first .bam file is not readable. Aborting."
 	exit 1
 fi
 
 if [ -r $BAMFILELQ ]; then
-	echo "      .bam file 2...OK"
+	echo "      $BAMFILELQ-Xms512m -Xmx2048m...OK"
 else
 	echo "!! ERROR: second .bam file is not readable. Aborting."
 	exit 1
@@ -79,7 +79,7 @@ echo "=============\n"
 ### Run BAMToGASV and BAMToGASV_AMBIG ###
 
 echo "===================================\n\n *** Running BAMToGASV....*** \n\n===================================\n"
-java -jar $GASVDIR/bin/BAMToGASV.jar $BAMFILEHQ -GASVPRO true -LIBRARY_SEPARATED all
+java -Xms512m -Xmx2048m -jar $GASVDIR/bin/BAMToGASV.jar $BAMFILEHQ -GASVPRO true -LIBRARY_SEPARATED all
 
 echo "===================================\n\n *** Running BAMToGASV_AMBIG....*** \n\n===================================\n"
 java -jar $GASVDIR/bin/BAMToGASV_AMBIG.jar $BAMFILELQ $BAMFILEHQ.gasv.in
@@ -95,19 +95,19 @@ fi
 
 if [ "$MINCLUSTER" = "NULL" ]; then
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar  --output regions --maximal --batch $BAMFILEHQ.gasv.in
+	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --maximal --batch $BAMFILELQ.gasv.combined.in
     else
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --output regions --batch $BAMFILEHQ.gasv.in
+	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --batch $BAMFILELQ.gasv.combined.in
     fi
 else
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $BAMFILEHQ.gasv.in
+	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --maximal --minClusterSize $MINCLUSTER --batch $BAMFILELQ.gasv.combined.in
     else
-    	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar  --output regions --minClusterSize $MINCLUSTER --batch $BAMFILEHQ.gasv.in
+    	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --minClusterSize $MINCLUSTER --batch $BAMFILELQ.gasv.combined.in
     fi
 fi
 
-### Run GASV-CC ###
+### Run GASVPro-CC ###
 
 if [ -r $BAMFILEHQ.gasvpro.in ]; then
     echo "====================\n\n *** Running GASV-CC with the following parameters...***"
@@ -134,4 +134,11 @@ cat $BAMFILEHQ.gasvpro.in
 echo "====================\n\n"
 
 $GASVDIR/bin/GASVPro-CC $BAMFILEHQ.gasvpro.in $BAMFILEHQ.gasv.in.clusters
+
+
+### Run GASVPro-graph ###
+
+$GASVDIR/bin/GASVPro-graph $BAMFILEHQ.gasv.in.clusters $BAMFILEHQ.gasv.in.clusters.GASVPro.coverage $WORKINGDIR
+
+
 
