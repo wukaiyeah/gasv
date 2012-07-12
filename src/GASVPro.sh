@@ -7,9 +7,9 @@
 ###############################
 
 #REQUIRED:
-BAMFILEHQ=/home/tonyc/gasv/example.bam
-BAMFILELQ=/home/tonyc/gasv/protest_smallbam_venterbwa/VenterBWA.AMBI.short.bam
-WORKINGDIR=outputdir  
+BAMFILEHQ=/home/tonyc/gasv/gasvprotest/wgsim.bam
+BAMFILELQ=/home/tonyc/gasv/gasvprotest/wgsim.bam.novo.bam
+WORKINGDIR=/home/tonyc/gasv/gasvprotest/outputdir  			#GIVE FULL PATH!
 GASVDIR=/home/tonyc/gasv
                   
 
@@ -18,8 +18,8 @@ UNIQUEFILE=NULL
 MAXUNIQUEVAL=NULL               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL                #default 0
-MINCLUSTER=NULL                 #default 4
-MAXIMAL=FALSE			#use GASV's --maximal flag. (use TRUE or FALSE)
+MINCLUSTER=1                 #default 4
+MAXIMAL=TRUE			#use GASV's --maximal flag. (use TRUE or FALSE)
 
 
 ###############################
@@ -45,7 +45,7 @@ else
 fi
 
 if [ -r $BAMFILELQ ]; then
-	echo "      $BAMFILELQ-Xms512m -Xmx2048m...OK"
+	echo "      $BAMFILELQ...OK"
 else
 	echo "!! ERROR: second .bam file is not readable. Aborting."
 	exit 1
@@ -79,66 +79,82 @@ echo "=============\n"
 ### Run BAMToGASV and BAMToGASV_AMBIG ###
 
 echo "===================================\n\n *** Running BAMToGASV....*** \n\n===================================\n"
-java -Xms512m -Xmx2048m -jar $GASVDIR/bin/BAMToGASV.jar $BAMFILEHQ -GASVPRO true -LIBRARY_SEPARATED all
+java -Xms512m -Xmx2048m -jar $GASVDIR/bin/BAMToGASV.jar $BAMFILEHQ -GASVPRO true -LIBRARY_SEPARATED all -OUTPUT_PREFIX BAMToGASV
 
 echo "===================================\n\n *** Running BAMToGASV_AMBIG....*** \n\n===================================\n"
-java -jar $GASVDIR/bin/BAMToGASV_AMBIG.jar $BAMFILELQ $BAMFILEHQ.gasv.in
+java -jar $GASVDIR/bin/BAMToGASV_AMBIG.jar $BAMFILELQ BAMToGASV.gasv.in -OUTPUT_PREFIX BAMToGASV_AMBIG
 
 ### Run GASV ### 
 
-if [ -r $BAMFILEHQ.gasv.in ]; then
+if [ -r BAMToGASV_AMBIG.gasv.combined.in ]; then
     echo "====================\n\n *** Running GASV....*** \n\n===================="
 else
-    echo "\n\n!! ERROR: necessary parameters file \"$BAMFILE.gasv.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
+    echo "\n\n!! ERROR: necessary parameters file \"BAMToGASV_AMBIG.gasv.combined.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
     exit 1
 fi
 
 if [ "$MINCLUSTER" = "NULL" ]; then
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --maximal --batch $BAMFILELQ.gasv.combined.in
+	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --maximal --batch BAMToGASV_AMBIG.gasv.combined.in
     else
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --batch $BAMFILELQ.gasv.combined.in
+	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --batch BAMToGASV_AMBIG.gasv.combined.in
     fi
 else
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --maximal --minClusterSize $MINCLUSTER --batch $BAMFILELQ.gasv.combined.in
+	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --maximal --minClusterSize $MINCLUSTER --batch BAMToGASV_AMBIG.gasv.combined.in
     else
-    	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --minClusterSize $MINCLUSTER --batch $BAMFILELQ.gasv.combined.in
+    	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --minClusterSize $MINCLUSTER --batch BAMToGASV_AMBIG.gasv.combined.in
     fi
 fi
 
 ### Run GASVPro-CC ###
 
-if [ -r $BAMFILEHQ.gasvpro.in ]; then
+if [ -r BAMToGASV.gasvpro.in ]; then
     echo "====================\n\n *** Running GASV-CC with the following parameters...***"
 else
-    echo "\n\n!! ERROR: necessary parameters file \"$BAMFILE.gasvpro.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
+    echo "\n\n!! ERROR: necessary parameters file \"BAMToGASV.gasvpro.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
     exit 1
 fi
 
 if [ -r $UNIQUEFILE ]; then
-    echo "UNIQUEFile: $UNIQUEFILE" >> $BAMFILEHQ.gasvpro.in
-    echo "MaxUniqueValue: $MAXUNIQUEVAL" >> $BAMFILEHQ.gasvpro.in
-    echo "MinScaledUniqueness: $MINSCALEDUNIQUE" >> $BAMFILEHQ.gasvpro.in
+    echo "UNIQUEFile: $UNIQUEFILE" >> BAMToGASV.gasvpro.in
+    echo "MaxUniqueValue: $MAXUNIQUEVAL" >> BAMToGASV.gasvpro.in
+    echo "MinScaledUniqueness: $MINSCALEDUNIQUE" >> BAMToGASV.gasvpro.in
 fi
 
 if [ "$LRTHRESHOLD" != "NULL" ]; then
-    echo "LRThreshold: $LRTHRESHOLD" >> $BAMFILEHQ.gasvpro.in
+    echo "LRThreshold: $LRTHRESHOLD" >> BAMToGASV.gasvpro.in
 fi
 
 if [ "$MAXIMAL" = "FALSE" ]; then
-    echo "maxmode: true" >> $BAMFILEHQ.gasvpro.in
+    echo "maxmode: true" >> BAMToGASV.gasvpro.in
 fi
 
-cat $BAMFILEHQ.gasvpro.in
+cat BAMToGASV.gasvpro.in
 echo "====================\n\n"
 
-$GASVDIR/bin/GASVPro-CC $BAMFILEHQ.gasvpro.in $BAMFILEHQ.gasv.in.clusters
+$GASVDIR/bin/GASVPro-CC BAMToGASV.gasvpro.in BAMToGASV_AMBIG.gasv.combined.in.clusters
 
 
 ### Run GASVPro-graph ###
 
-$GASVDIR/bin/GASVPro-graph $BAMFILEHQ.gasv.in.clusters $BAMFILEHQ.gasv.in.clusters.GASVPro.coverage $WORKINGDIR
+if [ -r BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.clusters -a -r BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.coverage ]; then
+	echo "====================\n\n *** Running GASVPro-Graph....*** \n\n===================="
+else
+	echo "!! ERROR: Check that GASVPro-CC completed successfully and produced BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.clusters and BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.coverage files."
+	exit 1
+fi
 
+
+
+$GASVDIR/bin/GASVPro-graph BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.clusters BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.coverage $WORKINGDIR
+
+### Run GASVPro-mcmc ###
+
+echo "====================\n\n *** Running GASVPro-mcmc....*** \n\n===================="
+
+$GASVDIR/bin/GASVPro-mcmc BAMToGASV.gasvpro.in $WORKINGDIR
+
+echo "====================\n\n *** GASVPro complete *** \n\n===================="
 
 
