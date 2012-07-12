@@ -25,6 +25,7 @@
 #include <cmath>
 #include <sstream>
 #include <map>
+#include <vector>
 #include <sys/stat.h>
 
 
@@ -234,13 +235,29 @@ int main(int argn, char* argv []){
 	if(concordants.fail()) { cerr<<"Concordants failed"<<endl; }
 	
 	//cout << "Ready to process clusters.\n";
-	
 	while(getline(clus_inp_del1,cluster)){
+		vector<string> tokens;		
+		if(cluster[0] == '#'){getline(clus_inp_del1,cluster);}		
 		istringstream line1(cluster);
-		line1>>strtemp>>strtemp>>loc;
+		while(line1.good())
+		{
+			string temp;
+			line1>>temp;
+			tokens.push_back(temp);
+		}
+		loc = atof(tokens[2].c_str());
 		getline(concordants,strtemp); //Read in the concordants; output them.
+		if(strtemp[0] == '#'){getline(concordants, strtemp);}
 		if(loc>=0){
-			output_inp_del1<<cluster<<endl;
+			string finalout;
+			for(int i = 0; i < (tokens.size()-2); i++)
+			{
+				if(tokens[i][tokens[i].length()-1] != ',')
+					finalout+=tokens[i]+"\t";
+				else
+					finalout+=tokens[i];
+			}
+			output_inp_del1<<finalout<<endl; //Remove the last two columns (LLR and #Copies) because we want what is output to be the original GASVclusters mode.
 			output_for_cov<<strtemp<<endl;
 		}
 	}
@@ -568,7 +585,7 @@ int main(int argn, char* argv []){
 	cerr << "Outputting summary statistics....";
 	
 	ofstream sum;
-	summary_out = output_path + "p_star.summary";
+	summary_out = output_path + "/"  + "p_star.summary";
 	sum.open(summary_out.c_str());
 	sum<<num_of_sv_clusters<<" "<<total_frg_ctr<<" "<<dist_frg_cntr<<endl;
 	sum.close();

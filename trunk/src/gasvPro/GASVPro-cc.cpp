@@ -711,6 +711,8 @@ int main(int argc, char* argv[]){
 				token1 = strtok(NULL,"\t");
 			}
 			
+			if(localChr != chrNumber){continue;}
+
             		if(clusterName[0] == '#'){continue;}
             
 			//Note: We can only support clusters that are deletions, inversions, or translocations!
@@ -721,6 +723,7 @@ int main(int argc, char* argv[]){
 			else{ 
 				if(numIgnored == 0)
 					cout << "WARNING: Found first cluster (cluster " << clusterName << ") of non-supported type \"" << type << "\", it will be ignored." << endl;
+				cout << "ignored " << type << endl;				
 				numIgnored++;
 				localType = 4;
 			}
@@ -1024,6 +1027,9 @@ int main(int argc, char* argv[]){
 		//0     1     2     3          4            5   6            7
 		//c1	1	204.2	D	SRR004856.7363154	1	1	746128, 748510, 746333, 748510, 746027, 748204, 746027, 748409
 		clusterFile.open(CLUSTERFILE,ios::in);
+
+		outFile2 << "#Cluster\tNumPRS\tLocalization\tType\tPR_List\tLeftChr\tRightChr\tBoundary_Pts\tLiklihood_Ratio\tvarCopyNumber" << endl;
+		outFile1 << "#Cluster\tType\tNumDiscordants\tProb_Variant\tProb_No_Variant\tBestA\tBestB\tCovL\tCovR\tMapL\tMapR\tcode" << endl;
 		while(!TRANS_ONLY && clusterFile.getline(Y1_INIT,15000000) ){
 			strcpy(CLUSTER_FOR_OUTPUT,Y1_INIT);
 			numBeyondTolerance = 0;
@@ -1466,7 +1472,7 @@ int main(int argc, char* argv[]){
 				if(LRCLUSTER >= LRTHRESHOLD || PRINTALL){
 				outFile1 << clusterName << "\t" << type  << "\t" << numDiscordants << "\t" << PROB_VARIANT << "\t" << PROB_NO_VARIANT << "\t" << bestA << "\t" << bestB << "\t" << NUMCC_L << "\t" << NUMCC_R << "\t" << MAP_L << "\t" << MAP_R << "\t" << code << endl;
 				if(!AMBIG_MODE){
-					outFile2 << CLUSTER_FOR_OUTPUT << "\t" << LRCLUSTER << "\t" << variantCopyNumber;
+					outFile2 << CLUSTER_FOR_OUTPUT << "\t" << LRCLUSTER;
 					outFile2 << endl;
 				}
 				}
