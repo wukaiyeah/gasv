@@ -358,6 +358,9 @@ int main(int argc, char* argv[] ){
 								   
 			//(4) Assignment Matrices: 
 			//Step 1: Read in the file once to count the number of ESPs and Variants needed
+			
+			cout << "\tFirst read, counting ESPs and Variants.\n";
+			
 			fn = input_path + "sv_" + subsetString.str() + ".sv";
 			subset_sv.open(fn.c_str());
 			int sv_count_subset; //This is not many SVs we need to process in this file.
@@ -406,12 +409,14 @@ int main(int argc, char* argv[] ){
 			unsigned numObservedESPs = observedESPs.size();
 			unsigned numObservedVariants = sv_count_subset;
 			
-			cout << "Processing Component " << subset << " with " << numObservedESPs << " ESPs and " << numObservedVariants << " variants.\n";
+			cout << "\tFinished, Component " << subset << " has " << numObservedESPs << " ESPs and " << numObservedVariants << " variants.\n";
 			subset_sv.close();
 			
 			//Second Read Through; get the variants
 			subset_sv.open(fn.c_str());
-						
+			
+			cout << "\tSecond read, determining possible assignment matrices.\n";
+
 			vector <int> numberOfMappings(observedESPs.size(),0); //When do we use this?
 			vector <ESP> componentESPs(numObservedESPs);
 			vector <variant> componentVariants(numObservedVariants);
@@ -516,8 +521,10 @@ int main(int argc, char* argv[] ){
 				//cout << "Finished variant " << clusterTokens[0].c_str() << componentVariants[i] << endl;
 				
 				//Note: The coverage line is NOW different!
-				//0     1   2       3         4            5     6     7     8   9   10 11  
-				//c1	D	1	-234.852	-947.093	41532	42334	0	0	0	0	0
+				//0     1   2       3           4               5         6         7          8    9   10 11  
+				//c1	D	1	-234.852	    -947.093	   41532	42334	    0	       0	0	0	0
+
+				//c28	D	1	-1.72921e+08	-1.48652e+10	40688	39764630	37524588	0	-1	0	1
 
 				
 				vector <string> coverageTokens;	
@@ -525,6 +532,7 @@ int main(int argc, char* argv[] ){
 				componentVariants[i].setValues(atoi(coverageTokens[5].c_str()), atoi(coverageTokens[6].c_str()), atoi(coverageTokens[7].c_str()),
 											   atoi(coverageTokens[8].c_str()), atof(coverageTokens[9].c_str()), atof(coverageTokens[10].c_str()),
 											   atoi(coverageTokens[11].c_str()));
+				cout << "\tFinished cluster --> " << coverageTokens[0].c_str() << endl;
 				
 			}
 			subset_sv.close();

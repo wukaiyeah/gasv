@@ -255,7 +255,7 @@ int main(int argn, char* argv []){
 				if(tokens[i][tokens[i].length()-1] != ',')
 					finalout+=tokens[i]+"\t";
 				else
-					finalout+=tokens[i];
+					finalout+=tokens[i]+" ";
 			}
 			output_inp_del1<<finalout<<endl; //Remove the last two columns (LLR and #Copies) because we want what is output to be the original GASVclusters mode.
 			output_for_cov<<strtemp<<endl;
