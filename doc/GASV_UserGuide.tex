@@ -183,7 +183,7 @@ in sections below.
 
 \subsection{Using BAMToGASV to Preprocess BAM files}
 
-The following command creates GASV input files by considering paired-reads (PRs) 
+The following command creates GASV input files by considering paired-eads (PRs) 
 from the BAM file ``Example.bam" (this particular BAM file contains no library information and contains only reads from chr17, so no translocations):
 {\normalsize
 \begin{Verbatim}[frame=single]
@@ -355,6 +355,23 @@ For users with both a high-quality BAM file of unique mappings and a BAM file of
   \caption{\textbf{GASVPro Workflow} (Refer to Figure~\ref{fig:GASVWorkflow} for GASV and GASVPro-HQ workflow.)}
   \label{fig:GASVProWorkflow}
 \end{figure}
+
+We have created a script called \verb+GASVPro.sh+ which will run this pipeline completely given two BAM files. As above, it is necessary to change the options at the top of the script file to match the desired parameters. The \verb+GASVPro.sh+ parameters appear as follows:
+\begin {Verbatim}[frame=single]
+#REQUIRED:
+BAMFILEHQ=/path/to/HQ.bam
+BAMFILELQ=/path/to/Ambiguous.bam
+WORKINGDIR=/FULL/path/to/output/directory   #GIVE FULL PATH!
+GASVDIR=/path/to/gasv/
+                  
+#OPTIONAL (set to NULL if not being used):
+UNIQUEFILE=NULL
+MAXUNIQUEVAL=NULL               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+LRTHRESHOLD=NULL   #default 0
+MINCLUSTER=1       #default 4
+MAXIMAL=FALSE      #use GASV's --maximal flag. (use TRUE or FALSE)
+\end{Verbatim}
 
 \section{BAMToGASV}
 
@@ -839,7 +856,7 @@ Because GASVPro was designed to be run after BAMtoGASV and GASV, the input files
 \end{itemize}
 \item{\bf Concordant File}: must be in BAMtoGASV default output format ($<$chr$>$ $<$start$>$ $<$end$>$). 
 \begin{itemize}
-\item The BAMtoGASV preprocessor produces these files with the {\bf-WRITE\_CONCORDANT} option set to {\bf True}. See Section 3.2 for details. 
+\item The BAMtoGASV preprocessor produces these files with either the {\bf-WRITE\_CONCORDANT} or {\bf-GASVPRO} option set to {\bf True}. See Section 3.2 for details. 
 \item {\bf NOTE:} If users provide their own concordant file it must follow the same format and {\bf must} be sorted numerically by start coordinate.
 \end{itemize}
 \item{\bf Uniqueness File}:  Because GASVPro's model is based on read depth, users may want to incorporate biases in the expected coverage (such as GC content or local mapability). A uniqueness file is a {\bf single file} of format $<$chr$>$ $<$start$>$ $<$end$>$ $<$unique$>$. (See Section~\ref{sec:modeloverview} for more information.) The uniqueness file {\bf must} be sorted numerically by start coordinate.
@@ -862,7 +879,7 @@ as a structural variant. A tolerance of $t$ will eliminate from further consider
 \item{\bf Max Chromosome Number}:  this is the highest {\em numerical value label} of all the chromosomes in the Clusters File. {\bf Default Value}: \verb+100+ {\scriptsize NOTE: It is highly advisable to lower this value to reduce runtime, if possible.}
 \item {\bf Translocations Mode}: running GASVPro in translocations mode will enable the processing of translocation clusters along with deletions and inversions (see page~\pageref{structvartypes} for accepted translocation types). {\bf WARNING: Processing translocations takes exponentially more time than processing deletions and inversions alone.} If possible, we recommend running Translocations Only mode on datasets with large numbers of translocations and possibly running two copies of GASVPro in parallel (one for translocations, another for inversions and deletions). {\bf Default Value}: \verb+false+
 
-\item {\bf Translocations Only (TransOnly)}: setting this value to \verb+true+ will process translocations ONLY, ignoring all other types. {\bf WARNING: This operation can take hours.} {\bf Default Value}: \verb+false+
+\item {\bf Translocations Only (TransOnly)}: setting this value to \verb+true+ will process translocations ONLY, ignoring all other types. {\bf WARNING: This operation can take a very long time.} {\bf Default Value}: \verb+false+
 \item {\bf Likelihood Ratio Threshold (LRThreshold)}: Users can input a numerical value or the string \verb+all+. GASVPro will only return clusters with a LR greater than or equal to the input value (See section~\ref{LRexp} for explanation of LR). If \verb+all+ is given, all clusters will be printed. {\bf Default Value}: \verb+all+
 \item {\bf Verbose}: specifying \verb+Y+ will print information for each cluster processed. 
 \end{description}
@@ -948,8 +965,40 @@ Additionally, GASVPro will output another file which offers more information gen
 \end{framed}
 
 \subsection{GASVPro-graph}
+GASVPro-graph is a component of the GASVPro pipeline that separates SV predictions into independent subsets for further analysis by the MCMC algorithm (below). It takes the following parameters:
+\begin{itemize}
+	\item Clusters File: produced by GASV. 
+	\item Coverage File: produced by GASVPro-cc. 
+	\item Output Directory: directory into which the output of GASVPro-graph and GASVPro-mcmc will be placed. If the specified directory does not exist, it will be created. 
+	\item (\textit{optional}) Minimum Support: the minimum level of support required for a cluster to be considered (default: 4).
+\end{itemize}
+
+\noindent GASVPro-graph is located in the \verb+/bin+ directory. Run it with the following command:
+\begin{framed}
+\noindent{\small \verb+./GASVPro-graph {Clusters File} {Coverage File} {Output Directory} <{Minimum Support}>+}
+\end{framed}
+
+Output from GASVPro-graph, inside the output directory given at runtime, is a series of \verb+sv_*.sv+ files, a \verb+p_star.summary+ file, and a \verb+svFileList.summary+ file. Each \verb+sv_*.sv+ file contains the clusters and coverage information for an individual independent component. The \verb+svFileList.summary+ file is an index of these independent components containing each file and the number of clusters within it.
 
 \subsection{GASVPro-mcmc}
+GASVPro-mcmc is the final processing component of the GASVPro pipeline. It reports the most probable SV predictions over the space of possible paired-read alignments using a Markov chain Monte Carlo procedure. It takes the following parameters:
+\begin{itemize}
+	\item Parameters File: use the same parameters file used with GASVPro-cc, created by BAMToGASV.
+	\item Working Directory: use the directory into which GASVPro-graph placed its output.
+	\item ({\em optional}) Start Cluster: optionally, specify a ClusterID at which to start processing.
+	\item ({\em optional}) End Cluster: optionally, specify a ClusterID at which to end processing. ({\small NOTE: these optional parameters are useful for running GASVPro-mcmc in parallel}).
+\end{itemize}
 
+\noindent GASVPro-mcmc is located in the \verb+/bin+ directory. Run it with the following command:
+\begin{framed}
+\noindent {\small \verb+./GASVPro-mcmc {Parameters File} {Working Directory} <{Start_cluster} {End_Cluster}>+}
+\end{framed}
+
+\noindent GASVPro-mcmc outputs three files for each structural variant file in the working directory: 
+\begin{itemize}
+	\item[] \verb+*_sv_+{\em N}\verb+.MCMCThreshold.clusters+: contains the final group of clusters associated with a given structural variant.
+	\item[] \verb+*_sv_+{\em N}\verb+.PR.results+
+	\item[] \verb+*_sv_+{\em N}\verb+.Variant.results+
+\end{itemize}
 
 \end{document}  

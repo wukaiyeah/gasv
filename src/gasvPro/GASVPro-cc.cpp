@@ -1171,7 +1171,7 @@ int main(int argc, char* argv[]){
 							cout << "\t\t\t\tNOTICE: Small deletion at cluster " << clusterName << " is being processed using beRD algorithm." << endl;
 							code = 0;
 						}
-						
+						code = 0;
 						//Store the coverage values;
 						for(a = minX; a<=maxX; a++){
 							//COUNTS_LEFT[a - minX] = getCoverage(STARTS,ENDS,NUM_SEGMENTS,a,BUFFER);
@@ -1425,7 +1425,7 @@ int main(int argc, char* argv[]){
 					//A2: We have negative length? Or cross ourselves?
 					//We cross ourselves, this is most unfortunate. We'll ignore CC in this case. (hopefully!)
 					else{
-						cout << "SHOULD NEVER BE HERE!!!!\t" << "cluster Name: " << clusterName << "\t" << "Distance: " << minY << " - " << maxX << " = " << minY - maxX << endl;
+						cout << "Erroneous cluster; skipping:\t" << "cluster Name: " << clusterName << "\t" << "Distance: " << minY << " - " << maxX << " = " << minY - maxX << endl;
 						code = -1;
 						PROB_NO_VARIANT = 0;
 						PROB_VARIANT = -2*INT_MAX1;
@@ -1469,7 +1469,7 @@ int main(int argc, char* argv[]){
 				//outFile1 is the coverage file
 				//outFile2 is the clusters file
 				
-				if(LRCLUSTER >= LRTHRESHOLD || PRINTALL){
+				if((LRCLUSTER >= LRTHRESHOLD || PRINTALL) && (code != -1)){
 				outFile1 << clusterName << "\t" << type  << "\t" << numDiscordants << "\t" << PROB_VARIANT << "\t" << PROB_NO_VARIANT << "\t" << bestA << "\t" << bestB << "\t" << NUMCC_L << "\t" << NUMCC_R << "\t" << MAP_L << "\t" << MAP_R << "\t" << code << endl;
 				if(!AMBIG_MODE){
 					outFile2 << CLUSTER_FOR_OUTPUT << "\t" << LRCLUSTER;
@@ -2259,7 +2259,7 @@ int main(int argc, char* argv[]){
 						//outFile1 is the coverage file
 						//outFile2 is the clusters file
 						
-						if(LRCLUSTER >= LRTHRESHOLD || PRINTALL){
+						if((LRCLUSTER >= LRTHRESHOLD || PRINTALL) && (code != -1)){
 						outFile1 << clusterName << "\t" << type  << "\t" << numDiscordants << "\t" << PROB_VARIANT << "\t" << PROB_NO_VARIANT << "\t" << bestA << "\t" << bestB << "\t" << NUMCC_L << "\t" << NUMCC_R << "\t" << MAP_L << "\t" << MAP_R << "\t" << code << endl;
 						if(!AMBIG_MODE){
 							outFile2 << CLUSTER_FOR_OUTPUT << "\t" << LRCLUSTER;
