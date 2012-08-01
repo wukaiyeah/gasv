@@ -28,10 +28,10 @@
 ###############################
 
 #REQUIRED:
-BAMFILEHQ=/home/tonyc/gasv/gasvprotest/wgsim.bam
-BAMFILELQ=/home/tonyc/gasv/gasvprotest/wgsim.bam.novo.bam
-WORKINGDIR=/home/tonyc/gasv/gasvprotest/outputdir  			#GIVE FULL PATH!
-GASVDIR=/home/tonyc/gasv
+BAMFILEHQ= ##BAMFILEHQ
+BAMFILELQ= ##BAMFILELQ
+WORKINGDIR= ##OUTPUTDIR  			#GIVE FULL PATH!
+GASVDIR= ##GASVDIR
                   
 
 #OPTIONAL (set to NULL if not being used):

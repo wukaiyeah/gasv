@@ -28,13 +28,13 @@
 ###############################
 
 #REQUIRED:
-BAMFILE=/home/tonyc/gasv/example.bam
-GASVDIR=/home/tonyc/gasv                 
+BAMFILE= ##BAMFILE
+GASVDIR= ##GASVDIRECTORY               
 
 #OPTIONAL (set to NULL if not being used):
-UNIQUEFILE=/data/compbio/ssindi/StructVarMCMCWork_checkAndDelete/RosettaUniquenessOriginal/RosettaUniquenessMerged.sh
-MAXUNIQUEVAL=37               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
-MINSCALEDUNIQUE=.3            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+UNIQUEFILE= ##UNIQUENESSFILE
+MAXUNIQUEVAL=NULL               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL                #default 0
 MINCLUSTER=NULL                 #default 4
 MAXIMAL=FALSE			#use GASV's --maximal flag. (use TRUE or FALSE)
