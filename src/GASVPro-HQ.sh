@@ -1,5 +1,26 @@
 #!/bin/sh
 
+####
+###
+## Copyright 2012 Benjamin Raphael, Suzanne Sindi, Anthony Cannistra, Hsin-Ta Wu, Luke Peng, Selim Onal
+##
+##  This file is part of the GASVPro code distribution.
+##
+##  GASVPro is free software: you can redistribute it and/or modify
+##  it under the terms of the GNU General Public License as published by
+##  the Free Software Foundation, either version 3 of the License, or
+##  (at your option) any later version.
+## 
+##  GASVPro is distributed in the hope that it will be useful,
+##  but WITHOUT ANY WARRANTY; without even the implied warranty of
+##  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##  GNU General Public License for more details.
+##  
+##  You should have received a copy of the GNU General Public License
+##  along with gasv.  If not, see <http://www.gnu.org/licenses/>.
+###
+####
+
 #### GASVPro High Quality #####
 
 ###############################
@@ -7,7 +28,7 @@
 ###############################
 
 #REQUIRED:
-BAMFILE=/home/tonyc/gasv/hugedata/NA19257.mapped.ILLUMINA.bwa.YRI.low_coverage.20101123.bam
+BAMFILE=/home/tonyc/gasv/example.bam
 GASVDIR=/home/tonyc/gasv                 
 
 #OPTIONAL (set to NULL if not being used):
@@ -22,11 +43,17 @@ MAXIMAL=FALSE			#use GASV's --maximal flag. (use TRUE or FALSE)
 ###############################
 #DO NOT MODIFY BELOW THIS POINT
 ###############################
-
+DATEPREFIX=$BAMFIILE_$(date +%F_%R)
 ### Check Input ###
 
 echo "\n** GASVProHQ Running... **\n" 
 echo "====Input===="
+if [ -d $GASVDIR ]; then
+	echo "      GASVDIR...ok" 
+else
+	echo "!! ERROR: Please configure this script with the correct GASV directory."
+	exit 1
+fi
 if [ -r $BAMFILE ]; then
     echo "      Valid .bam file: $BAMFILE"
 else
@@ -69,64 +96,81 @@ echo $S1 $S2
 ### Run BAMtoGASV ###
 
 echo "===================================\n\n *** Running BAMToGASV....*** \n\n===================================\n"
-java -jar -Xms512m -Xmx4g $GASVDIR/bin/BAMToGASV.jar $BAMFILE -GASVPRO true -LIBRARY_SEPARATED all
+java -jar -Xms512m -Xmx2g $GASVDIR/bin/BAMToGASV.jar $BAMFILE -GASVPRO true -LIBRARY_SEPARATED all -OUTPUT_PREFIX $DATEPREFIX
+OUT=$?
+if [ "$OUT" != 0 ]; then
+	echo "Warning: BAMToGASV aborted. Stopping pipeline."
+	exit  1
+fi 
 
 ### Run GASV ###
 
-if [ -r $BAMFILE.gasv.in ]; then
+if [ -r $DATEPREFIX.gasv.in ]; then
     echo "====================\n\n *** Running GASV....*** \n\n===================="
 else
-    echo "\n\n!! ERROR: necessary parameters file \"$BAMFILE.gasv.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
+    echo "\n\n!! ERROR: necessary parameters file \"$DATEPREFIX.gasv.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
     exit 1
 fi
 
 if [ "$MINCLUSTER" = "NULL" ]; then
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx4g $GASVDIR/bin/GASV.jar  --output regions --maximal --batch $BAMFILE.gasv.in
+	java -jar -Xms512m -Xmx2g $GASVDIR/bin/GASV.jar  --output regions --maximal --batch $DATEPREFIX.gasv.in
     else
-	java -jar -Xms512m -Xmx4g $GASVDIR/bin/GASV.jar --output regions --batch $BAMFILE.gasv.in
+	java -jar -Xms512m -Xmx2g $GASVDIR/bin/GASV.jar --output regions --batch $DATEPREFIX.gasv.in
     fi
 else
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx4g $GASVDIR/bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
+	java -jar -Xms512m -Xmx2g $GASVDIR/bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $DATEPREFIX.gasv.in
     else
-    	java -jar -Xms512m -Xmx4g $GASVDIR/bin/GASV.jar  --output regions --minClusterSize $MINCLUSTER --batch $BAMFILE.gasv.in
+    	java -jar -Xms512m -Xmx2g $GASVDIR/bin/GASV.jar  --output regions --minClusterSize $MINCLUSTER --batch $DATEPREFIX.gasv.in
     fi
 fi
 
+OUT=$?
+if [ "$OUT" != 0 ]; then
+	echo "Warning: GASV aborted. Stopping pipeline."
+	exit  1
+fi 
+
 ### Run GASV-CC ###
 
-if [ -r $BAMFILE.gasvpro.in ]; then
+if [ -r $DATEPREFIX.gasvpro.in ]; then
     echo "====================\n\n *** Running GASV-CC with the following parameters...***"
 else
-    echo "\n\n!! ERROR: necessary parameters file \"$BAMFILE.gasvpro.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
+    echo "\n\n!! ERROR: necessary parameters file \"$DATEPREFIX.gasvpro.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
     exit 1
 fi
 
 if [ -r $UNIQUEFILE ]; then
-    echo "UNIQUEFile: $UNIQUEFILE" >> $BAMFILE.gasvpro.in
-    echo "MaxUniqueValue: $MAXUNIQUEVAL" >> $BAMFILE.gasvpro.in
-    echo "MinScaledUniqueness: $MINSCALEDUNIQUE" >> $BAMFILE.gasvpro.in
+    echo "UNIQUEFile: $UNIQUEFILE" >> $DATEPREFIX.gasvpro.in
+    echo "MaxUniqueValue: $MAXUNIQUEVAL" >> $DATEPREFIX.gasvpro.in
+    echo "MinScaledUniqueness: $MINSCALEDUNIQUE" >> $DATEPREFIX.gasvpro.in
 fi
 
 if [ "$LRTHRESHOLD" != "NULL" ]; then
-    echo "LRThreshold: $LRTHRESHOLD" >> $BAMFILE.gasvpro.in
+    echo "LRThreshold: $LRTHRESHOLD" >> $DATEPREFIX.gasvpro.in
 fi
 
 if [ "$MAXIMAL" = "FALSE" ]; then
-    echo "maxmode: true" >> $BAMFILE.gasvpro.in
+    echo "maxmode: true" >> $DATEPREFIX.gasvpro.in
 fi
 
-cat $BAMFILE.gasvpro.in
+cat $DATEPREFIX.gasvpro.in
 echo "====================\n\n"
 
-$GASVDIR/bin/GASVPro-CC $BAMFILE.gasvpro.in $BAMFILE.gasv.in.clusters
+$GASVDIR/bin/GASVPro-CC $DATEPREFIX.gasvpro.in $DATEPREFIX.gasv.in.clusters
+
+OUT=$?
+if [ "$OUT" != 0 ]; then
+	echo "Warning: GASVPro-cc aborted. Stopping pipeline."
+	exit  1
+fi 
 
 ###Prune Clusters###
 
 echo "\n===================================\n\n *** Pruning Clusters... *** \n\n===================================\n"
 
-$GASVDIR/scripts/GASVPruneClusters.pl $BAMFILE.gasv.in.clusters.GASVPro.clusters
+$GASVDIR/scripts/GASVPruneClusters.pl $DATEPREFIX.gasv.in.clusters.GASVPro.clusters
 
 
 echo "===================\n\n GASVPro-HQ Completed Successfully \n\n===================\n"

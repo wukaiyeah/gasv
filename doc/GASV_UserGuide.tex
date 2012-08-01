@@ -75,7 +75,7 @@ Inc. (\url{http://www.seisw.com/}).\\
 
 \sectionline
 
-\noindent GASVPro is a probabilistic version of the GASV algorithm, combining read depth information with discordant paired-read mappings into a single model. \\
+\noindent GASVPro is a probabilistic version of the GASV algorithm, combining read depth information with discordant paired-read mappings into a single model. It is comprised of three software implementations: GASVPro-cc, GASVPro-graph, and GASVPro-mcmc (see \ref{gasvprosec}). \\
 
 \noindent If you use GASVPro in your research, please cite: \\ \\ 
 S. Sindi, S. Onal, L. Peng, H. Wu, B.J. Raphael. An Integrative Probabilistic Model for Identification of Structural Variation in Sequencing Data. Genome Biology 2012 13(3):R22. \href{http://dx.doi.org/10.1186/gb-2012-13-3-r22}{doi:10.1186/gb-2012-13-3-r22}.\\
@@ -83,7 +83,7 @@ S. Sindi, S. Onal, L. Peng, H. Wu, B.J. Raphael. An Integrative Probabilistic Mo
 \noindent This product contains software developed by Erik Garrison (\url{http://github.com/ekg}).\\ \\ 
 \
 \noindent Version: 1.0\\
-\noindent Version Date: July 13 2012
+\noindent Version Date: \today
 
 \begin{wrapfigure}{l}{0.55\textwidth}
   \begin{center}
@@ -211,7 +211,7 @@ $ java -Xms512m -Xmx2048m -jar BAMToGASV.jar Example.bam -LIBRARY_SEPARATED all
 \noindent Example.bam.info\\
 \noindent Example.bam.gasv.in \\
 \noindent Example.bam\_all.deletion \\
-\noindent Example.bam\_all.divergent \\
+\noindent Example.bam\_all.divergent \\July 13 2012
 \noindent Example.bam\_all.insertion \\
 \noindent Example.bam\_all.inversion \\
 \noindent Example.bam\_all.translocation\\
@@ -400,7 +400,7 @@ Determines whether or not to consider multiple libraries separately
 \item[all] Produce a single set of output files for all libraries.
 \end{description}
 If no libary information is provided in the BAM file header, it will default to the 'all' setting. In the case where no library info is found or 'all' is passed as -LIBRARY\_SEPARATED, the word ``all'' is used as the LIBRARY\_ID in the output file names.
-
+July 13 2012
 \item[-OUTPUT\_PREFIX $<$String$>$] (Default: BAM filename)\\
 The prefix for your output files.
 
@@ -472,7 +472,7 @@ Discordant fragments are grouped into output files according to the type of stru
 
 \begin{itemize}
 \item[] OUTPUT\_PREFIX(\_LIBRARY\_ID).deletion
-\item[] OUTPUT\_PREFIX(\_LIBRARY\_ID).divergent
+\item[] OUTPUT\_PREFIX(\_LIBRARY\_ID).divergentJuly 13 2012
 \item[] OUTPUT\_PREFIX(\_LIBRARY\_ID).insertion
 \item[] OUTPUT\_PREFIX(\_LIBRARY\_ID).inversion
 \item[] OUTPUT\_PREFIX(\_LIBRARY\_ID).translocation
@@ -802,6 +802,7 @@ GASV provides two additional formatting options for the clusters file. These opt
 \clearpage
 
 \section{GASVPro}
+\label{gasvprosec}
 
 \subsection{Running GASVPro}
 
