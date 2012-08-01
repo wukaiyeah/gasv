@@ -75,7 +75,7 @@ Inc. (\url{http://www.seisw.com/}).\\
 
 \sectionline
 
-\noindent GASVPro is a probabilistic version of the GASV algorithm, combining read depth information with discordant paired-read mappings into a single model. It is comprised of three software implementations: GASVPro-cc, GASVPro-graph, and GASVPro-mcmc (see \ref{gasvprosec}). \\
+\noindent GASVPro is a probabilistic version of the GASV algorithm, combining read depth information with discordant paired-read mappings into a single model. It is comprised of three software programs: GASVPro-cc, GASVPro-graph, and GASVPro-mcmc (see Section~\ref{gasvprosec}). \\ 
 
 \noindent If you use GASVPro in your research, please cite: \\ \\ 
 S. Sindi, S. Onal, L. Peng, H. Wu, B.J. Raphael. An Integrative Probabilistic Model for Identification of Structural Variation in Sequencing Data. Genome Biology 2012 13(3):R22. \href{http://dx.doi.org/10.1186/gb-2012-13-3-r22}{doi:10.1186/gb-2012-13-3-r22}.\\
@@ -310,7 +310,7 @@ $ java -jar GASV.jar --output reads --batch Example.bam.gasv.in
 
 \section{Running the GASVPro Pipeline with Scripts}
 \label{sec:GASVProScripts}
-To aid users in running the GASVPro pipeline, we have provided paramaterized scripts for GASVPro-HQ and GASVPro. They are designed to take as input a \verb+.bam+ file, plus other optional parameters, and run the respective pipeline (Figure~\ref{fig:GASVWorkflow} and Figure~\ref{fig:GASVProWorkflow}). Note that these scripts are easily modified to fit a desired workflow and users are encouraged to adapt these scripts or develop their own. These scripts are stored in the \verb+\bin+ directory.
+To aid users in running the GASVPro pipeline, we have provided paramaterized scripts for GASVPro-HQ and GASVPro. They are designed to take as input a \verb+.bam+ file (or files), plus other optional parameters, and run the respective pipeline (Figure~\ref{fig:GASVWorkflow} and Figure~\ref{fig:GASVProWorkflow}). Note that these scripts are easily modified to fit a desired workflow and users are encouraged to adapt these scripts or develop their own. These scripts are stored in the \verb+\bin+ directory.
 
 
 \subsection{GASVPro-HQ (High Quality)}
@@ -371,6 +371,15 @@ MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL   #default 0
 MINCLUSTER=1       #default 4
 MAXIMAL=FALSE      #use GASV's --maximal flag. (use TRUE or FALSE)
+\end{Verbatim}
+
+\noindent After the desired parameters are chosen, be sure to save the file. To ensure the file is executable, run 
+\begin{Verbatim}[frame=single]
+chmod 777 GASVPro-HQ.sh
+\end{Verbatim}
+Now it is possible to run GASVPro.sh. Initiate the pipeline by running 
+\begin{Verbatim}[frame=single]
+./GASVPro.sh
 \end{Verbatim}
 
 \section{BAMToGASV}
@@ -815,7 +824,7 @@ The program is run by passing a parameters file and a \verb+.clusters+ file on t
 $ ./GASVPro <parametersFile> <clustersFile>
 \end{Verbatim}
 %%CHANGE TO GASVPRO OPTION
- There are many different options available, detailed below; however, for ease of use a parameters file is created with the execution of BAMToGASV when the {\bf-WRITE\_CONCORDANT} option set to {\bf True} (see Example above). Users are encouraged to begin with this default parameters file and to add/modify options as needed by their specific application.
+ There are many different options available, detailed below; however, for ease of use a parameters file is created with the execution of BAMToGASV when the {\bf-WRITE\_CONCORDANT} or {\bf \\-GASVPRO} option is set to {\bf True} (see Example above). Users are encouraged to begin with this default parameters file and to add/modify options as needed by their specific application.
 
 \subsubsection{Parameters} 
 
@@ -877,7 +886,7 @@ as a structural variant. A tolerance of $t$ will eliminate from further consider
 
 \subsubsection{Parameters for Formatting Output}
 \begin{description}
-\item{\bf Max Chromosome Number}:  this is the highest {\em numerical value label} of all the chromosomes in the Clusters File. {\bf Default Value}: \verb+100+ {\scriptsize NOTE: It is highly advisable to lower this value to reduce runtime, if possible.}
+\item{\bf Max Chromosome Number}:  this is the highest {\em numerical value label} of all the chromosomes in the Clusters File. {\bf Default Value}: \verb+100+ 
 \item {\bf Translocations Mode}: running GASVPro in translocations mode will enable the processing of translocation clusters along with deletions and inversions (see page~\pageref{structvartypes} for accepted translocation types). {\bf WARNING: Processing translocations takes exponentially more time than processing deletions and inversions alone.} If possible, we recommend running Translocations Only mode on datasets with large numbers of translocations and possibly running two copies of GASVPro in parallel (one for translocations, another for inversions and deletions). {\bf Default Value}: \verb+false+
 
 \item {\bf Translocations Only (TransOnly)}: setting this value to \verb+true+ will process translocations ONLY, ignoring all other types. {\bf WARNING: This operation can take a very long time.} {\bf Default Value}: \verb+false+
