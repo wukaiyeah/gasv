@@ -1,7 +1,16 @@
 Geometric Analysis of Structural Variants (GASV)
 
-Software for identifying and comparing structural variants by computing 
-intersections of breakpoint regions.
+GASV is software for identifying and structural variants (SVs) from paired-end sequencing data. 
+
+GASV
+Version: 2.0
+Version Date: May 30, 2012
+
+GASVPro
+Version: 1.0
+Version Date: August 2, 2012
+
+Contact: Benjamin Raphael at gasv@cs.brown.edu
 
 If you use GASV in your research, please cite: 
 S. Sindi, E. Helman, A. Bashir, B.J. Raphael. A Geometric Approach for
@@ -11,13 +20,10 @@ Biology and 8th Annual International European Conference on
 Computational Biology (ISMB/ECCB 09).  Bioinformatics 2009
 25(12):i222-i230. 
 
-This product includes software developed by the Solution Engineering,
-Inc. (http://www.seisw.com/). 
-
-Contact: Ben Raphael at gasv@cs.brown.edu
-
-Version: 2.0
-Version Date: May 30, 2012
+If you use GASVPro in your research, please cite:
+S. Sindi, S. Onal, L. Peng, H.T. Wu, B.J Raphael. An Integrative Probabilistic 
+Model for Identification of Structural Variation in Sequencing Data. 
+Genome Biology 2012 27;13(3). 
 
 SUMMARY ==============================================
 
@@ -32,23 +38,29 @@ A read-only copy can be checked out
 
 CONTENTS =============================================
 
-(i) Installation Script (build.xml)
+(i) Installation Script
 
-	The GASV software package is maintained in Java. 
-	Executable jar files can be built usint ant, available 
-	at:
-	
-	<http://ant.apache.org/>
-	
 	To install from the command line, simply type:
 	
-	% ant
+	% ./install
 	
 	Installation creates the following:
 	
 	bin/GASV.jar  
 	bin/BAMToGASV.jar 
+	bin/BAMToGASV_AMBIG.jar
+	bin/GASVPro-HQ.sh 
+	bin/GASVPro.sh
+	bin/GASVPro-CC		
+	bin/GASVPro-graph
+	bin/GASVPro-mcmc
+
+	Note that GASV and BAMToGASV are maintained in Java. 
+	Executable jar files are built using ant, available 
+	at:
 	
+	<http://ant.apache.org/>
+
 (ii) Documentation (doc/ subdirectory):
 
 * GASV_UserGuide.pdf
@@ -62,24 +74,27 @@ CONTENTS =============================================
 
 * Software License Information; LICENSE.txt
 
-(iii) GASV Software (in src/)
+(iii) Software (in src/)
 
 * Source code for GASV.jar is in src/gasv
 
-* Source code for BAMToGASV.jar is in src/bamtogasv
+* Source code for BAMToGASV.jar and BAMToGASV_AMBIG.jar 
+  is in src/bamtogasv
 
-* Run ant to build executable GASV.jar and BAMToGASV.jar in bin/ 
+* Source code for GASVPro is in src/gasvpro
+
+* Running ./install builds executable GASV.jar and BAMToGASV.jar in bin/ 
 
 (iv) Other Dependencies
 
 * jarfiles/ subdirectory:
-	Contains:
+	Contains jar files from Picard:
 	- FixMateInformation.jar	
 	- sam-1.68.jar 
-	
-	BAMToGASV.jar re-packages these two jar files from Picard.
+		
+	BAMToGASV.jar re-packages these jar files.	
+
 	For more information visit:
-	
     <http://picard.sourceforge.net/>	
 	
 * scripts/ subdirectory:
@@ -87,6 +102,5 @@ CONTENTS =============================================
 	    If you create your own GASV input files, without using
 		BAMToGASV.jar, the paired-read files must be sorted with
 		sortPR.bash prior to running GASV.jar.
-
 
 
