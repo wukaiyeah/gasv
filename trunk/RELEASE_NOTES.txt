@@ -1,3 +1,19 @@
+GASV and GASVPro Release August 2, 2012  =================
+
+GASVPro (Version 1.0):
+* Sripts for simplified execution of standard GASVPro pipelines:
+bin/GASVPro-HQ.sh
+bin/GASVPro.sh
+
+* Documentation detailing GASVPro options and parameters.
+
+BAMToGASV (Version 2.0.1):
+* GASVPro flag, automatically creates input parameters for GASVPro
+
+BAMToGASV_Ambig (Version 1.0):
+* BAM file preprocessor for "low-quality" mappings. That is, reads may have
+more than one reported mapping.
+
 RELEASE 2.0 ============================================
 
 GASV:

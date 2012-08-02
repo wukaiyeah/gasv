@@ -289,7 +289,7 @@ public class BAMToGASV_AMBIG {
 	 * Prints the usage information.
 	 **/
 	public void printUsage() {
-		System.out.println("\nProgram: BAMToGASV_AMBIG\nVersion: 2.0\n");
+		System.out.println("\nProgram: BAMToGASV_AMBIG\nVersion: 1.0\n");
 		System.out.println("USAGE (src): java -Xms512m -Xmx2048m BAMToGASV_AMBIG <bam file> <gasv.in> [Options]\n" +
 				"USAGE (jar): java -Xms512m -Xmx2048m -jar BAMToGASV.jar <bam file> <gasv.in> [Options]\n\n" +
 				"Options are:\n" +
