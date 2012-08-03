@@ -183,8 +183,10 @@ int main(int argc, char* argv[] ){
 	bool PRINTALL = false;
 		
 	//(4) Get the MCMC Iteration Steps;
-	int BURN_IN = 100000;
-	int SAMPLE = 900000;
+	int DEFAULT_BURN_IN = 100000;
+	int DEFAULT_SAMPLE  = 900000;
+	int BURN_IN = DEFAULT_BURN_IN;
+	int SAMPLE = DEFAULT_SAMPLE;
 			
 	//(5) Get Error for the probability model
 	double p_err;
@@ -277,6 +279,17 @@ int main(int argc, char* argv[] ){
 				continue;
 			}
 		}
+	}
+	
+	//Error Checking:
+	if(BURN_IN <=0){ 
+		BURN_IN = DEFAULT_BURN_IN;
+		cerr << "Error: Parameter Burnin must be positive. Resetting Burnin to default of " << DEFAULT_BURN_IN << endl;
+	}
+	
+	if(SAMPLE <=0){ 
+		SAMPLE = DEFAULT_SAMPLE;
+		cerr << "Error: Parameter Sample must be positive. Resetting Sample to default of " << DEFAULT_SAMPLE << endl;
 	}
 	
 	//Set remaining parameters;
