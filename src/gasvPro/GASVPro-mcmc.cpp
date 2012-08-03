@@ -179,8 +179,8 @@ int main(int argc, char* argv[] ){
 	
 	double Tolerance;
 	int PRINT_FLAG;
-	double LRTHRESHOLD;
-	bool PRINTALL;
+	double LRTHRESHOLD = 0;
+	bool PRINTALL = false;
 		
 	//(4) Get the MCMC Iteration Steps;
 	int BURN_IN = 100000;

@@ -347,15 +347,36 @@ Now it is possible to run GASVPro-HQ.sh. Initiate the pipeline by running
 ./GASVPro-HQ.sh
 \end{Verbatim}
 
+\subsubsection{Output of GASVPro-HQ.sh}
+GASVPro-HQ.sh produces quite a few output files, only a few of which are the "final products" of the entire pipeline. The following files are produced by running GASVPro-HQ:
+\begin{framed}
+\noindent \textit {date\_time}\verb+.gasv+\\				
+\textit{date\_time}\verb+.gasv.in.clusters+\\
+\textit {date\_time}\verb+.gasv.in.clusters.GASVPro.clusters+\\				
+\textit {date\_time}\verb+.gasv.in.clusters.GASVPro.clusters.pruned.clusters+\\
+\textit {date\_time}\verb+.gasv.in.clusters.GASVPro.coverage+\\
+\textit {date\_time}\verb+.gasvpro.in+\\
+\textit {date\_time}\verb+.info+\\
+\textit {date\_time}\verb+_all.concordant+\\
+\textit {date\_time}\verb+_all.deletion+\\
+\textit {date\_time}\verb+_all.divergent+\\
+\textit {date\_time}\verb+_all.insertion+\\
+\textit {date\_time}\verb+_all.translocation+
+\end{framed}
+\noindent The final output of the pipeline is \textit {date\_time}\verb+.gasv.in.clusters.GASVPro.clusters+, containing SV clusters in regions format,			
+\textit {date\_time}\verb+.gasv.in.clusters.GASVPro.clusters.pruned.clusters+, containing a pruned subset of those clusters, and 
+\textit {date\_time}\verb+.gasv.in.clusters.GASVPro.coverage+, containing extra information about each cluster (such as concordant coverage) from GASVPro-cc. 
+
 \subsection{GASVPro}
 For users with both a high-quality BAM file of unique mappings and a BAM file of lower-quality and possibly multiple mappings. The GASVPro pipeline will incorporate both types of data. 
-
-\begin{figure}[htbp]
+  
+\begin{figure}[!htbp]
    \centering
     \includegraphics[width=0.55\textwidth]{Figures/GASVPro_Workflow.pdf}
   \caption{\textbf{GASVPro Workflow} (Refer to Figure~\ref{fig:GASVWorkflow} for GASV and GASVPro-HQ workflow.)}
   \label{fig:GASVProWorkflow}
 \end{figure}
+
 
 We have created a script called \verb+GASVPro.sh+ which will run this pipeline completely given two BAM files. As above, it is necessary to change the options at the top of the script file to match the desired parameters. The \verb+GASVPro.sh+ parameters appear as follows:
 \begin {Verbatim}[frame=single]
@@ -382,6 +403,18 @@ Now it is possible to run GASVPro.sh. Initiate the pipeline by running
 \begin{Verbatim}[frame=single]
 ./GASVPro.sh
 \end{Verbatim}
+
+\subsubsection{Output of GASVPro.sh}
+The output of GASVPro.sh includes all of the output of GASVPro-HQ.sh {(\em one set of SV files for each of the HQ and LQ BAMs}, with combined gasv and gasvpro clusters files), plus the following additional files contained within the specified output directory:
+\begin{framed}
+\noindent \verb+sv_*.sv+ (many files)\\
+\verb+BAMToGASV.gasvpro.in_sv_*.MCMCThreshold.clusters+ (many files)\\
+\verb+BAMToGASV.gasvpro.in_sv_0.PR.results+ (many files)\\
+\verb+BAMToGASV.gasvpro.in_sv_0.Variant.results+ (many files)\\
+\verb+p_star.summary+\\
+\verb+svFileList.summary+
+\end{framed}
+\noindent These files are the final output of the GASVPro.sh pipeline. See the GASVPro-graph and GASVPro-mcmc sections (Sections {\bf \ref{sec:gasvpro-graph}} and {\bf \ref{sec:gasvpro-mcmc}}, respectively) for details.
 
 \section{BAMToGASV}
 
@@ -973,6 +1006,7 @@ Additionally, GASVPro will output another file which offers more information gen
 \end{framed}
 
 \subsection{GASVPro-graph}
+\label{sec:gasvpro-graph}
 GASVPro-graph is a component of the GASVPro pipeline that separates SV predictions into independent subsets for further analysis by the MCMC algorithm (below). It takes the following parameters:
 \begin{itemize}
 	\item Clusters File: produced by GASV. 
@@ -989,6 +1023,7 @@ GASVPro-graph is a component of the GASVPro pipeline that separates SV predictio
 Output from GASVPro-graph, inside the output directory given at runtime, is a series of \verb+sv_*.sv+ files, a \verb+p_star.summary+ file, and a \verb+svFileList.summary+ file. Each \verb+sv_*.sv+ file contains the clusters and coverage information for an individual independent component. The \verb+svFileList.summary+ file is an index of these independent components containing each file and the number of clusters within it.
 
 \subsection{GASVPro-mcmc}
+\label{sec:gasvpro-mcmc}
 GASVPro-mcmc is the final processing component of the GASVPro pipeline. It reports the most probable SV predictions over the space of possible paired-read alignments using a Markov chain Monte Carlo procedure. It takes the following parameters:
 \begin{itemize}
 	\item Parameters File: use the same parameters file used with GASVPro-CC, created by BAMToGASV.
