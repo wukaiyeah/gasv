@@ -28,10 +28,10 @@
 ###############################
 
 #REQUIRED:
-BAMFILEHQ= ##BAMFILEHQ
-BAMFILELQ= ##BAMFILELQ
-WORKINGDIR= ##OUTPUTDIR  			#GIVE FULL PATH!
-GASVDIR= ##GASVDIR
+BAMFILEHQ=NULL ##BAMFILEHQ
+BAMFILELQ=NULL ##BAMFILELQ
+WORKINGDIR=NULL ##OUTPUTDIR  			#GIVE FULL PATH!
+GASVDIR=NULL ##GASVDIR
                   
 
 #OPTIONAL (set to NULL if not being used):
@@ -39,8 +39,10 @@ UNIQUEFILE=NULL
 MAXUNIQUEVAL=NULL               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL                #default 0
-MINCLUSTER=1                 #default 4
+MINCLUSTER=NULL               	#default 4
 MAXIMAL=TRUE			#use GASV's --maximal flag. (use TRUE or FALSE)
+BURNIN=NULL			#GASVPro-mcmc parameter
+SAMPLE=NULL			#GASVPro-mcmc parameter
 
 
 ###############################
@@ -131,7 +133,7 @@ fi
 ### Run GASVPro-CC ###
 
 if [ -r BAMToGASV.gasvpro.in ]; then
-    echo "====================\n\n *** Running GASV-CC with the following parameters...***"
+    echo "====================\n\n *** Running GASVPro-CC with the following parameters...***"
 else
     echo "\n\n!! ERROR: necessary parameters file \"BAMToGASV.gasvpro.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
     exit 1
@@ -141,7 +143,6 @@ if [ -r $UNIQUEFILE ]; then
     echo "UNIQUEFile: $UNIQUEFILE" >> BAMToGASV.gasvpro.in
     echo "MaxUniqueValue: $MAXUNIQUEVAL" >> BAMToGASV.gasvpro.in
     echo "MinScaledUniqueness: $MINSCALEDUNIQUE" >> BAMToGASV.gasvpro.in
-    echo "runningMCMC: true" >> BAMToGASV.gasvpro.in
 fi
 
 if [ "$LRTHRESHOLD" != "NULL" ]; then
@@ -151,6 +152,8 @@ fi
 if [ "$MAXIMAL" = "FALSE" ]; then
     echo "maxmode: true" >> BAMToGASV.gasvpro.in
 fi
+
+echo "runningMCMC: true" >> BAMToGASV.gasvpro.in
 
 cat BAMToGASV.gasvpro.in
 echo "====================\n\n"
@@ -174,9 +177,15 @@ $GASVDIR/bin/GASVPro-graph BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.clu
 ### Run GASVPro-mcmc ###
 
 echo "====================\n\n *** Running GASVPro-mcmc....*** \n\n===================="
+if [ "$BURNIN" -ne "NULL" ]; then
+  echo "Burnin: $BURNIN" >> BAMToGASV.gasvpro.in
+fi
+if [ "$SAMPLE" -ne "NULL" ]; then
+  echo "Sample: $SAMPLE" >> BAMToGASV.gasvpro.in
+fi
 
 $GASVDIR/bin/GASVPro-mcmc BAMToGASV.gasvpro.in $WORKINGDIR
 
+echo "====================\n\n Combining MCMC results.... \n\n===================="
+cat BAMToGASV.gasvpro.in_sv_*.MCMCThreshold.clusters >> BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters
 echo "====================\n\n *** GASVPro complete *** \n\n===================="
-
-

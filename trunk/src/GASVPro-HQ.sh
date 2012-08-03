@@ -135,7 +135,7 @@ fi
 ### Run GASV-CC ###
 
 if [ -r $DATEPREFIX.gasvpro.in ]; then
-    echo "====================\n\n *** Running GASV-CC with the following parameters...***"
+    echo "====================\n\n *** Running GASVPro-CC with the following parameters...***"
 else
     echo "\n\n!! ERROR: necessary parameters file \"$DATEPREFIX.gasvpro.in\" does not exist. Ensure BAMToGASV ran correctly and restart.\n"
     exit 1
