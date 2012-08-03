@@ -42,9 +42,10 @@
 
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
-\title{User Guide for GASV (Version 2.0) and GASVPro (Version 1.0)}
+\title{User Guide for GASV Software Package
+\\GASV (Version 2.0) and GASVPro (Version 1.0)}
 %\author{The Author}
-\date{}                                           % Activate to display a given date or no date
+\date{August 3, 2012}                                           % Activate to display a given date or no date
 
 \begin{document}
 \bibliographystyle{plain}
@@ -83,7 +84,7 @@ S. Sindi, S. Onal, L. Peng, H. Wu, B.J. Raphael. An Integrative Probabilistic Mo
 \noindent This product contains software developed by Erik Garrison (\url{http://github.com/ekg}).\\ \\ 
 \
 \noindent Version: 1.0\\
-\noindent Version Date: \today
+\noindent Version Date: August 3, 2012
 
 \begin{wrapfigure}{l}{0.55\textwidth}
   \begin{center}
@@ -99,8 +100,6 @@ Requires: Perl, Java 5 (or higher), *nix OS, \\
 
 \noindent Building GASV from the source requires ant, available at: 
 http://ant.apache.org/ 
-
-
 
 
 \subsection{Summary}
@@ -348,7 +347,7 @@ Now it is possible to run GASVPro-HQ.sh. Initiate the pipeline by running
 \end{Verbatim}
 
 \subsubsection{Output of GASVPro-HQ.sh}
-GASVPro-HQ.sh produces quite a few output files, only a few of which are the "final products" of the entire pipeline. The following files are produced by running GASVPro-HQ:
+GASVPro-HQ.sh produces quite a few output files, only a few of which are the ``final products" of the entire pipeline. The following files are produced by running GASVPro-HQ:
 \begin{framed}
 \noindent \textit {date\_time}\verb+.gasv+\\				
 \textit{date\_time}\verb+.gasv.in.clusters+\\
@@ -409,12 +408,12 @@ The output of GASVPro.sh includes all of the output of GASVPro-HQ.sh {(\em one s
 \begin{framed}
 \noindent \verb+sv_*.sv+ (many files)\\
 \verb+BAMToGASV.gasvpro.in_sv_*.MCMCThreshold.clusters+ (many files)\\
-\verb+BAMToGASV.gasvpro.in_sv_0.PR.results+ (many files)\\
-\verb+BAMToGASV.gasvpro.in_sv_0.Variant.results+ (many files)\\
+\verb+BAMToGASV.gasvpro.in_sv_*.PR.results+ (many files)\\
+\verb+BAMToGASV.gasvpro.in_sv_*.Variant.results+ (many files)\\
 \verb+p_star.summary+\\
 \verb+svFileList.summary+
 \end{framed}
-\noindent These files are the final output of the GASVPro.sh pipeline. See the GASVPro-graph and GASVPro-mcmc sections (Sections {\bf \ref{sec:gasvpro-graph}} and {\bf \ref{sec:gasvpro-mcmc}}, respectively) for details.
+\noindent These files are the final output of the GASVPro.sh pipeline. The final set of predictions is given in the (FINAL FILE). See the GASVPro-graph and GASVPro-mcmc sections (Sections {\bf \ref{sec:gasvpro-graph}} and {\bf \ref{sec:gasvpro-mcmc}}, respectively) for details.
 
 \section{BAMToGASV}
 
@@ -1037,11 +1036,20 @@ GASVPro-mcmc is the final processing component of the GASVPro pipeline. It repor
 \noindent {\small \verb+./GASVPro-mcmc {Parameters File} {Working Directory} <{Start_cluster} {End_Cluster}>+}
 \end{framed}
 
-\noindent GASVPro-mcmc outputs three files for each structural variant file in the working directory: 
+\noindent Upon completion of each component GASVPro-mcmc outputs three files for each structural variant file in the working directory: 
 \begin{itemize}
 	\item[] \verb+*_sv_+{\em N}\verb+.MCMCThreshold.clusters+: contains the final group of clusters associated with a given structural variant.
 	\item[] \verb+*_sv_+{\em N}\verb+.PR.results+
 	\item[] \verb+*_sv_+{\em N}\verb+.Variant.results+
+\end{itemize}
+
+\noindent The latter two files describe sampling of assignments for PR and variants themselves:
+\begin{itemize}
+\item[] \verb+*_sv_+{\em N}\verb+.PR.results+ \\
+For each PR analyzed, we output the fraction of time it occupies each possible
+assignment (including errors) during the MCMC sampling procedure. 
+\item[] \verb+*_sv_+{\em N}\verb+.Variant.results+ \\
+For each variant analyzed, we output the fraction of time it has each possible number of supporting PRs (including 0) during the MCMC sampling procedure.
 \end{itemize}
 
 \end{document}  
