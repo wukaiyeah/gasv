@@ -141,6 +141,7 @@ if [ -r $UNIQUEFILE ]; then
     echo "UNIQUEFile: $UNIQUEFILE" >> BAMToGASV.gasvpro.in
     echo "MaxUniqueValue: $MAXUNIQUEVAL" >> BAMToGASV.gasvpro.in
     echo "MinScaledUniqueness: $MINSCALEDUNIQUE" >> BAMToGASV.gasvpro.in
+    echo "runningMCMC: true" >> BAMToGASV.gasvpro.in
 fi
 
 if [ "$LRTHRESHOLD" != "NULL" ]; then

@@ -153,7 +153,7 @@ int main(int argc, char* argv[]){
 				cout << "\nGASVPro: Geometric Analysis of Structural Variants, Probabilistic" << endl;
 				cout << "Version: 1.0" << endl << endl;
 				cout << "Usage: Pass parameter file of the following format AND a clusters file:" << endl;
-                cout << "       \tConcordantFile: {path/to/file}\n\tUNIQUEFile: {path/to/file}\n\tLavg: {value} \n\tReadLen: {value}\n\tLambda: {value}\n\tPerr: {value}\n\tLimit: {value}\n\tTolerance: {value}\n\tVerbose: {value}\n\tMaxChrNumber: {Value}\n\tMaxUniqueValue: {value}\n\tMinScaledUniqueness: {Value}\n\tTranslocations: {Value}\n\tTransOnly: {value}\n\tAmbiguous: {value}\n\tLRThreshold: {value}\n\n";
+                cout << "       \tConcordantFile: {path/to/file}\n\tUNIQUEFile: {path/to/file}\n\tLavg: {value} \n\tReadLen: {value}\n\tLambda: {value}\n\tPerr: {value}\n\tLimit: {value}\n\tTolerance: {value}\n\tVerbose: {value}\n\tMaxChrNumber: {Value}\n\tMaxUniqueValue: {value}\n\tMinScaledUniqueness: {Value}\n\tTranslocations: {Value}\n\tTransOnly: {value}\n\tAmbiguous: {value}\n\tLRThreshold: {value}\n\trunningMCMC: {value}\n\n";
                 cout << "      ./exe {parametersfile} {clusterfile}\n " << endl;
                 exit(-1);
 	 }
@@ -184,6 +184,7 @@ int main(int argc, char* argv[]){
 	bool MAXMODE= false;
 	int numbadloc = 0;
 	int DIVERGENTS = 0;
+	bool MCMCMODE = false;
 	
 
 	//Step 0:
@@ -192,6 +193,7 @@ int main(int argc, char* argv[]){
 	//Input Processing
 	int *COUNTS_LEFT  = new int[100000];
 	int *COUNTS_RIGHT = new int[100000];
+
 	double *UNIQ_LEFT = new double[100000];
 	double *UNIQ_RIGHT= new double[100000];
 	
@@ -226,7 +228,7 @@ int main(int argc, char* argv[]){
 		string temp;
 		ifstream p_file(argv[1], ios::in);
 		if(p_file.is_open()){cout << "   Parameters file found." << endl;}
-		else{cout << "WARNING: Parameters file \"" << argv[1] << "\" cannot be opened." << endl; exit(1);}
+		else{cout << "ERROR: Parameters file \"" << argv[1] << "\" cannot be opened." << endl; exit(1);}
 		while(getline(p_file, temp))
 		{
 			if(temp[0] == '#')
@@ -346,6 +348,12 @@ int main(int argc, char* argv[]){
 				if(term == "maxmode:"){
 					if(value == "true")
 						MAXMODE = true;
+				}
+				if(term == "runningMCMC:"){
+					if(value == "true"){
+						MCMCMODE = true;
+						cout << "   MCMC Mode: true" << endl;
+					}
 				}
 			}
 		}
@@ -357,7 +365,7 @@ int main(int argc, char* argv[]){
 		string temp;
 		ifstream p_file(argv[1], ios::in);
 		if(p_file.is_open()){cout << "   Parameters file found." << endl;}
-		else{cout << "WARNING: Parameters file \"" << argv[1] << "\" cannot be opened." << endl; exit(1);}
+		else{cout << "ERROR: Parameters file \"" << argv[1] << "\" cannot be opened." << endl; exit(1);}
 		while(getline(p_file, temp))
 		{
 			if(temp[0] == '#')
@@ -477,6 +485,12 @@ int main(int argc, char* argv[]){
 				if(term == "maxmode:"){
 					if(value == "true")
 						MAXMODE = true;
+				}
+				if(term == "runningMCMC:"){
+					if(value == "true"){
+						MCMCMODE = true;
+						cout << "   MCMC Mode: true" << endl;
+					}
 				}
 			}
 		}
@@ -526,6 +540,9 @@ int main(int argc, char* argv[]){
 	if(!(Lavg >= 2*ReadLen)) {exit_flag2 = true;}
 	cout << "OK." << endl;
 
+	
+	
+	
 	if(exit_flag1)
 	{
 		cout << "\n\t\tERROR: We require Lavg >= 2*ReadLen + (50bp). You may change this 50bp buffer (READ_LEN_BUFFER) in the source.\n";
@@ -538,6 +555,9 @@ int main(int argc, char* argv[]){
 	
 	char *BPOUT1 = new char[200];
 	
+	if(MCMCMODE){
+		PRINTALL = true;
+	}
 	
 	sprintf(BPOUT1,"%s.GASVPro.coverage",CLUSTERINPUT.c_str());
 	ofstream outFile1(BPOUT1,ios::out);
@@ -553,6 +573,11 @@ int main(int argc, char* argv[]){
 	if(AMBIG_MODE){
 		graph.open("graphArgs",ios::out);
 	}
+	
+	outFile2 << "#Cluster\tNumPRS\tLocalization\tType\tPR_List\tLeftChr\tRightChr\tBoundary_Pts\tLiklihood_Ratio\tvarCopyNumber" << endl << flush;
+	outFile1 << "#Cluster\tType\tNumDiscordants\tProb_Variant\tProb_No_Variant\tBestA\tBestB\tCovL\tCovR\tMapL\tMapR\tcode" << endl << flush;
+	
+	
 	
 	//Max Cluster Size:
 	//Note: Have a maximum line length of 15000000; should change this to a string; 
@@ -1000,7 +1025,7 @@ int main(int argc, char* argv[]){
 			
 			//If no inversions:
 			if(relevantGenome.size() == 0)
-			{
+			{ 
 				continue;
 			}
 			for(int x = tmpStart; x <= tmpEnd; x++)
@@ -1028,8 +1053,7 @@ int main(int argc, char* argv[]){
 		//c1	1	204.2	D	SRR004856.7363154	1	1	746128, 748510, 746333, 748510, 746027, 748204, 746027, 748409
 		clusterFile.open(CLUSTERFILE,ios::in);
 
-		outFile2 << "#Cluster\tNumPRS\tLocalization\tType\tPR_List\tLeftChr\tRightChr\tBoundary_Pts\tLiklihood_Ratio\tvarCopyNumber" << endl;
-		outFile1 << "#Cluster\tType\tNumDiscordants\tProb_Variant\tProb_No_Variant\tBestA\tBestB\tCovL\tCovR\tMapL\tMapR\tcode" << endl;
+		
 		while(!TRANS_ONLY && clusterFile.getline(Y1_INIT,15000000) ){
 			strcpy(CLUSTER_FOR_OUTPUT,Y1_INIT);
 			numBeyondTolerance = 0;
