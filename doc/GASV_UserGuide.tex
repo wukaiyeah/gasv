@@ -364,7 +364,7 @@ GASVPro-HQ.sh produces quite a few output files, only a few of which are the ``f
 \end{framed}
 \noindent The final output of the pipeline is \textit {date\_time}\verb+.gasv.in.clusters.GASVPro.clusters+, containing SV clusters in regions format,			
 \textit {date\_time}\verb+.gasv.in.clusters.GASVPro.clusters.pruned.clusters+, containing a pruned subset of those clusters, and 
-\textit {date\_time}\verb+.gasv.in.clusters.GASVPro.coverage+, containing extra information about each cluster (such as concordant coverage) from GASVPro-cc. 
+\textit {date\_time}\verb+.gasv.in.clusters.GASVPro.coverage+, containing extra information about each cluster (such as concordant coverage) from GASVPro-CC. 
 
 \subsection{GASVPro}
 For users with both a high-quality BAM file of unique mappings and a BAM file of lower-quality and possibly multiple mappings. The GASVPro pipeline will incorporate both types of data. 
@@ -407,13 +407,14 @@ Now it is possible to run GASVPro.sh. Initiate the pipeline by running
 The output of GASVPro.sh includes all of the output of GASVPro-HQ.sh {(\em one set of SV files for each of the HQ and LQ BAMs}, with combined gasv and gasvpro clusters files), plus the following additional files contained within the specified output directory:
 \begin{framed}
 \noindent \verb+sv_*.sv+ (many files)\\
+\verb+BAMToGASV.gasvpro.in_ALL.MCMCThreshold.clusters+\\
 \verb+BAMToGASV.gasvpro.in_sv_*.MCMCThreshold.clusters+ (many files)\\
 \verb+BAMToGASV.gasvpro.in_sv_*.PR.results+ (many files)\\
 \verb+BAMToGASV.gasvpro.in_sv_*.Variant.results+ (many files)\\
 \verb+p_star.summary+\\
 \verb+svFileList.summary+
 \end{framed}
-\noindent These files are the final output of the GASVPro.sh pipeline. The final set of predictions is given in the (FINAL FILE). See the GASVPro-graph and GASVPro-mcmc sections (Sections {\bf \ref{sec:gasvpro-graph}} and {\bf \ref{sec:gasvpro-mcmc}}, respectively) for details.
+\noindent These files are the final output of the GASVPro.sh pipeline. The final set of predictions is given in \verb+BAMToGASV.gasvpro.in_ALL.MCMCThreshold.clusters+. See the GASVPro-graph and GASVPro-mcmc sections (Sections {\bf \ref{sec:gasvpro-graph}} and {\bf \ref{sec:gasvpro-mcmc}}, respectively) for details.
 
 \section{BAMToGASV}
 
