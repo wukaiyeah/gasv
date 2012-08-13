@@ -1165,8 +1165,8 @@ int main(int argc, char* argv[]){
 				scaledNumDiscordants = numDiscordants;	//this line resets the above calculation.
 				
 				discordantProbNoVariant     = probError(Perr,numDiscordants);
-				discordantProbHomoVariant   = probVariant(Lambda,Lavg - 2*ReadLen, scaledNumDiscordants); //,covArray,MAX_COV);
-				discordantProbHeteroVariant = probVariant(Lambda/2,Lavg-2*ReadLen, scaledNumDiscordants); //,covArray,MAX_COV);
+				discordantProbHomoVariant   = probVariant(Lambda,(Lavg - 2*ReadLen)/(1.0*Lavg), scaledNumDiscordants); //,covArray,MAX_COV);
+				discordantProbHeteroVariant = probVariant(Lambda/2,(Lavg-2*ReadLen)/(1.0*Lavg), scaledNumDiscordants); //,covArray,MAX_COV);
 				
 				/*
 				cout << "Lambda:\t" << Lambda << endl;
@@ -2103,8 +2103,8 @@ int main(int argc, char* argv[]){
 						scaledNumDiscordants = numDiscordants;	//this line resets the above calculation.
 						
 						discordantProbNoVariant     = probError(Perr,numDiscordants);
-						discordantProbHomoVariant   = probVariant(Lambda,Lavg - 2*ReadLen, scaledNumDiscordants); //,covArray,MAX_COV);
-						discordantProbHeteroVariant = probVariant(Lambda/2,Lavg-2*ReadLen, scaledNumDiscordants); //,covArray,MAX_COV);
+						discordantProbHomoVariant   = probVariant(Lambda,(Lavg - 2*ReadLen)/(1.0*Lavg), scaledNumDiscordants); //,covArray,MAX_COV);
+						discordantProbHeteroVariant = probVariant(Lambda/2,(Lavg-2*ReadLen)/(1.0*Lavg), scaledNumDiscordants); //,covArray,MAX_COV);
 						
 						/*
 						cout << "Lambda:\t" << Lambda << endl;
