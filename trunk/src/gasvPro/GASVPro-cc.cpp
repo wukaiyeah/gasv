@@ -100,14 +100,53 @@ int validCoverage(double mean, double coverage, double tolerance){
 	}
 }
 
+
+struct point{
+	int x;
+	int y;
+};
+
 //Determines if possible breakpoint pair is on the boundary
 int onBoundary(int* X_COORDS,int* Y_COORDS, int NUM_VALUES, int X, int Y){
 	int match = 0;
+	//Are we one of the corer points?
 	for(int i = 0; i<NUM_VALUES;i++){
 		if(X_COORDS[i] == X && Y_COORDS[i] == Y){
 			match++;
 		}
 	}
+	if(match>0){
+		return match;
+	}
+	
+	//Are we along one of the line segments?
+	point c;
+	c.x = X; c.y = Y;
+	for(int i = 0; i<NUM_VALUES;i++){
+		//Set up points on the line segment:
+		point a, b;
+		if(i == 0){ a.x = X_COORDS[NUM_VALUES-1]; a.y = Y_COORDS[NUM_VALUES-1]; }
+		else{ a.x = X_COORDS[i-1]; a.y = Y_COORDS[i-1]; }
+		b.x = X_COORDS[i]; b.y = Y_COORDS[i];
+		
+		int doWeMatch = 0;
+		
+		//Determine Relevant Values
+		int crossproduct = (c.y - a.y) * (b.x - a.x) - (c.x - a.x) * (b.y - a.y);
+		if(abs(crossproduct) > 0.0 ){ } //No match, skip to next edge
+		else{
+			int dotproduct = (c.x - a.x) * (b.x - a.x) + (c.y - a.y)*(b.y - a.y);
+			if( dotproduct < 0){ } //No match, skip to next edge;
+			else{
+				int squaredlengthba = (b.x - a.x)*(b.x - a.x) + (b.y - a.y)*(b.y - a.y);
+				if(dotproduct > squaredlengthba){ }//No match, skip to next edge;
+				else{
+					match++; //We pass all tests, we lie on this edge.
+				}
+			}
+		}
+	}
+	
 	return match;
 }
 
@@ -215,9 +254,6 @@ int main(int argc, char* argv[]){
 	vector<Interval<uInt*> > allIntervals;
 	IntervalTree<uInt*> uniquenessTree;
 	
-	
-
-
 	int MAX_UNIQUE = 550000;
 	int *UNIQUE = new int[550000];
 	int *TOTAL  = new int[550000];
@@ -695,13 +731,6 @@ int main(int argc, char* argv[]){
 		double uniqueLeft,uniqueRight, scaledCovLeft, scaledCovRight;
 		int numLines = 0;
 	
-	
-		//OLD VARIABLES:
-		//Scaled LambdaD
-		//lambda_d = lambda * (avgFragLength - 2*readLen)/avgFragLength;
-		//**but then what is the length to consider? We observe this # of fragments in (essentially) a single position in the genome.
-		//**My guess; length is simply Lmax; why? We have Lmax region to look at...
-		//double Lambda_d = Lambda*(Lavg - 2*ReadLen)/Lavg; //= Lambda  * (200.0- 2*50.0)/200.0;
 		while(	clusterFile.getline(Y1_INIT,1500000000) ){
 
 			numLines++;
@@ -851,11 +880,11 @@ int main(int argc, char* argv[]){
 			continue;
 		}
 		
-		cout << "\t\tSorting inversion intervals (" << inversionIntervals.size() << ")....";
+		cout << "\t\tSorting predictions invervals for beRD model (" << inversionIntervals.size() << ")....";
 		sort(inversionIntervals.begin(), inversionIntervals.end());
 		cout << "done." << endl;
 		
-		cout << "\t\tProcessing inversion intervals....";
+		cout << "\t\tProcessing prediction intervals for beRD model....";
 		vector<pair<int, int> > result;
 		
 		if(inversionIntervals.size() != 0)
@@ -1041,7 +1070,7 @@ int main(int argc, char* argv[]){
 		}
 		inFile.close();
 		
-		cout << "\t\tRelevant Genome Size: " << relevantGenome.size() << ", # Inversion Invervals: " << inversionIntervals.size() << endl;
+		cout << "\t\tRelevant Genome Size: " << relevantGenome.size() << ", # beRD Invervals: " << inversionIntervals.size() << endl;
 
 		
 		cout << "\t\tProcessing Clusters\n";
@@ -1133,7 +1162,7 @@ int main(int argc, char* argv[]){
 				//For the default values if we do NOT find them!
 				NUMCC_L = NUMCC_R = -1;
 				MAP_L = MAP_R = -1;
-				
+								
 				double bestHomozygousScore, bestHeterozygousScore, bestErrorScore;
 				double bestOverall;
 				int bestCopyNum = 0;
@@ -1159,7 +1188,7 @@ int main(int argc, char* argv[]){
 					scaledNumDiscordants = (int) (floor)((1.0*numDiscordants)/((MIN_SCALED_UNIQUE)+(1-MIN_SCALED_UNIQUE)*discordantUniqueness));
 				}
 				else{
-					scaledNumDiscordants = 1;
+					scaledNumDiscordants = numDiscordants;
 				}
 				
 				scaledNumDiscordants = numDiscordants;	//this line resets the above calculation.
@@ -1201,7 +1230,7 @@ int main(int argc, char* argv[]){
 							//COUNTS_LEFT[a - minX] = getCoverage(STARTS,ENDS,NUM_SEGMENTS,a,BUFFER);
 							//COUNTS_LEFT[a - minX] = chromosomeCoverage[a];
 							COUNTS_LEFT[a - minX] = getCoverage(a,&relevantGenome);
-
+							cout << "LeftBreak " << a << " " << COUNTS_LEFT[a-minX] << endl;
 							if(IS_UNIQUE){ UNIQ_LEFT[a-minX] = getUniqueness(a-Lavg,a, &uniquenessTree, MAX_UNIQUE_VALUE);}//getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,a-Lavg,a);}
 							//UNIQ_LEFT[a-minX] = getUniqueness(a-Lavg,a,&uniquenessTree);
 							//cout << clusterName << ": " << a << " in " << minX << " " << maxX << endl;
@@ -1214,12 +1243,15 @@ int main(int argc, char* argv[]){
 							//COUNTS_RIGHT[b - minY] = getCoverage(STARTS,ENDS,NUM_SEGMENTS,b,BUFFER);	
 							//COUNTS_RIGHT[b - minY] = chromosomeCoverage[b];
 							COUNTS_RIGHT[b - minY] = getCoverage(b, &relevantGenome);
+							cout << "RightBreak " << b << " " << COUNTS_RIGHT[b-minY] << endl;
 							if(IS_UNIQUE){ UNIQ_RIGHT[b-minY] = getUniqueness(b-Lavg,b,&uniquenessTree,MAX_UNIQUE_VALUE);}//getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,b-Lavg,b); }
 							//UNIQ_RIGHT[b-minY] = getUniqueness(b-Lavg,b,&uniquenessTree);
 							//cout << clusterName << ": " << b << " in " << minY << " " << maxY << endl;
 							//cout << "	OLD: " << getCoverage(STARTS,ENDS,NUM_SEGMENTS,b,BUFFER) << " _ NEW: " << COUNTS_RIGHT[b - minY] << endl;
 						}
 
+						cout << "Processing point combinations\n";
+						
 						for(a = minX; a<=maxX; a++){
 							for(b = minY; b<=maxY; b++){
 								checking++;
@@ -1227,7 +1259,7 @@ int main(int argc, char* argv[]){
 								int boundary = onBoundary(X_COORDS,Y_COORDS,index,a,b);
 
 								if(valid == 1 || boundary > 0){
-									//cout << "\tThey are valid!\n";
+									cout << "\t Considering a point (" << a << "," << b << ")!\n";
 									double scaledUniqLeft = 1;
 									double scaledUniqRight = 1;
 
@@ -1248,6 +1280,10 @@ int main(int argc, char* argv[]){
 									covLeft = COUNTS_LEFT[a-minX]; covRight = COUNTS_RIGHT[b-minY];
 									uniqueLeft = UNIQ_LEFT[a - minX]; uniqueRight = UNIQ_RIGHT[b-minY];
 
+									cout << "\t\tCounts_a " << covLeft <<"\tUniq_a " << uniqueLeft << endl;
+									cout << "\t\tCounts_b " << covRight <<"\tUniq_b " << uniqueRight << endl;
+
+									
 									scaledCovLeft = covLeft;   //
 									scaledCovRight = covRight; //these two lines reset the above calculations
 									
@@ -1271,6 +1307,7 @@ int main(int argc, char* argv[]){
 									
 									int validC = validCoverage(Lambda*Lavg*2,scaledCovLeft+scaledCovRight,Tolerance);
 									if(validC == 0){
+										cout << "\t\tWe are beyond tolerance --> " << numBeyondTolerance << endl;
 										numBeyondTolerance++;
 										covBeyondTolerance = scaledCovLeft+scaledCovRight;
 									}
@@ -1300,7 +1337,7 @@ int main(int argc, char* argv[]){
 							variantCopyNumber = -1;
 							bestA = maxX;
 							bestB = minY;							
-							NUMCC_L = (int) ceil(covBeyondTolerance/2.0);
+							NUMCC_L = (int) ceil(covBeyondTolerance/2.0); 
 							NUMCC_R = (int) ceil(covBeyondTolerance/2.0);
 							MAP_L = MAP_R = 1.0;
 
@@ -2098,7 +2135,7 @@ int main(int argc, char* argv[]){
 							scaledNumDiscordants = (int) (floor)((1.0*numDiscordants)/((MIN_SCALED_UNIQUE)+(1-MIN_SCALED_UNIQUE)*discordantUniqueness));
 						}
 						else
-							scaledNumDiscordants = 1;*/
+							scaledNumDiscordants = numDiscordants;*/
 							
 						scaledNumDiscordants = numDiscordants;	//this line resets the above calculation.
 						
