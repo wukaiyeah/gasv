@@ -206,7 +206,7 @@ int main(int argc, char* argv[]){
 	int Lavg = 0;
 	int ReadLen = 0;
 	double Lambda = 0;
-	double Perr = 0.01;
+	double Perr = 0.0001;
 	int Limit = 1000;
 	double Tolerance = .0001;
 	int MAX_CHR_NUMBER = 100;
