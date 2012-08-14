@@ -157,7 +157,7 @@ double probError(double perr, double coverage){
 }
 
 //Log Poisson Distribution with mean lambda*length evaluated at coverge
-double probVariant(double lambda, int length, double coverage){
+double probVariant(double lambda, double length, double coverage){
 	double prob;
 	
 	double newLambda = lambda*length;
@@ -1347,18 +1347,14 @@ int main(int argc, char* argv[]){
 									//else if(deletion, inversions )
 									
 									double localHomozygous   = probError(Perr,scaledCovLeft) + probError(Perr,scaledCovRight);
-									//double localHeterozygous = probVariant(Lambda/2,Lavg,scaledCovLeft,covArray,MAX_COV) + probVariant(Lambda/2,Lavg,scaledCovRight,covArray,MAX_COV); 
-									//double localError        = probVariant(Lambda,Lavg,scaledCovLeft,covArray,MAX_COV) + probVariant(Lambda,Lavg,scaledCovRight,covArray,MAX_COV);
-									
-
-									double localHeterozygous = probVariant(Lambda/2,Lavg,scaledCovLeft) + probVariant(Lambda/2,Lavg,scaledCovRight); 
-									double localError        = probVariant(Lambda,Lavg,scaledCovLeft) + probVariant(Lambda,Lavg,scaledCovRight);
+									double localHeterozygous = probVariant(Lambda/2,1.0,scaledCovLeft) + probVariant(Lambda/2,1.0,scaledCovRight); 
+									double localError        = probVariant(Lambda,1.0,scaledCovLeft) + probVariant(Lambda,1.0,scaledCovRight);
 									
 									
 									double combinedDiffHomo   = (discordantProbHomoVariant + localHomozygous) - (localError + discordantProbNoVariant);
 									double combinedDiffHetero = (discordantProbHeteroVariant + localHeterozygous) - (localError + discordantProbNoVariant);
 									
-									int validC = validCoverage(Lambda*Lavg*2,scaledCovLeft+scaledCovRight,Tolerance);
+									int validC = validCoverage(Lambda*2,scaledCovLeft+scaledCovRight,Tolerance);
 									if(validC == 0){
 										numBeyondTolerance++;
 										covBeyondTolerance = scaledCovLeft+scaledCovRight;
@@ -2270,18 +2266,14 @@ int main(int argc, char* argv[]){
 											scaledCovRight = covRight; //these two lines reset the above calculations
 											
 											double localHomozygous   = probError(Perr,scaledCovLeft) + probError(Perr,scaledCovRight);
-											//double localHeterozygous = probVariant(Lambda/2,Lavg,scaledCovLeft,covArray,MAX_COV) + probVariant(Lambda/2,Lavg,scaledCovRight,covArray,MAX_COV); 
-											//double localError        = probVariant(Lambda,Lavg,scaledCovLeft,covArray,MAX_COV) + probVariant(Lambda,Lavg,scaledCovRight,covArray,MAX_COV);
-											
-		
-											double localHeterozygous = probVariant(Lambda/2,Lavg,scaledCovLeft) + probVariant(Lambda/2,Lavg,scaledCovRight); 
-											double localError        = probVariant(Lambda,Lavg,scaledCovLeft) + probVariant(Lambda,Lavg,scaledCovRight);
+											double localHeterozygous = probVariant(Lambda/2,1.0,scaledCovLeft) + probVariant(Lambda/2,1.0,scaledCovRight); 
+											double localError        = probVariant(Lambda,1.0,scaledCovLeft) + probVariant(Lambda,1.0,scaledCovRight);
 											
 											
 											double combinedDiffHomo   = (discordantProbHomoVariant + localHomozygous) - (localError + discordantProbNoVariant);
 											double combinedDiffHetero = (discordantProbHeteroVariant + localHeterozygous) - (localError + discordantProbNoVariant);
 											
-											int validC = validCoverage(Lambda*Lavg*2,scaledCovLeft+scaledCovRight,Tolerance);
+											int validC = validCoverage(Lambda*2,scaledCovLeft+scaledCovRight,Tolerance);
 											if(validC == 0){
 												numBeyondTolerance++;
 												covBeyondTolerance = scaledCovLeft+scaledCovRight;
