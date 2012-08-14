@@ -910,21 +910,15 @@ int main(int argc, char* argv[] ){
 					double LLR = componentVariants[i].getLikelihoodVariantGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current) - componentVariants[i].getLikelihoodErrorGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current);
 					if(LLR >= LRTHRESHOLD || PRINTALL ){
 						outTHRESHOLD << componentVariants[i].getName() 
-							//<< "_" << componentVariants[i].getLikelihoodVariantGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current)
-							//<< "_" << componentVariants[i].getLikelihoodErrorGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current)
-						        << "\t" << componentVariants[i].getCurrentAssigned() 
+							<< "\t" << componentVariants[i].getCurrentAssigned() 
 							<< "\t" << componentVariants[i].getTheRest() 
-						        << "\t" << LLR	<< endl;
+							<< "\t" << LLR	<< endl;
 					}
 				}
 			}
 
 			outESP.close();
-			outVAR.close();
-			//outLIKE.close();
-			//outMLE.close();
-			//outAVERAGE.close();
-			//outAVERAGEVAR.close();			
+			outVAR.close();		
 			outTHRESHOLD.close();
 		
 			subset_inp.close();
