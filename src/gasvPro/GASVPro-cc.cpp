@@ -52,6 +52,11 @@ struct CHelper
 	bool divergent;
 };
 
+struct point{
+	int x;
+	int y;
+};	
+
 
 int pointInPoly(int *STARTS, int *ENDS, int npoints, unsigned int xt, unsigned int yt);
 int findLocation(int *STARTS, int NUM_FRAGMENTS, int START); 
@@ -63,6 +68,8 @@ int getCoverage(int point, vector<pair<int,int> >* genome);
 bool intervalCompare(pair<int,int> intervalA, pair<int,int> intervalB);
 bool genomeCompare(pair<int,int> pointA, pair<int,int> pointB);
 double getUniqueness(int start, int end, IntervalTree<uInt*>* tree, double MAX_UNIQUE_VAL);
+double getUniquenessNEW(int start, int end, IntervalTree<uInt*> *tree, double MAX_UNIQUE_VAL);
+
 
 
 //Goal:
@@ -103,11 +110,44 @@ int validCoverage(double mean, double coverage, double tolerance){
 //Determines if possible breakpoint pair is on the boundary
 int onBoundary(int* X_COORDS,int* Y_COORDS, int NUM_VALUES, int X, int Y){
 	int match = 0;
+	//Are we one of the corer points?
 	for(int i = 0; i<NUM_VALUES;i++){
 		if(X_COORDS[i] == X && Y_COORDS[i] == Y){
 			match++;
 		}
 	}
+	if(match>0){
+		return match;
+	}
+	
+	//Are we along one of the line segments?
+	point c;
+	c.x = X; c.y = Y;
+	for(int i = 0; i<NUM_VALUES;i++){
+		//Set up points on the line segment:
+		point a, b;
+		if(i == 0){ a.x = X_COORDS[NUM_VALUES-1]; a.y = Y_COORDS[NUM_VALUES-1]; }
+		else{ a.x = X_COORDS[i-1]; a.y = Y_COORDS[i-1]; }
+		b.x = X_COORDS[i]; b.y = Y_COORDS[i];
+		
+		int doWeMatch = 0;
+		
+		//Determine Relevant Values
+		int crossproduct = (c.y - a.y) * (b.x - a.x) - (c.x - a.x) * (b.y - a.y);
+		if(abs(crossproduct) > 0.0 ){ } //No match, skip to next edge
+		else{
+			int dotproduct = (c.x - a.x) * (b.x - a.x) + (c.y - a.y)*(b.y - a.y);
+			if( dotproduct < 0){ } //No match, skip to next edge;
+			else{
+				int squaredlengthba = (b.x - a.x)*(b.x - a.x) + (b.y - a.y)*(b.y - a.y);
+				if(dotproduct > squaredlengthba){ }//No match, skip to next edge;
+				else{
+					match++; //We pass all tests, we lie on this edge.
+				}
+			}
+		}
+	}
+	
 	return match;
 }
 
@@ -117,7 +157,7 @@ double probError(double perr, double coverage){
 }
 
 //Log Poisson Distribution with mean lambda*length evaluated at coverge
-double probVariant(double lambda, int length, double coverage){
+double probVariant(double lambda, double length, double coverage){
 	double prob;
 	
 	double newLambda = lambda*length;
@@ -678,6 +718,7 @@ int main(int argc, char* argv[]){
 		
 		//BEGIN --> Variables needed for processing clusters:
 		
+		
 		//Misc Variables;
 		int numClustersProcessed = 0;
 		int numBeyondTolerance;
@@ -774,69 +815,93 @@ int main(int argc, char* argv[]){
 				if(localType == 0 || localType == 3) 		//i.e. Deletion or Divergent
 				{
 					bool flag = false;
-					if((minY - maxX) < Limit)
+					if((minY - maxX) < Limit)	//SMALL DELETION, use beRD for uniqueness and coverage
 					{
 						flag = true;
 						if(PRINT_FLAG == 1 && localType == 0) {cout << "\tNOTE: Small deletion, using BeRD model. " << endl << flush;}
 						if(PRINT_FLAG == 1 && localType == 3) {cout << "\tNOTE: Small divergent, using BeRD model." << endl << flush;}
 						inversionIntervals.push_back(make_pair(maxX, minY));
-					}
-					if(!flag){
-						CHelper* temp = new CHelper;
-						temp->coverage = 0;
-						if(localType == 0){temp->divergent = false; deletions.push_back(Interval<CHelper*>(maxX, minY, temp));}
-						if(localType == 3){
-							temp->divergent = true;
-							deletions.push_back(Interval<CHelper*>(maxX, minY, temp));
-						}
-					}
+						inversionIntervals.push_back(make_pair(minX, maxX));
+						inversionIntervals.push_back(make_pair(minY, maxY));
 						
-					uInt* temp = new uInt;
-					temp->start = maxX;
-					temp->end = minY;
-					temp->length = abs(minY-maxX);
-					temp->bases = 0;
-					temp->uniqueness = 0;
+						uInt* temp = new uInt;
+						temp->end = maxX+Lavg;
+						temp->bases = 0;
+						temp->uniqueness = 0;
+						if(minX-Lavg >= 0){temp->start = minX-Lavg; temp->length = abs(maxX-minX)+(2*Lavg); allIntervals.push_back(Interval<uInt*>(minX-Lavg, maxX+Lavg, temp));}
+						else{temp->start = minX; temp->length = abs(maxX-minX)+Lavg; allIntervals.push_back(Interval<uInt*>(minX, maxX+Lavg, temp));}
+						
+						temp = new uInt;
+						temp->end = maxY+Lavg;
+						temp->bases = 0;
+						temp->uniqueness = 0;
+						if(minY-Lavg >= 0){temp->start = minY-Lavg; temp->length = abs(maxY-minY)+(2*Lavg); allIntervals.push_back(Interval<uInt*>(minY-Lavg, maxY+Lavg, temp));}
+						else{temp->start = minY; temp->length = abs(maxY-minY)+Lavg; allIntervals.push_back(Interval<uInt*>(minY, maxY+Lavg, temp));}
+					
+						if(minX > LARGESTPOS)
+						    LARGESTPOS = minX;
+						if(maxX > LARGESTPOS)
+						    LARGESTPOS = maxX;
+						if(minY > LARGESTPOS)
+						    LARGESTPOS = minY;
+						if(maxY > LARGESTPOS)
+						    LARGESTPOS = maxY;
+					}
+					
+					if(!flag)
+					{
+						CHelper* temp1 = new CHelper;
+						temp1->coverage = 0;
+						if(localType == 0){temp1->divergent = false; deletions.push_back(Interval<CHelper*>(maxX, minY, temp1));}
+						if(localType == 3){
+							temp1->divergent = true;
+							deletions.push_back(Interval<CHelper*>(maxX, minY, temp1));
+						}
+					
+						int int_start = min(maxX, minY);
+						int int_stop = max(maxX, minY);
+						
+						uInt* temp = new uInt;
+						if(int_start-Lavg >= 0){temp->start = int_start-Lavg; temp->length = abs(minY-maxX) + (2*Lavg);}
+						else{temp->start = int_start; temp->length = abs(minY-maxX)+Lavg;}
+						temp->end = int_stop+Lavg;	
+						temp->bases = 0;
+						temp->uniqueness = 0;
 
-					allIntervals.push_back(Interval<uInt*>(maxX, minY, temp));
-					if(maxX > LARGESTPOS)
-						LARGESTPOS = maxX;
-					if(minY > LARGESTPOS)
-						LARGESTPOS = minY;
-					
-					
+						allIntervals.push_back(Interval<uInt*>(int_start, int_stop, temp));
+						if(maxX > LARGESTPOS)
+							LARGESTPOS = maxX;
+						if(minY > LARGESTPOS)
+							LARGESTPOS = minY;					
+					}
 				}
 					
 				if(localType == 1)
-				{
+				{				  
 					inversionIntervals.push_back(pair<int,int>(minX,maxX));
-					uInt* temp = new uInt;
-					temp->start = minX;
-					temp->end = maxX;
-					temp->length = abs(maxX-minX);
-					temp->bases = 0;
-					temp->uniqueness = 0;
-					allIntervals.push_back(Interval<uInt*>(minX, maxX, temp));
-										
-					
 					inversionIntervals.push_back(pair<int,int>(minY,maxY));
-					temp = new uInt;
-					temp->start = minY;
-					temp->end = maxY;
-					temp->length = abs(maxY-minY);
+					uInt* temp = new uInt;
+					temp->end = maxX+Lavg;
 					temp->bases = 0;
 					temp->uniqueness = 0;
-					allIntervals.push_back(Interval<uInt*>(minY, maxY, temp));
+					if(minX-Lavg >= 0){temp->start = minX-Lavg; temp->length = abs(maxX-minX)+(2*Lavg); allIntervals.push_back(Interval<uInt*>(minX-Lavg, maxX+Lavg, temp));}
+					else{temp->start = minX; temp->length = abs(maxX-minX)+Lavg; allIntervals.push_back(Interval<uInt*>(minX, maxX+Lavg, temp));}
 					
+					temp = new uInt;
+					temp->end = maxY+Lavg;
+					temp->bases = 0;
+					temp->uniqueness = 0;
+					if(minY-Lavg >= 0){temp->start = minY-Lavg; temp->length = abs(maxY-minY)+(2*Lavg); allIntervals.push_back(Interval<uInt*>(minY-Lavg, maxY+Lavg, temp));}
+					else{temp->start = minY; temp->length = abs(maxY-minY)+Lavg; allIntervals.push_back(Interval<uInt*>(minY, maxY+Lavg, temp));}
+				
 					if(minX > LARGESTPOS)
-						LARGESTPOS = minX;
+					    LARGESTPOS = minX;
 					if(maxX > LARGESTPOS)
-						LARGESTPOS = maxX;
+					    LARGESTPOS = maxX;
 					if(minY > LARGESTPOS)
-						LARGESTPOS = minY;
+					    LARGESTPOS = minY;
 					if(maxY > LARGESTPOS)
-						LARGESTPOS = maxY;
-
+					    LARGESTPOS = maxY;
 				}
 					
 
@@ -851,11 +916,13 @@ int main(int argc, char* argv[]){
 			continue;
 		}
 		
-		cout << "\t\tSorting inversion intervals (" << inversionIntervals.size() << ")....";
+		cout << "\t\tSorting intervals for beRD model (" << inversionIntervals.size() << ")....";
 		sort(inversionIntervals.begin(), inversionIntervals.end());
 		cout << "done." << endl;
 		
-		cout << "\t\tProcessing inversion intervals....";
+		
+		
+		cout << "\t\tProcessing intervals for beRD model....";
 		vector<pair<int, int> > result;
 		
 		if(inversionIntervals.size() != 0)
@@ -875,13 +942,20 @@ int main(int argc, char* argv[]){
 		}
    		cout << "done." << endl;
 		
+
+		
 		cout << "\t\tBuilding genome vector...";	//QUESTIONABLE
+
 		for(int i = 0; i < result.size(); i++)
 		{
-			for(int j = result[i].first; j <= result[i].second; j++)
+			int int_start = min(result[i].first, result[i].second);
+			int int_end = max(result[i].first, result[i].second);			
+			for(int j = int_start; j <= int_end; j++)
 			{
 				relevantGenome.push_back(make_pair(j,0));
+				
 			}
+			
 		}
 		cout << "done. Size: " << relevantGenome.size() << endl;
 		
@@ -971,7 +1045,9 @@ int main(int argc, char* argv[]){
 			}			
 			i++; 
 		}
+
 		
+	
 		uFile.close();
 		
 		if(IS_UNIQUE && allIntervals.size() != numDone)
@@ -1030,18 +1106,23 @@ int main(int argc, char* argv[]){
 			}
 			for(int x = tmpStart; x <= tmpEnd; x++)
 			{
+				//cout << "going from " << tmpStart << " to " << tmpEnd << " AT " << x << endl;
 				pair<int,int> testPair = make_pair(x,0);				
 				vector<pair<int,int> >::iterator low = lower_bound(relevantGenome.begin(), relevantGenome.end(), testPair, genomeCompare);
-				
+				//cout << "\t found " << (*low).first << endl;
+				//cout << "\t was " << (*low).second;
+				//cout << "does " << (*low).first << " = " << x << "?" << endl;
 				if((*low).first == x)
 				{
+					//cout << "INCREMENTING" << endl;
 					(*low).second++;
-				}			
-			}
+				}	
+			}	
 		}
 		inFile.close();
+
 		
-		cout << "\t\tRelevant Genome Size: " << relevantGenome.size() << ", # Inversion Invervals: " << inversionIntervals.size() << endl;
+		cout << "\t\tRelevant Genome Size: " << relevantGenome.size() << ", # beRD Invervals: " << inversionIntervals.size() << endl;
 
 		
 		cout << "\t\tProcessing Clusters\n";
@@ -1120,7 +1201,7 @@ int main(int argc, char* argv[]){
 				
 				int a,b;
 				minA = minB = minCovLeft = minCovRight = -1;
-				minUniqueLeft = minUniqueRight = scaledCovLeft = scaledCovRight = -1;
+				minUniqueLeft = minUniqueRight = scaledCovLeft = scaledCovRight = 0;
 				
 				//Values to output.
 				double PROB_VARIANT;
@@ -1141,7 +1222,7 @@ int main(int argc, char* argv[]){
 				bestHomozygousScore = -2*INT_MAX1;
 				bestHeterozygousScore = -2*INT_MAX1;
 				bestErrorScore = -2*INT_MAX1;
-				
+						
 				//NEW CODE: Want to scale the discordant fragments by uniqueness as well!
 				//Begin --> Comment out to remove scaling of discordants by mapability;
 				//double xLeftUnique  = getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,minX-Lavg,minX);
@@ -1165,8 +1246,8 @@ int main(int argc, char* argv[]){
 				scaledNumDiscordants = numDiscordants;	//this line resets the above calculation.
 				
 				discordantProbNoVariant     = probError(Perr,numDiscordants);
-				discordantProbHomoVariant   = probVariant(Lambda,(Lavg - 2*ReadLen)/(1.0*Lavg), scaledNumDiscordants); //,covArray,MAX_COV);
-				discordantProbHeteroVariant = probVariant(Lambda/2,(Lavg-2*ReadLen)/(1.0*Lavg), scaledNumDiscordants); //,covArray,MAX_COV);
+				discordantProbHomoVariant   = probVariant(Lambda,(Lavg - 2.0*ReadLen)/(Lavg*1.0), scaledNumDiscordants); //,covArray,MAX_COV);
+				discordantProbHeteroVariant = probVariant(Lambda/2,(Lavg - 2.0*ReadLen)/(Lavg*1.0), scaledNumDiscordants); //,covArray,MAX_COV);
 				
 				/*
 				cout << "Lambda:\t" << Lambda << endl;
@@ -1201,8 +1282,10 @@ int main(int argc, char* argv[]){
 							//COUNTS_LEFT[a - minX] = getCoverage(STARTS,ENDS,NUM_SEGMENTS,a,BUFFER);
 							//COUNTS_LEFT[a - minX] = chromosomeCoverage[a];
 							COUNTS_LEFT[a - minX] = getCoverage(a,&relevantGenome);
-
-							if(IS_UNIQUE){ UNIQ_LEFT[a-minX] = getUniqueness(a-Lavg,a, &uniquenessTree, MAX_UNIQUE_VALUE);}//getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,a-Lavg,a);}
+							//cout << "cov at " << a << " " << COUNTS_LEFT[a-minX] << endl;
+							int start_frag = min(a-Lavg, a+Lavg);
+							int end_frag = max(a-Lavg, a+Lavg);
+							if(IS_UNIQUE){ UNIQ_LEFT[a-minX] = getUniquenessNEW(start_frag,end_frag, &uniquenessTree, MAX_UNIQUE_VALUE);}//getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,a-Lavg,a);}
 							//UNIQ_LEFT[a-minX] = getUniqueness(a-Lavg,a,&uniquenessTree);
 							//cout << clusterName << ": " << a << " in " << minX << " " << maxX << endl;
 							//cout << "	OLD: " << getCoverage(STARTS,ENDS,NUM_SEGMENTS,a,BUFFER) << " _ NEW: " << COUNTS_LEFT[a - minX] << endl;
@@ -1214,7 +1297,10 @@ int main(int argc, char* argv[]){
 							//COUNTS_RIGHT[b - minY] = getCoverage(STARTS,ENDS,NUM_SEGMENTS,b,BUFFER);	
 							//COUNTS_RIGHT[b - minY] = chromosomeCoverage[b];
 							COUNTS_RIGHT[b - minY] = getCoverage(b, &relevantGenome);
-							if(IS_UNIQUE){ UNIQ_RIGHT[b-minY] = getUniqueness(b-Lavg,b,&uniquenessTree,MAX_UNIQUE_VALUE);}//getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,b-Lavg,b); }
+							//cout << "cov at " << b << " " << COUNTS_RIGHT[b-minY] << endl;
+							int start_frag = min(b-Lavg, b+Lavg);
+							int end_frag = max(b-Lavg, b+Lavg);
+							if(IS_UNIQUE){ UNIQ_RIGHT[b-minY] = getUniquenessNEW(start_frag,end_frag,&uniquenessTree,MAX_UNIQUE_VALUE);}//getUniqueness(START_UNIQUE,END_UNIQUE,VALUE_UNIQUE,NUM_UNIQUE,b-Lavg,b); }
 							//UNIQ_RIGHT[b-minY] = getUniqueness(b-Lavg,b,&uniquenessTree);
 							//cout << clusterName << ": " << b << " in " << minY << " " << maxY << endl;
 							//cout << "	OLD: " << getCoverage(STARTS,ENDS,NUM_SEGMENTS,b,BUFFER) << " _ NEW: " << COUNTS_RIGHT[b - minY] << endl;
@@ -1236,7 +1322,9 @@ int main(int argc, char* argv[]){
 										scaledUniqLeft = ((1-MIN_SCALED_UNIQUE)*UNIQ_LEFT[a-minX]+(MIN_SCALED_UNIQUE));
 										scaledUniqRight = ((1-MIN_SCALED_UNIQUE)*UNIQ_RIGHT[b-minY]+(MIN_SCALED_UNIQUE));
 									}	
-									
+									else{
+										scaledUniqLeft = scaledUniqRight = 1;
+									}
 									scaledCovLeft  = (int) floor((COUNTS_LEFT[a-minX]/scaledUniqLeft)+.5);
 									scaledCovRight = (int) floor((COUNTS_RIGHT[b-minY]/scaledUniqRight)+.5); 
 							
@@ -1246,7 +1334,8 @@ int main(int argc, char* argv[]){
 									}*/
 								
 									covLeft = COUNTS_LEFT[a-minX]; covRight = COUNTS_RIGHT[b-minY];
-									uniqueLeft = UNIQ_LEFT[a - minX]; uniqueRight = UNIQ_RIGHT[b-minY];
+									if(IS_UNIQUE){uniqueLeft = UNIQ_LEFT[a - minX]; uniqueRight = UNIQ_RIGHT[b-minY];}
+									else{uniqueLeft = uniqueRight = 1;}
 
 									scaledCovLeft = covLeft;   //
 									scaledCovRight = covRight; //these two lines reset the above calculations
@@ -1258,18 +1347,14 @@ int main(int argc, char* argv[]){
 									//else if(deletion, inversions )
 									
 									double localHomozygous   = probError(Perr,scaledCovLeft) + probError(Perr,scaledCovRight);
-									//double localHeterozygous = probVariant(Lambda/2,Lavg,scaledCovLeft,covArray,MAX_COV) + probVariant(Lambda/2,Lavg,scaledCovRight,covArray,MAX_COV); 
-									//double localError        = probVariant(Lambda,Lavg,scaledCovLeft,covArray,MAX_COV) + probVariant(Lambda,Lavg,scaledCovRight,covArray,MAX_COV);
-									
-
-									double localHeterozygous = probVariant(Lambda/2,Lavg,scaledCovLeft) + probVariant(Lambda/2,Lavg,scaledCovRight); 
-									double localError        = probVariant(Lambda,Lavg,scaledCovLeft) + probVariant(Lambda,Lavg,scaledCovRight);
+									double localHeterozygous = probVariant(Lambda/2,1.0,scaledCovLeft) + probVariant(Lambda/2,1.0,scaledCovRight); 
+									double localError        = probVariant(Lambda,1.0,scaledCovLeft) + probVariant(Lambda,1.0,scaledCovRight);
 									
 									
 									double combinedDiffHomo   = (discordantProbHomoVariant + localHomozygous) - (localError + discordantProbNoVariant);
 									double combinedDiffHetero = (discordantProbHeteroVariant + localHeterozygous) - (localError + discordantProbNoVariant);
 									
-									int validC = validCoverage(Lambda*Lavg*2,scaledCovLeft+scaledCovRight,Tolerance);
+									int validC = validCoverage(Lambda*2,scaledCovLeft+scaledCovRight,Tolerance);
 									if(validC == 0){
 										numBeyondTolerance++;
 										covBeyondTolerance = scaledCovLeft+scaledCovRight;
@@ -1391,11 +1476,12 @@ int main(int argc, char* argv[]){
 							continue; 
 						}				
 						code = 1;
-						double combinedUniqueness = -1;
+						double combinedUniqueness = 1;
 						double scaledUniqueness = 1;
 						//int combinedCoverage          = getCoverage(STARTS,ENDS,NUM_SEGMENTS,maxX,minY,BUFFER);
 						int combinedCoverage = getCoverage(maxX, minY, &deletionTree);
-						if(IS_UNIQUE){combinedUniqueness     = getUniqueness(maxX, minY, &uniquenessTree, MAX_UNIQUE_VALUE);}
+						if(IS_UNIQUE){combinedUniqueness     = getUniquenessNEW(maxX-Lavg, minY+Lavg, &uniquenessTree, MAX_UNIQUE_VALUE);}
+						
 						if(IS_UNIQUE){scaledUniqueness = ((1-MIN_SCALED_UNIQUE)*combinedUniqueness+(MIN_SCALED_UNIQUE));}
 						int combinedScaledCoverage    = (int) floor((combinedCoverage/scaledUniqueness)+.5);
 						
@@ -2103,9 +2189,9 @@ int main(int argc, char* argv[]){
 						scaledNumDiscordants = numDiscordants;	//this line resets the above calculation.
 						
 						discordantProbNoVariant     = probError(Perr,numDiscordants);
-						discordantProbHomoVariant   = probVariant(Lambda,(Lavg - 2*ReadLen)/(1.0*Lavg), scaledNumDiscordants); //,covArray,MAX_COV);
-						discordantProbHeteroVariant = probVariant(Lambda/2,(Lavg-2*ReadLen)/(1.0*Lavg), scaledNumDiscordants); //,covArray,MAX_COV);
-						
+						discordantProbHomoVariant   = probVariant(Lambda,(Lavg - 2.0*ReadLen)/(Lavg*1.0), scaledNumDiscordants); //,covArray,MAX_COV);
+						discordantProbHeteroVariant = probVariant(Lambda/2,(Lavg - 2.0*ReadLen)/(Lavg*1.0), scaledNumDiscordants); //,covArray,MAX_COV);						
+
 						/*
 						cout << "Lambda:\t" << Lambda << endl;
 						cout << "Length:\t" << Lavg-2*ReadLen << endl;
@@ -2159,7 +2245,7 @@ int main(int argc, char* argv[]){
 											double scaledUniqLeft = 1;
 											double scaledUniqRight = 1;
 		
-											if(IS_UNIQUE)
+											if(true)
 											{
 												scaledUniqLeft = ((1-MIN_SCALED_UNIQUE)*UNIQ_LEFT[a-minX]+(MIN_SCALED_UNIQUE));
 												scaledUniqRight = ((1-MIN_SCALED_UNIQUE)*UNIQ_RIGHT[b-minY]+(MIN_SCALED_UNIQUE));
@@ -2180,18 +2266,14 @@ int main(int argc, char* argv[]){
 											scaledCovRight = covRight; //these two lines reset the above calculations
 											
 											double localHomozygous   = probError(Perr,scaledCovLeft) + probError(Perr,scaledCovRight);
-											//double localHeterozygous = probVariant(Lambda/2,Lavg,scaledCovLeft,covArray,MAX_COV) + probVariant(Lambda/2,Lavg,scaledCovRight,covArray,MAX_COV); 
-											//double localError        = probVariant(Lambda,Lavg,scaledCovLeft,covArray,MAX_COV) + probVariant(Lambda,Lavg,scaledCovRight,covArray,MAX_COV);
-											
-		
-											double localHeterozygous = probVariant(Lambda/2,Lavg,scaledCovLeft) + probVariant(Lambda/2,Lavg,scaledCovRight); 
-											double localError        = probVariant(Lambda,Lavg,scaledCovLeft) + probVariant(Lambda,Lavg,scaledCovRight);
+											double localHeterozygous = probVariant(Lambda/2,1.0,scaledCovLeft) + probVariant(Lambda/2,1.0,scaledCovRight); 
+											double localError        = probVariant(Lambda,1.0,scaledCovLeft) + probVariant(Lambda,1.0,scaledCovRight);
 											
 											
 											double combinedDiffHomo   = (discordantProbHomoVariant + localHomozygous) - (localError + discordantProbNoVariant);
 											double combinedDiffHetero = (discordantProbHeteroVariant + localHeterozygous) - (localError + discordantProbNoVariant);
 											
-											int validC = validCoverage(Lambda*Lavg*2,scaledCovLeft+scaledCovRight,Tolerance);
+											int validC = validCoverage(Lambda*2,scaledCovLeft+scaledCovRight,Tolerance);
 											if(validC == 0){
 												numBeyondTolerance++;
 												covBeyondTolerance = scaledCovLeft+scaledCovRight;
@@ -2578,10 +2660,12 @@ double getUniqueness(int start, int end, IntervalTree<uInt*> *tree, double MAX_U
 {
 	vector<Interval<uInt*> > results;
 	tree->findContained(start, end, results);
-	if(results.size() == 0){return 010101010.0;}
+	if(results.size() == 0){return 200.2;}
 	
 	for(int i = 0; i < results.size(); i++)
 	{
+		cout << "\t\tfor " << start << " " << end << " FOUND " << results.size() << endl; 
+		cout << "\t\t" << results[i].value->start << " "  << results[i].value->end << endl;
 		if(results[i].value->start >= start && results[i].value->end <= end)
 		{
 			return results[i].value->uniqueness/(MAX_UNIQUE_VAL);
@@ -2589,5 +2673,19 @@ double getUniqueness(int start, int end, IntervalTree<uInt*> *tree, double MAX_U
 	}
 	
 
-	return 0101010101;
+	return -200.1;
+}
+
+double getUniquenessNEW(int start, int end, IntervalTree<uInt*> *tree, double MAX_UNIQUE_VAL)
+{
+	vector<Interval<uInt*> > results;
+	tree->findOverlapping(start, end, results);
+	if(results.size() == 0){return MAX_UNIQUE_VAL;} //NOTE: should be changed to MAX_UNIQUE_VAL 
+	double sum = 0;
+	double goodones = 0.0;
+	for(int i = 0; i < results.size(); i++)
+	{
+	    if(start >= results[i].value->start && end <= results[i].value->end) { goodones++; sum += (results[i].value->uniqueness)/MAX_UNIQUE_VAL;}
+	}
+	return sum/goodones;
 }
