@@ -189,7 +189,7 @@ int main(int argc, char* argv[] ){
 	int SAMPLE = DEFAULT_SAMPLE;
 			
 	//(5) Get Error for the probability model
-	double p_err;
+	double p_err = 0.01; //Default error parameter
 	
 	//Step 0: Process the Parameters File
 	cout << "|||INPUT PARAMETERS|||" << endl;
@@ -291,6 +291,9 @@ int main(int argc, char* argv[] ){
 		SAMPLE = DEFAULT_SAMPLE;
 		cerr << "Error: Parameter Sample must be positive. Resetting Sample to default of " << DEFAULT_SAMPLE << endl;
 	}
+	
+	//Set coverage to the previous value:
+	COVERAGE = COVERAGE/LAVG;
 	
 	//Set remaining parameters;
 	LDIS = LAVG - 2*READLEN;
@@ -566,7 +569,6 @@ int main(int argc, char* argv[] ){
 
 			int numAssigned = 0;
 			int numEmpty = 0;
-			double perrTemp = 0.01;
 			//cout << "Before Random Initialization " << componentVariants[5] << endl;
 			
 			//NEW: Fix the unique EPSs if needed;
@@ -591,14 +593,13 @@ int main(int argc, char* argv[] ){
 			
 			cout << "We are about to begin and have " << numMobileESPs  << "/" << numObservedESPs << " mobile ESPs.\n";
 			
-			randomInitialization(numMobileESPs,mobileESPs,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,perrTemp);
+			randomInitialization(numMobileESPs,mobileESPs,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,p_err);
 	
 			
 			cout << "After Random Initialization " << endl;
 			
 			//(0) Stay the same; (1) Naive; (2) Add; (3) Remove; (4) Swap
 			//Needed Code
-			perrTemp = 0.01;
 			vector<int> modifiedESPs; 
 			modifiedESPs.clear();
 			int numModifiedESPs = 0;
@@ -645,14 +646,14 @@ int main(int argc, char* argv[] ){
 		
 		//Update the Variants;
 		for(int i = 0; i<numObservedVariants;i++){
-			componentVariants[i].updateOccupancy(stepsToIncrement,perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS); 
+			componentVariants[i].updateOccupancy(stepsToIncrement,p_err,COVERAGE,COVERAGE_SCALED,LAVG,LDIS); 
 		}
 		
 		
 		//Get the current likelihood:
 		double currentLikelihood = -1;
 		int moveToMake = 0;
-		int accept = acceptMove(numMobileESPs,mobileESPs,moveToMake,currentLikelihood,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS);
+		int accept = acceptMove(numMobileESPs,mobileESPs,moveToMake,currentLikelihood,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,p_err,COVERAGE,COVERAGE_SCALED,LAVG,LDIS);
 		
 		//outLIKE << 0 << "\t" << currentLikelihood << "\t" << componentESPs.size() << "\t";
 		
@@ -681,8 +682,8 @@ int main(int argc, char* argv[] ){
 			for(int i = 0; i<numObservedVariants; i++){
 				if(MLE_SUPPORT[i]>0){ 
 					MAX_LIKELIHOOD_STREAM << componentVariants[i].getName() 
-					<< "_" << componentVariants[i].getLikelihoodVariantGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,MLE_SUPPORT[i]) 
-					<< "_" << componentVariants[i].getLikelihoodErrorGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,MLE_SUPPORT[i])
+					<< "_" << componentVariants[i].getLikelihoodVariantGiven(p_err,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,MLE_SUPPORT[i]) 
+					<< "_" << componentVariants[i].getLikelihoodErrorGiven(p_err,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,MLE_SUPPORT[i])
 					<< "\t" << MLE_SUPPORT[i] << "\t" << componentVariants[i].getTheRest() << endl;
 				}
 			}
@@ -739,22 +740,22 @@ int main(int argc, char* argv[] ){
 					if(moveToMake == 1){
 						//cout << "MOVE " << steps << "--> NAIVE\n";
 						//for(int i = 0; i<5; i++){ cout << i << "--> " << moveTally[i] << "; "; } cout << endl;
-						proposeNaiveMove(numMobileESPs,mobileESPs,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,perrTemp);
+						proposeNaiveMove(numMobileESPs,mobileESPs,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,p_err);
 					}
 					else if(moveToMake == 2){
 						//cout << "MOVE " << steps << "--> ADD\n";
 						//for(int i = 0; i<5; i++){ cout << i << "--> " << moveTally[i] << "; "; } cout << endl;
-						proposeAddMove(numMobileESPs,mobileESPs,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,perrTemp);
+						proposeAddMove(numMobileESPs,mobileESPs,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,p_err);
 					}
 					else if(moveToMake == 3){
 						//cout << "MOVE " << steps << "--> REMOVE\n";
 						//for(int i = 0; i<5; i++){ cout << i << "--> " << moveTally[i] << "; "; } cout << endl;
-						proposeRemoveMove(numMobileESPs,mobileESPs,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,perrTemp);
+						proposeRemoveMove(numMobileESPs,mobileESPs,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,p_err);
 					}
 					else if(moveToMake == 4){
 						//cout << "MOVE " << steps << "--> SWAP\n";
 						//for(int i = 0; i<5; i++){ cout << i << "--> " << moveTally[i] << "; "; } cout << endl;
-						//proposeSwapMove(numMobileESPs,mobileESPs,componentESPs, componentVariants, componentPairs,runningDependencies,TotalDependencies,visitedDependencies,numDependencies, steps,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,perrTemp);
+						//proposeSwapMove(numMobileESPs,mobileESPs,componentESPs, componentVariants, componentPairs,runningDependencies,TotalDependencies,visitedDependencies,numDependencies, steps,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,p_err);
 					}
 					else{
 						cout << "Problem in random number generation?\n"; 
@@ -762,7 +763,7 @@ int main(int argc, char* argv[] ){
 				}
 				
 				double currentLikelihood = -1;
-				int accept = acceptMove(numMobileESPs,mobileESPs,moveToMake,currentLikelihood,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS);
+				int accept = acceptMove(numMobileESPs,mobileESPs,moveToMake,currentLikelihood,componentESPs,componentVariants,assignedVariants,numAssigned,emptyVariants,numEmpty,modifiedESPs,numModifiedESPs,modifiedVariants,numModifiedVariants,p_err,COVERAGE,COVERAGE_SCALED,LAVG,LDIS);
 				
 				/*cout << "Accepted --> " << accept << endl;
 				for(int i = 0; i<numAssigned; i++){ 
@@ -799,8 +800,8 @@ int main(int argc, char* argv[] ){
 					for(int i = 0; i<numObservedVariants; i++){
 						if(MLE_SUPPORT[i]>0){ 
 								MAX_LIKELIHOOD_STREAM << componentVariants[i].getName() 
-										<< "_" << componentVariants[i].getLikelihoodVariantGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,MLE_SUPPORT[i]) 
-										<< "_" << componentVariants[i].getLikelihoodErrorGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,MLE_SUPPORT[i])
+										<< "_" << componentVariants[i].getLikelihoodVariantGiven(p_err,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,MLE_SUPPORT[i]) 
+										<< "_" << componentVariants[i].getLikelihoodErrorGiven(p_err,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,MLE_SUPPORT[i])
 										<< "\t" << MLE_SUPPORT[i] << "\t" << componentVariants[i].getTheRest() << endl;
 						}
 					}
@@ -907,7 +908,7 @@ int main(int argc, char* argv[] ){
 			for(int i = 0; i<numObservedVariants; i++){ 
 				int current = componentVariants[i].getCurrentAssigned();
 				if(current > 0){
-					double LLR = componentVariants[i].getLikelihoodVariantGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current) - componentVariants[i].getLikelihoodErrorGiven(perrTemp,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current);
+					double LLR = componentVariants[i].getLikelihoodVariantGiven(p_err,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current) - componentVariants[i].getLikelihoodErrorGiven(p_err,COVERAGE,COVERAGE_SCALED,LAVG,LDIS,current);
 					if(LLR >= LRTHRESHOLD || PRINTALL ){
 						outTHRESHOLD << componentVariants[i].getName() 
 							<< "\t" << componentVariants[i].getCurrentAssigned() 
