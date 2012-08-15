@@ -1,3 +1,11 @@
+GASV and GASVPro Release August 16, 2012  =================
+
+* Updated documentation and work flow description of GASV
+software.
+
+GASVPro (Version 1.1):
+* Corrected a problem with updating read depth counts.
+
 GASV and GASVPro Release August 2, 2012  =================
 
 GASVPro (Version 1.0):

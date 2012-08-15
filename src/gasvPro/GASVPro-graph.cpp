@@ -166,7 +166,7 @@ int main(int argn, char* argv []){
 
 	if(argn < 4 ){ 
 		cerr << "GASVPro-Graph: Separates Ambiguous Clusters in to Dependent Components\n";
-		cerr << "Version:       1.0\n\n";
+		cerr << "Version:       1.1\n\n";
 		
 		cerr << "Usage: ./GASVPro-Graph {ClustersFile} {CoverageFile} {OutputDir} {MinimimSupport}\n";
 		
