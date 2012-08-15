@@ -43,7 +43,7 @@
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
 \title{User Guide for GASV Software Package
-\\GASV (Version 2.0) and GASVPro (Version 1.0)}
+\\GASV (Version 2.0) and GASVPro (Version 1.1)}
 %\author{The Author}
 \date{August 3, 2012}                                           % Activate to display a given date or no date
 
@@ -83,14 +83,14 @@ S. Sindi, S. Onal, L. Peng, H. Wu, B.J. Raphael. An Integrative Probabilistic Mo
 
 \noindent This product contains software developed by Erik Garrison (\url{http://github.com/ekg}).\\ \\ 
 \
-\noindent Version: 1.0\\
-\noindent Version Date: August 3, 2012
+\noindent Version: 1.1\\
+\noindent Version Date: August 14, 2012
 
 \begin{wrapfigure}{l}{0.55\textwidth}
   \begin{center}
     \includegraphics[width=0.55\textwidth]{Figures/GASV_Workflow.pdf}
   \end{center}
-  \caption{\textbf{GASV and GASVPro-HQ Workflow}}
+  \caption{\textbf{GASV Workflow}}
   \label{fig:GASVWorkflow}
 \end{wrapfigure}
 
@@ -309,7 +309,17 @@ $ java -jar GASV.jar --output reads --batch Example.bam.gasv.in
 
 \section{Running the GASVPro Pipeline with Scripts}
 \label{sec:GASVProScripts}
-To aid users in running the GASVPro pipeline, we have provided paramaterized scripts for GASVPro-HQ and GASVPro. These scripts are stored in the \verb+\bin+ directory and are designed for streamlined use. They take as input a \verb+.bam+ file (or files), plus other optional parameters, and run the respective pipeline (Figure~\ref{fig:GASVWorkflow} and Figure~\ref{fig:GASVProWorkflow}). 
+GASVPro, a probabilistic algorithm based on GASV predictions, consists of two possible pipeliens, GASVPro-HQ and GASVPro as depicted in Figure~\ref{fig:GASVProWorkflow}. Users with a single BAM file of unique mappings, should use GASVPro-HQ. Users that, in addition, have a file of ambiguous mappings should use GASVPro.
+
+\begin{figure}[!htbp]
+   \centering
+    \includegraphics[width=0.55\textwidth]{Figures/GASVPro_Workflow.pdf}
+  \caption{\textbf{Pipelines for GASVPro-HQ and GASVPro.} These pipelines are implemented in scripts as described in the text.}
+  \label{fig:GASVProWorkflow}
+\end{figure}
+
+
+To aid users in running the GASVPro pipeline, we have provided paramaterized scripts for GASVPro-HQ and GASVPro. These scripts are stored in the \verb+\bin+ directory and are designed for streamlined use. They take as input a \verb+.bam+ file (or files), plus other optional parameters, and run the respective pipeline. 
 
 Most users should begin with the GASVPro-HQ script. However, our scripts can be easily modified to fit a desired workflow and users are encouraged to adapt these scripts or develop their own. 
 
@@ -368,14 +378,6 @@ GASVPro-HQ.sh produces quite a few output files, only a few of which are the ``f
 
 \subsection{GASVPro}
 For users with both a high-quality BAM file of unique mappings and a BAM file of lower-quality and possibly multiple mappings. The GASVPro pipeline will incorporate both types of data. 
-  
-\begin{figure}[!htbp]
-   \centering
-    \includegraphics[width=0.55\textwidth]{Figures/GASVPro_Workflow.pdf}
-  \caption{\textbf{GASVPro Workflow} (Refer to Figure~\ref{fig:GASVWorkflow} for GASV and GASVPro-HQ workflow.)}
-  \label{fig:GASVProWorkflow}
-\end{figure}
-
 
 We have created a script called \verb+GASVPro.sh+ which will run this pipeline completely given two BAM files. As above, it is necessary to change the options at the top of the script file to match the desired parameters. The \verb+GASVPro.sh+ parameters appear as follows:
 \begin {Verbatim}[frame=single]
@@ -978,14 +980,14 @@ After successful completion GASVPro will output two files, a \verb+.clusters+ fi
    \centering
    %\topcaption{Table captions are better up top} % requires the topcapt package
    \begin{tabular}{lllllllll} % Column formatting, @{} suppresses leading/trailing space
- \#Cluster\_ID:  &  NumPRS:   &  Localization: & Type:  &  $\cdots$    &     $\cdots$  & $\cdots$  &  $\cdots$ & Likelihood Ratio:\\
+ \#Cluster\_ID:  &  NumPRS:   &  Localization: & Type:  &  $\cdots$    &     $\cdots$  & $\cdots$  &  $\cdots$ & LogLikelihoodRatio:\\
 		\verb+c19+  &  \verb+1+  &    \verb+212+   &    \verb+TNR-+     & $\cdots$   &    $\cdots$  &     $\cdots$&    $\cdots$ & \verb+620.355+
     \end{tabular}
    \caption{An Example GASVPro Output Cluster (see Section \ref{add_out_opt} for all fields.)}
    \label{tab:booktabs}
 \end{table}
 
-\noindent Let the probability that a given cluster $C$ {\em is} a variant be given by $P_v$ and the probability that $C$ {\em is not} a variant be given by $P_{nv}$.  The Likelihood Ratio therefore is $P_v - P_{nv}$. The rest of the information in the \verb+.clusters+ file is identical to the input file. \label{LRexp}
+\noindent Let the probability that a given cluster $C$ {\em is} a variant be given by $P_v$ and the probability that $C$ {\em is not} a variant be given by $P_{nv}$.  The Log Likelihood Ratio therefore is $Log(P_v) -Log(P_{nv})$. The rest of the information in the \verb+.clusters+ file is identical to the input file. \label{LRexp}
 
 Additionally, GASVPro will output another file which offers more information generated directly by the program. This file will have a \verb+.coverage+ extension and includes the following information:
 \begin{framed}

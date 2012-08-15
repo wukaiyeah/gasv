@@ -7,8 +7,8 @@ Version: 2.0
 Version Date: May 30, 2012
 
 GASVPro
-Version: 1.0
-Version Date: August 2, 2012
+Version: 1.1
+Version Date: August 15, 2012
 
 Contact: Benjamin Raphael at gasv@cs.brown.edu
 
