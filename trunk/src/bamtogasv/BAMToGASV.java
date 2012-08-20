@@ -68,6 +68,7 @@ public class BAMToGASV {
 	public ValidationStringency STRINGENCY = ValidationStringency.SILENT; 
 	public boolean GASVPRO_OUTPUT = false; // GASVPro
 	public boolean BATCH = false;
+	public boolean NOSORT = false;
 
 	/* Additional Variables */
 	public boolean someLibPassed = false; // true if at least one library is paired, false otherwise.
@@ -88,13 +89,14 @@ public class BAMToGASV {
 	public ArrayList<String> LIBRARY_NAMES; // list of <full_library_name>
 	public HashMap<String,String> HIGHQ_INDICATOR; // <full_library_name,#of reads>
 	public HashMap<String,String> LOWQ_INDICATOR; // <full_library_name,#of reads>
+	public HashMap<String,BufferedWriter> CONCORDANT_FILES; // <filename, filewriter>
 
 	/* (Done by Anna on 5/5)
 	 * (1) Make HIGHQ and LOWQ indicator data structures HashMaps (key; fragmentname), values are SAMRecord strings.
 	 *     We can do this with getSAMString()
 	 * (2) As parsing, write the the pairs out as a sam file.
 	 */
-	
+
 	/* Sorters for ESPs and for Concordants */
 	public ExternalSort discordantSorter,concordantSorter;
 
@@ -176,8 +178,11 @@ public class BAMToGASV {
 		HIGHQ_INDICATOR = new HashMap<String,String>();
 		LOWQ_INDICATOR = new HashMap<String,String>();
 		NON_DEFAULT_REFS = new HashMap<String,Boolean>();
+		if(NOSORT) {
+			CONCORDANT_FILES = new HashMap<String,BufferedWriter>();
+		}
 		BAD_RECORD_COUNTER = 0;
-	
+
 		// Try opening sorters and catch errors.
 		try {
 			discordantSorter = new ExternalSort("ESP");
@@ -199,6 +204,7 @@ public class BAMToGASV {
 		} else { // to be safe, set CHR_NAMES to null.
 			CHR_NAMES = null;
 		}
+
 	}
 
 	/**
@@ -329,18 +335,32 @@ public class BAMToGASV {
 				else if (args[i+1].equalsIgnoreCase("false")){
 					GASVPRO_OUTPUT = false;
 				}
-			}else {
+			} else if(args[i].equalsIgnoreCase("-NOSORT")) { // Don't Sort Concordants
+				if(args[i+1].equalsIgnoreCase("true")){
+					NOSORT = true;
+				}
+				else if (args[i+1].equalsIgnoreCase("false")){
+					NOSORT = false;
+				} else {
+					System.out.println("Error! Option " + args[i] + " does not exist.");
+					return false;
+				}
+			} else {
 				System.out.println("Error! Option " + args[i] + " does not exist.");
 				return false;
 			}
 		}
-		
+
 		// if it's a  URL and the OUTPUT_PREFIX is the BAMFILE, die.
 		if(IS_URL && OUTPUT_PREFIX.equals(BAMFILE)) { 
 			System.out.println("ERROR: OUTPUT_PREFIX must be specified if BAMFILE is a URL.");
 			return false;
 		}
-			
+
+		if(!WRITE_CONCORDANT && NOSORT) {
+			System.out.println("ERROR: NOSORT flag cannot be set if Concordant Pairs are not written.");
+		}
+
 		return true;
 	}
 
@@ -384,6 +404,8 @@ public class BAMToGASV {
 				"\tstrict\tRead SAM records and die when a record is not formatted properly.\n"+
 				"-GASVPRO [Boolean] (Default: False)\n"+
 				"\tTrue\tGenerate GASVPro parameters file and concordant file. Warning - this will be large!\n"+
+				"-NOSORT [Boolean] (Default: False)\n"+
+				"\tTrue\tDo not sort the concordant file. Improves running time.\n"+
 		"Refer to the Manual for more details.");
 	}
 
@@ -598,7 +620,7 @@ public class BAMToGASV {
 
 		// Step 0: Calculate Mean and STD
 		getMeanAndSTDForNovoalign(lib);
-		
+
 		// Step 1: Determine which metric to use.
 
 		/// EXACT CUTOFF_LMINLMAX ///
@@ -779,7 +801,7 @@ public class BAMToGASV {
 			lib.Lmax = last_value;
 		}
 	}
-	
+
 	public void getMeanAndSTDForNovoalign(Library lib) {
 		lib.mean = (int)((double)lib.total_L/lib.total_C+0.5);
 		double sd_up = 0;
@@ -870,7 +892,7 @@ public class BAMToGASV {
 				System.exit(-1);
 			}
 		}
-		
+
 		// initialize BAM file for lowquality alignments.
 		if(WRITE_LOWQ)
 			try {
@@ -881,8 +903,8 @@ public class BAMToGASV {
 				System.out.println("ERROR creating low quality SAM file.");
 				System.exit(-1);
 			}
-		else
-			LOWQ_BAM_FILE = null;
+			else
+				LOWQ_BAM_FILE = null;
 
 
 		// Initialize Library objects
@@ -893,7 +915,7 @@ public class BAMToGASV {
 
 		// Iterate through each Record and store relevant information.
 		for (SAMRecord samRecord : inputSam) {
-			
+
 			// print information every 500,000 lines.
 			recordCounter++;
 			if(recordCounter % 500000 == 0 || recordCounter == 1) {
@@ -962,13 +984,14 @@ public class BAMToGASV {
 		} // end for (SAMRecord samRecord : inputSam)
 
 		inputSam.close();
-		if(WRITE_LOWQ)
+		if(WRITE_LOWQ) {
 			try {
 				LOWQ_BAM_FILE.close();
 			} catch (IOException e) {
 				System.out.println("WARNING: Cannot close low-quality sam file.");
 			}
-		
+		}
+
 		System.out.println("Done reading BAM file.\n");
 
 		// finish analysis with remaining records in libraries.
@@ -1013,7 +1036,7 @@ public class BAMToGASV {
 			// library. We don't need to write variant files here.
 			if(lib.Lmin == Integer.MIN_VALUE || lib.Lmax == Integer.MIN_VALUE)
 				continue;
-			
+
 			// Go through each Variant Type.
 			for(int j=0;j<VARIANTS.length;j++) {
 				type = VARIANTS[j];
@@ -1021,10 +1044,14 @@ public class BAMToGASV {
 				// skip variant types that aren't flagged as "to-write"
 				if(type == VariantType.CONC && !WRITE_CONCORDANT)
 					continue;
-				
+
 				// (2) Write last temporary files for variants
 				if(lib.rowsForVariant.get(type).size() > 0) 				
 					sortAndWriteTempFile(lib,type);
+				
+				// If it's concordant and we aren't sorting, then no need to merge.
+				if(type == VariantType.CONC && NOSORT) 
+					continue;
 
 				// (3) For each variant, merge temporary files into one sorted file.
 				// Files are deleted in the merge() function.
@@ -1039,15 +1066,27 @@ public class BAMToGASV {
 
 				// Now, merge files. Concordants are written differently than all
 				// other ESP files.
-				if(type == VariantType.CONC)
+				if(type == VariantType.CONC) {
 					concordantSorter.merge(tmpFilenames,getFinalFileName(libname,type));
-				else 
+				} else 
 					discordantSorter.merge(tmpFilenames,getFinalFileName(libname,type));
 
 			} // END for each variant
 
 		} // END for each library
 
+		// If we're not sorting concordants, then close all concordant files.
+		if(NOSORT) {
+			Iterator<String> iter = CONCORDANT_FILES.keySet().iterator();
+			try {
+				while(iter.hasNext()) {
+					CONCORDANT_FILES.get(iter.next()).close();
+				}
+			} catch (IOException e) {
+				System.out.println("WARNING: Cannot close unsorted concordant files.");
+			}
+		}
+		
 		System.out.println();
 	}
 
@@ -1116,7 +1155,7 @@ public class BAMToGASV {
 
 		// Add line to variant list for this library.
 		lib.addLine(type,pobj.createOutput(type));
-				
+
 		// Check to see if we should sort and write tmp file here.
 		// Now, sort and write ALL tmp files (all libraries, all types)
 		if(lib.rowsForVariant.get(type).size() >= NUM_LINES_FOR_EXTERNAL_SORT) {
@@ -1128,7 +1167,7 @@ public class BAMToGASV {
 				for(int j=0;j<VARIANTS.length;j++) {
 					if(VARIANTS[j] == VariantType.CONC && !WRITE_CONCORDANT)
 						continue;
-					
+
 					// if there are fewer than 1/10th of the number of reads, don't do this yet.
 					if(lib.rowsForVariant.get(VARIANTS[j]).size() < USE_NUMBER_READS/10)
 						continue;
@@ -1141,7 +1180,7 @@ public class BAMToGASV {
 
 	}
 
-	
+
 	/**
 	 * Add GASVPair object to the LOWQUAL list in Library's data structure.
 	 * @param pobj - GASVPair object
@@ -1179,7 +1218,7 @@ public class BAMToGASV {
 		} // END if(lib.rowsForVariant.get(type).size() >= NUM_LINES_FOR_EXTERNAL_SORT)
 
 	}
-	*/
+	 */
 
 	/**
 	 * Parse read and put the SAM record in the appropriate place.  
@@ -1275,7 +1314,7 @@ public class BAMToGASV {
 			} // END low quality read conditional
 		} // END mapping quality check
 	}
-	
+
 	public void writeLowQualityRecordPair(String record1,String record2)  {
 		try {
 			LOWQ_BAM_FILE.write(record1+record2);
@@ -1338,13 +1377,28 @@ public class BAMToGASV {
 
 		// Sort and write this set of reads to a temporary file.
 		if(type == VariantType.CONC){ // Handle Concordants.
-			try {
-				concordantSorter.sort(
-						lib.rowsForVariant.get(type),
-						getTmpFileName(lib.name,type,curnum));
-			} catch (IOException e) {
-				System.out.println("ERROR WHILE WRITING CONCORDANT TMP FILE " + getTmpFileName(lib.name,type,curnum) + ". Most likely, the tmp file cannot be created - check the output directory location.");
-				System.exit(-1);
+			if(NOSORT) { // ADDED by Anna 8/20
+				String filename = getFinalFileName(lib.name,type);
+				try {
+					if(!CONCORDANT_FILES.containsKey(filename)) 
+						CONCORDANT_FILES.put(filename,new BufferedWriter(new FileWriter(new File(filename))));
+					BufferedWriter writer = CONCORDANT_FILES.get(filename);
+					ArrayList<String> towrite = lib.rowsForVariant.get(type);
+					for(int i=0;i<towrite.size();i++) 
+						writer.write(towrite.get(i)+"\n");
+				} catch (IOException e) {
+					System.out.println("ERROR WHILE OPENING AND WRITING TO " + filename);
+					System.exit(-1);
+				}
+			} else {
+				try {
+					concordantSorter.sort(
+							lib.rowsForVariant.get(type),
+							getTmpFileName(lib.name,type,curnum));
+				} catch (IOException e) {
+					System.out.println("ERROR WHILE WRITING CONCORDANT TMP FILE " + getTmpFileName(lib.name,type,curnum) + ". Most likely, the tmp file cannot be created - check the output directory location.");
+					System.exit(-1);
+				}
 			}
 		} else { // Handle Discordants
 			try {
@@ -1397,10 +1451,10 @@ public class BAMToGASV {
 		System.exit(-1);
 		return "";
 	}
-	
+
 	public void mergeConcordantFiles() {
 		String concordantFile = OUTPUT_PREFIX+"_all.concordant"; // from writeGASVPROInputFile()
-		
+
 		// MERGE CONCORDANT FILES (Anna - new June 30,2012)
 		// Only when GASVPRO_FLAG is set AND LIBRARY_SEPARATED is not 'all'
 		// (1) Get list of all concordant files.
@@ -1415,7 +1469,7 @@ public class BAMToGASV {
 		// if there are no concordant files, print a warning.
 		if(concordantfiles.size()==0)
 			System.out.println("\nWARNING: " + concordantFile + " was not created because there are no concordant files for the libraries.\n");
-		
+
 		// if this list has only one file, we're done.
 		if(concordantfiles.size()==1) {
 			System.out.println("\nMoving single concordant file to one with the correct name.\n");
@@ -1424,7 +1478,7 @@ public class BAMToGASV {
 			if(!success) 
 				System.out.println("WARNING: " + concordantFile + " was not created by moving " + old.getName());
 		}
-		
+
 		// Otherwise, merge the multiple concordant files.
 		if(concordantfiles.size() > 1) {
 			// (2) Merge all concordant files using Sorter.merge() function. Write to OUTPUT_PREFIX+"_all.concordant
@@ -1445,11 +1499,11 @@ public class BAMToGASV {
 			for(int i=0;i<LIBRARY_NAMES.size();i++) {
 				libname = LIBRARY_NAMES.get(i);
 				lib = LIBRARY_INFO.get(libname);
-				
+
 				// skip if there are no reads.
 				if(lib.Lmin == Integer.MIN_VALUE || lib.Lmax == Integer.MIN_VALUE)
 					continue;
-				
+
 				writer.write(libname + "\t" + LIBRARY_INFO.get(libname).Lmin+"\t"+
 						LIBRARY_INFO.get(libname).Lmax+"\t"+
 						LIBRARY_INFO.get(libname).mean+"\t"+
@@ -1525,7 +1579,7 @@ public class BAMToGASV {
 			writerpro.write("Lambda: "+totalGAvgInsert/GL+"\n");
 			writerpro.close();
 		} catch (Exception e) {
-				System.out.println("Error writing .gasvproInput file. Continuing.");
+			System.out.println("Error writing .gasvproInput file. Continuing.");
 		}
 	}
 
@@ -1546,17 +1600,17 @@ public class BAMToGASV {
 				System.out.println("  "+iter.next());
 		}
 		System.out.println();
-		
+
 		String libname;
 		Library lib;
 		for(int i=0;i<LIBRARY_NAMES.size();i++) {
 			libname = LIBRARY_NAMES.get(i);
 			lib = LIBRARY_INFO.get(libname);
-			
+
 			// skip if there are no reads.
 			if(lib.Lmin == Integer.MIN_VALUE || lib.Lmax == Integer.MIN_VALUE)
 				System.out.println("\nWARNING: Library \""+libname+
-						"\" had zero reads present. Not including this library in output files.\n");
+				"\" had zero reads present. Not including this library in output files.\n");
 		}
 	}
 
@@ -1574,7 +1628,7 @@ public class BAMToGASV {
 		if(WRITE_LOWQ) {
 			System.out.println("  "+OUTPUT_PREFIX+"_lowqual.sam");
 		}
-			
+
 
 		for(int i=0;i<LIBRARY_NAMES.size();i++) {
 			for(int j=0;j<VARIANTS.length;j++) {
