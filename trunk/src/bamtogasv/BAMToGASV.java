@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 
 import net.sf.samtools.*;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
+import net.sf.samtools.util.RuntimeEOFException;
 import net.sf.samtools.util.RuntimeIOException;
 import net.sf.picard.sam.FixMateInformation;
 
@@ -988,6 +989,17 @@ public class BAMToGASV {
 		} catch (RuntimeIOException e) {
 			System.out.println("WARNING: RuntimeIOException caught when iterating through records - closing BAM file and processing output. This might be due to a truncated file.");
 			System.err.println("WARNING: RuntimeIOException caught when iterating through records - closing BAM file and processing output. This might be due to a truncated file.");
+		}
+		// Layla 8/22/2012 - Add additional catches for truncated files.
+		catch (FileTruncatedException e) {
+			System.out.println("WARNING: FileTruncatedException caught when iterating through records - closing BAM file and processing output.");
+			System.err.println("WARNING: FileTruncatedException caught when iterating through records - closing BAM file and processing output.");
+		}
+		
+		catch (RuntimeEOFException e) {
+			System.out.println("WARNING: RuntimeEOFException caught when iterating through records - closing BAM file and processing output.");
+			System.err.println("WARNING: RuntimeEOFException caught when iterating through records - closing BAM file and processing output.");
+		
 		}
 		inputSam.close();
 		if(WRITE_LOWQ) {
