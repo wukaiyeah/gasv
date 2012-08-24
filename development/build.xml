@@ -1,0 +1,93 @@
+<project name="GASV Version 2.0" default="distJars" basedir=".">
+    <description>
+        Build file for BAMToGASV.jar and GASV.jar code
+    </description>
+  <!-- set global properties for this build -->
+  <property name="srcBtG" location="src/bamtogasv"/>
+  <property name="srcG" location="src/gasv"/>
+  <property name="build" location="build"/>
+  <property name="buildBtG" location="build/bamtogasv"/>
+  <property name="buildG" location="build/gasv"/>
+  <property name="dist" location="bin"/>
+  <property name="lib" location="jarfiles/"/>
+  
+  <!-- include external jars -->
+  <path id="BAMToGASV.classpath">
+    <fileset dir="${lib}" >
+      <include name="sam-1.56.jar"/>
+      <include name="FixMateInformation.jar"/>
+    </fileset>
+  </path>
+
+  <target name="clean"
+        description="clean up" >
+    <!-- Delete the ${build} and ${dist} directory tree -->
+    <delete dir="${build}"/>
+    <delete dir="${dist}"/>
+  </target>
+
+  <target name="init" depends="clean">
+    <!-- Create the time stamp -->
+    <tstamp/>
+    <!-- Create the build directory structure used by compile -->
+    <mkdir dir="${build}"/>
+    <mkdir dir="${buildBtG}"/>
+    <mkdir dir="${buildG}"/>
+    <mkdir dir="${dist}"/>
+  </target>
+
+  <target name="compileBAMToGASV" depends="init"
+        description="compile the source " >
+    <!-- Compile the java code from ${srcBtG} into ${buildBtG} -->
+	<javac srcdir="${srcBtG}" includeantruntime="false" classpathref="BAMToGASV.classpath" destdir="${buildBtG}"/>
+  </target>
+
+  <target name="compileGASV" depends="compileBAMToGASV"
+        description="compile the source " >
+    <!-- Compile the java code from ${srcG} into ${buildG} -->
+	<javac srcdir="${srcG}" includeantruntime="false" destdir="${buildG}"/>
+  </target>
+
+  
+  <target name="distBAMToGASV" depends="compileGASV"
+        description="generate the distribution BAMToGASV.jar" >
+    <!-- make jar file -->
+    <jar jarfile="${dist}/BAMToGASV.jar" basedir="${buildBtG}">
+      <zipgroupfileset dir="${lib}" includes="*.jar"/>
+      <manifest>
+		<attribute name="Main-Class" value="BAMToGASV"/>
+      </manifest>
+    </jar>
+  </target>
+
+
+  <target name="distGASV" depends="distBAMToGASV"
+        description="generate the distribution GASV.jar" >
+
+    <!-- make jar file -->
+    <jar jarfile="${dist}/GASV.jar" basedir="${buildG}">
+      <manifest>
+		<attribute name="Main-Class" value="gasv.main.GASVMain"/>
+      </manifest>
+    </jar>
+  </target>
+  
+	<!-- try to make BAMToGASV_AMBIG jar file -->
+  <target name="distBAMToGASV_AMBIG" depends="distGASV"
+        description="generate the distribution BAMToGASV_AMBIG.jar" >
+    <!-- make jar file -->
+    <jar jarfile="${dist}/BAMToGASV_AMBIG.jar" basedir="${buildBtG}">
+      <zipgroupfileset dir="${lib}" includes="*.jar"/>
+      <manifest>
+		<attribute name="Main-Class" value="BAMToGASV_AMBIG"/>
+      </manifest>
+    </jar>
+  </target>
+  
+  
+  <target name="distJars" depends="distBAMToGASV_AMBIG"
+        description="generates jar files" >
+  </target>
+
+</project>
+
