@@ -1,0 +1,26 @@
+#!/bin/bash
+
+echo "Installing BAMToGASV and GASV..."
+mkdir bin
+ant
+
+echo "Creating pipeline scripts..."
+cp src/GASVPro-HQ.sh bin
+cp src/GASVPro.sh bin
+cd src
+chmod 777 GASVPro-HQ.sh 
+chmod 777 GASVPro.sh
+cd ..
+
+echo "Installing GASVPro-CC..."
+g++ -O2 -w src/gasvPro/GASVPro-cc.cpp -o bin/GASVPro-CC
+
+echo "Installing GASVPro-graph..."
+g++ -O2 -w src/gasvPro/GASVPro-graph.cpp -o bin/GASVPro-graph
+
+echo "Installing GASVPro-mcmc..."
+g++ -O2 -w src/gasvPro/GASVPro-mcmc.cpp -o bin/GASVPro-mcmc
+
+
+
+echo "Installation complete. Check for errors." 	
