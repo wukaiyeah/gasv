@@ -39,11 +39,11 @@ public class SimpleSAMRecordParser {
 		int count = 0;
 		BufferedWriter writer = new BufferedWriter(new FileWriter(outfile));
 		SAMFileReader in = new SAMFileReader(new File(bamfile));
-		//System.out.println("Name\tChr\tStart\tEnd\tNegativeStrand?\tQuality\tCIGAR");
-		writer.write("Name\tChr\tStart\tEnd\tNegativeStrand?\tQuality\tCIGAR\n");
+		//System.out.println("Name\tSAMFlag\tChr\tStart\tEnd\tNegativeStrand?\tQuality\tCIGAR");
+		writer.write("Name\tSAMFlag\tChr\tStart\tEnd\tNegativeStrand?\tQuality\tCIGAR\n");
 		for (SAMRecord s : in) {
-			//System.out.println(s.getReadName()+"\t"+s.getReferenceName()+"\t"+s.getAlignmentStart()+"\t"+s.getAlignmentEnd()+"\t"+s.getReadNegativeStrandFlag()+"\t"+s.getMappingQuality()+"\t"+s.getCigarString());
-			writer.write(s.getReadName()+"\t"+s.getReferenceName()+"\t"+s.getAlignmentStart()+"\t"+s.getAlignmentEnd()+"\t"+s.getReadNegativeStrandFlag()+"\t"+s.getMappingQuality()+"\t"+s.getCigarString()+"\n");
+			//System.out.println(s.getReadName()+"\t"+s.getFlags()+"\t"+s.getReferenceName()+"\t"+s.getAlignmentStart()+"\t"+s.getAlignmentEnd()+"\t"+s.getReadNegativeStrandFlag()+"\t"+s.getMappingQuality()+"\t"+s.getCigarString());
+			writer.write(s.getReadName()+"\t"+s.getFlags()+"\t"+s.getReferenceName()+"\t"+s.getAlignmentStart()+"\t"+s.getAlignmentEnd()+"\t"+s.getReadNegativeStrandFlag()+"\t"+s.getMappingQuality()+"\t"+s.getCigarString()+"\n");
 			if(count % 500000 == 0) 
 				System.out.println("  record "+count+"...");
 			count++;
@@ -57,6 +57,7 @@ public class SimpleSAMRecordParser {
 		System.out.println("\t<input_bam_file> is the input file");
 		System.out.println("\t<output_file> is a tab-delimited file with the following columns:");
 		System.out.println("\t\t<name>\tRecord name");
+		System.out.println("\t\t<flag>\tSAM Flag");
 		System.out.println("\t\t<chr>\tChomosome (or reference) name");
 		System.out.println("\t\t<start>\talignment start (softclipped, according to Picard)");
 		System.out.println("\t\t<end>\talignment end (softclipped, according to Picard)");
