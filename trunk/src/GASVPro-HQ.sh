@@ -32,12 +32,13 @@ BAMFILE= ##BAMFILE
 GASVDIR= ##GASVDIRECTORY               
 
 #OPTIONAL (set to NULL if not being used):
-UNIQUEFILE= ##UNIQUENESSFILE
+UNIQUEFILE=NULL ##UNIQUENESSFILE
 MAXUNIQUEVAL=NULL               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL                #default 0
 MINCLUSTER=NULL                 #default 4
 MAXIMAL=FALSE			#use GASV's --maximal flag. (use TRUE or FALSE)
+OUTPUT=NULL         #desired GASV cluster output (default is intervals format)
 
 
 ###############################
@@ -171,6 +172,16 @@ fi
 echo "\n===================================\n\n *** Pruning Clusters... *** \n\n===================================\n"
 
 $GASVDIR/scripts/GASVPruneClusters.pl $DATEPREFIX.gasv.in.clusters.GASVPro.clusters
+
+###Final Formatting GASVProClusters###
+
+#echo "====================\n\n Formatting GASVPro Clusters.... \n\n===================="
+
+#if [ "$OUTPUT" != "NULL" ]; then
+#   echo "Formatting Clusters"
+#    $GASVDIR/bin/convertClusters $DATEPREFIX.gasv.in.clusters.GASVPro.clusters $OUTPUT
+#    $GASVDIR/bin/convertClusters $DATEPREFIX.gasv.in.clusters.GASVPro.clusters.pruned.clusters $OUTPUT
+#fi
 
 
 echo "===================\n\n GASVPro-HQ Completed Successfully \n\n===================\n"

@@ -34,7 +34,7 @@ public class ClusterESP{
 	/** note that none of these have a trailing newline, so need to add it */
 	private static final String ESP_HEAD_STD = "#Cluster_ID:\tLeftChr:\tLeftBreakPoint:\tRightChr:\tRightBreakPoint:\tNum PRS:\tLocalization:\tType:";
 	private static final String ESP_HEAD_READS = "#Cluster_ID:\tLeftChr:\tLeftBreakPoint:\tRightChr:\tRightBreakPoint:\tNum PRS:\tLocalization:\tType:\tList of PRS:";
-	private static final String ESP_HEAD_REGIONS = "#Cluster_ID:\tNum PES:\tLocalization:\tType:\tList of PRS:\t LeftChr:\tRightChr:\tBoundary Points:";
+	private static final String ESP_HEAD_REGIONS = "#Cluster_ID:\tNum PRS:\tLocalization:\tType:\tList of PRS:\t LeftChr:\tRightChr:\tBoundary Points:";
 	private static RandomAccessFile tmpFile = null;
 	private static ArrayList<BreakRegion> cLocal = new ArrayList<BreakRegion>();
 
