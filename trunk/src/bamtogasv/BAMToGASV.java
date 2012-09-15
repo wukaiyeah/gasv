@@ -1259,7 +1259,7 @@ public class BAMToGASV {
 
 		// If this record has high mapping quality, then store it.
 		// If this record has low mapping quality AND the write-lowq flag is set, store it too.
-		if(s.getMappingQuality() > MAPPING_QUALITY){ 	
+		if(s.getMappingQuality() >= MAPPING_QUALITY){ 	
 
 			// Have we seen it's mate? First check HIGHQ, then check LOWQ
 			if(HIGHQ_INDICATOR.containsKey(readname)) {
@@ -1308,7 +1308,7 @@ public class BAMToGASV {
 				HIGHQ_INDICATOR.put(readname,s.getSAMString());
 			} // END high quality read conditional 
 
-		} else { // (s.getMappingQuality() <= MAPPING_QUALITY)
+		} else { // (s.getMappingQuality() < MAPPING_QUALITY)
 
 			// Have we seen it's mate? First check HIGHQ, then check LOWQ
 			if(HIGHQ_INDICATOR.containsKey(readname)) {
