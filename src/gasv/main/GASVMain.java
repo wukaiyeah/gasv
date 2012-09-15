@@ -671,5 +671,7 @@ public class GASVMain{
 		}
 
 	
-	}	
+	
+        System.out.println("GASV Program has Finished Successfully.");
+    }
 }

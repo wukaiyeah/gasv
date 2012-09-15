@@ -21,6 +21,7 @@ g++ -O2 -w src/gasvPro/GASVPro-graph.cpp -o bin/GASVPro-graph
 echo "Installing GASVPro-mcmc..."
 g++ -O2 -w src/gasvPro/GASVPro-mcmc.cpp -o bin/GASVPro-mcmc
 
-
+echo "Installing Cluster Converter..."
+g++ -O2 -w src/gasvPro/convertClusters.cpp -o bin/convertClusters
 
 echo "Installation complete. Check for errors." 	

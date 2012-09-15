@@ -41,6 +41,7 @@ MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL                #default 0
 MINCLUSTER=NULL               	#default 4
 MAXIMAL=TRUE			#use GASV's --maximal flag. (use TRUE or FALSE)
+OUTPUT=NULL         #desired GASV cluster output (default is intervals format)
 BURNIN=NULL			#GASVPro-mcmc parameter
 SAMPLE=NULL			#GASVPro-mcmc parameter
 
@@ -171,7 +172,6 @@ else
 fi
 
 
-
 $GASVDIR/bin/GASVPro-graph BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.clusters BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.coverage $WORKINGDIR
 
 ### Run GASVPro-mcmc ###
@@ -188,4 +188,20 @@ $GASVDIR/bin/GASVPro-mcmc BAMToGASV.gasvpro.in $WORKINGDIR
 
 echo "====================\n\n Combining MCMC results.... \n\n===================="
 cat BAMToGASV.gasvpro.in_sv_*.MCMCThreshold.clusters >> BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters
+
+###Prune Clusters###
+
+echo "\n===================================\n\n *** Pruning Clusters... *** \n\n===================================\n"
+
+$GASVDIR/scripts/GASVPruneClusters.pl BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters
+
+#echo "====================\n\n Formatting GASVPro Clusters.... \n\n===================="
+
+#if [ "$OUTPUT" -ne "NULL" ]; then
+#    echo "Formatting Clusters"
+#    $GASVDIR/bin/convertClusters BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters $OUTPUT
+#    $GASVDIR/bin/convertClusters BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters.pruned.clusters $OUTPUT
+#fi
+
+
 echo "====================\n\n *** GASVPro complete *** \n\n===================="

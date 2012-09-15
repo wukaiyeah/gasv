@@ -614,8 +614,8 @@ int main(int argc, char* argv[]){
 		graph.open("graphArgs",ios::out);
 	}
 	
-	outFile2 << "#Cluster\tNumPRS\tLocalization\tType\tPR_List\tLeftChr\tRightChr\tBoundary_Pts\tLog_Liklihood_Ratio\tvarCopyNumber" << endl << flush;
-	outFile1 << "#Cluster\tType\tNumDiscordants\tLog_Prob_Variant\tLog_Prob_No_Variant\tBestA\tBestB\tCovL\tCovR\tMapL\tMapR\tcode" << endl << flush;
+	outFile2 << "#Cluster_ID:\tNum PRS:\tLocalization:\tType:\tList of PRS:\tLeftChr:\tRightChr:\tBoundary Points:\tLog_Likelihood_Ratio:" << endl << flush;
+	outFile1 << "#Cluster_ID:\tType:\tNumDiscordants:\tLog_Prob_Variant:\tLog_Prob_No_Variant:\tBestA:\tBestB:\tCovL:\tCovR:\tMapL:\tMapR:\tcode:" << endl << flush;
 	
 	
 	
