@@ -1178,7 +1178,7 @@ public class BAMToGASV_AMBIG {
 	 * Parse *Special Sam record
 	 */
 	private void parseSAMRecordAmbi(SAMRecord s1, SAMRecord s2, Library lib, int counter){
-		if(s1.getMappingQuality() > MAPPING_QUALITY && s2.getMappingQuality() > MAPPING_QUALITY){ 	
+		if(s1.getMappingQuality() >= MAPPING_QUALITY && s2.getMappingQuality() >= MAPPING_QUALITY){ 	
 
 			// make a GASVPair object
 			GASVPair pobj = null;
@@ -1238,7 +1238,7 @@ public class BAMToGASV_AMBIG {
 
 		// If this record has high mapping quality, then store it.
 		// If this record has low mapping quality AND the write-lowq flag is set, store it too.
-		if(s.getMappingQuality() > MAPPING_QUALITY){ 	
+		if(s.getMappingQuality() >= MAPPING_QUALITY){ 	
 
 			// Have we seen it's mate? First check HIGHQ, then check LOWQ
 			if(HIGHQ_INDICATOR.containsKey(readname)) {
@@ -1278,7 +1278,7 @@ public class BAMToGASV_AMBIG {
 				HIGHQ_INDICATOR.put(readname,1);
 			} // END high quality read conditional 
 
-		} else { // (s.getMappingQuality() <= MAPPING_QUALITY)
+		} else { // (s.getMappingQuality() < MAPPING_QUALITY)
 
 			// Have we seen it's mate? First check HIGHQ, 
 			if(HIGHQ_INDICATOR.containsKey(readname)) {

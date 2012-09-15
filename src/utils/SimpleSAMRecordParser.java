@@ -26,6 +26,9 @@ import java.io.IOException;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 
+import java.util.Iterator;
+import net.sf.samtools.SAMRecord.SAMTagAndValue;
+
 public class SimpleSAMRecordParser {
 	public static void main(String[] args) throws IOException {
 		
@@ -39,11 +42,21 @@ public class SimpleSAMRecordParser {
 		int count = 0;
 		BufferedWriter writer = new BufferedWriter(new FileWriter(outfile));
 		SAMFileReader in = new SAMFileReader(new File(bamfile));
-		//System.out.println("Name\tSAMFlag\tChr\tStart\tEnd\tNegativeStrand?\tQuality\tCIGAR");
-		writer.write("Name\tSAMFlag\tChr\tStart\tEnd\tNegativeStrand?\tQuality\tCIGAR\n");
+		
+		writer.write("Name\tSAMFlag\tChr\tStart\tEnd\tNegativeStrand?\tQuality\tCIGAR\tNM\n");
 		for (SAMRecord s : in) {
-			//System.out.println(s.getReadName()+"\t"+s.getFlags()+"\t"+s.getReferenceName()+"\t"+s.getAlignmentStart()+"\t"+s.getAlignmentEnd()+"\t"+s.getReadNegativeStrandFlag()+"\t"+s.getMappingQuality()+"\t"+s.getCigarString());
-			writer.write(s.getReadName()+"\t"+s.getFlags()+"\t"+s.getReferenceName()+"\t"+s.getAlignmentStart()+"\t"+s.getAlignmentEnd()+"\t"+s.getReadNegativeStrandFlag()+"\t"+s.getMappingQuality()+"\t"+s.getCigarString()+"\n");
+			/*
+			Iterator<SAMTagAndValue> iter = s.getAttributes().iterator();
+			while(iter.hasNext()) {
+				SAMTagAndValue val = iter.next();
+				System.out.println(val.tag+" " +val.value);
+			}
+			*/
+		
+			writer.write(s.getReadName()+"\t"+s.getFlags()+"\t"+s.getReferenceName()+"\t"+
+					s.getAlignmentStart()+"\t"+s.getAlignmentEnd()+"\t"+
+					s.getReadNegativeStrandFlag()+"\t"+s.getMappingQuality()+"\t"+
+					s.getCigarString()+"\t"+s.getAttribute("NM")+"\n");
 			if(count % 500000 == 0) 
 				System.out.println("  record "+count+"...");
 			count++;
@@ -64,6 +77,7 @@ public class SimpleSAMRecordParser {
 		System.out.println("\t\t<neg>\ttrue if the alignment is on the negative strand, false otherwise");
 		System.out.println("\t\t<qual>\tmapping quality");
 		System.out.println("\t\t<cigar>\tCIGAR string");
+		System.out.println("\t\t<NM>\tEdit distance to the reference (excluding clipping)");
 		
 	}
 }
