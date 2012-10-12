@@ -29,17 +29,21 @@
 
 #REQUIRED:
 BAMFILE= ##BAMFILE
-GASVDIR= ##GASVDIRECTORY               
+GASVDIR= ##GASVDIRECTORY
 
-#OPTIONAL (set to NULL if not being used):
-UNIQUEFILE=NULL ##UNIQUENESSFILE
+#JAVA JAR PREFIX
+JAVAPREFIX="java -jar -Xms512m -Xmx2g"
+
+#OPTIONAL (set to NULL/FALSE if not being used):
+#(See GASV Documentation for more information)
+UNIQUEFILE=NULL                 ##UNIQUENESSFILE
 MAXUNIQUEVAL=NULL               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
-LRTHRESHOLD=NULL                #default 0
-MINCLUSTER=NULL                 #default 4
-MAXIMAL=FALSE			#use GASV's --maximal flag. (use TRUE or FALSE)
-OUTPUT=NULL         #desired GASV cluster output (default is intervals format)
-
+LRTHRESHOLD=NULL                #Default: 0
+MINCLUSTER=NULL                 #Default: 4
+MAXIMAL=FALSE                   #use GASV's --maximal flag. (Default: FALSE)
+OUTPUT=NULL                     #desired GASV cluster output format (Default: intervals)
+TRANSLOCATIONS=NULL             #analyze translocations with GASVPro (Default: FALSE)
 
 ###############################
 #DO NOT MODIFY BELOW THIS POINT
@@ -75,9 +79,6 @@ else
 fi
 
 
-
-
-
 if [ "$LRTHRESHOLD" = "NULL" ]; then
     echo "      No LR Threshold Provided"
 else
@@ -97,7 +98,7 @@ echo $S1 $S2
 ### Run BAMtoGASV ###
 
 echo "===================================\n\n *** Running BAMToGASV....*** \n\n===================================\n"
-java -jar -Xms512m -Xmx2g $GASVDIR/bin/BAMToGASV.jar $BAMFILE -GASVPRO true -LIBRARY_SEPARATED all -OUTPUT_PREFIX $DATEPREFIX
+$JAVAPREFIX $GASVDIR/bin/BAMToGASV.jar $BAMFILE -GASVPRO true -LIBRARY_SEPARATED all -OUTPUT_PREFIX $DATEPREFIX
 OUT=$?
 if [ "$OUT" != 0 ]; then
 	echo "Warning: BAMToGASV aborted. Stopping pipeline."
@@ -115,15 +116,15 @@ fi
 
 if [ "$MINCLUSTER" = "NULL" ]; then
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2g $GASVDIR/bin/GASV.jar  --output regions --maximal --batch $DATEPREFIX.gasv.in
+        $JAVAPREFIX $GASVDIR/bin/GASV.jar  --output regions --maximal --batch $DATEPREFIX.gasv.in
     else
-	java -jar -Xms512m -Xmx2g $GASVDIR/bin/GASV.jar --output regions --batch $DATEPREFIX.gasv.in
+        $JAVAPREFIX $GASVDIR/bin/GASV.jar --output regions --batch $DATEPREFIX.gasv.in
     fi
 else
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2g $GASVDIR/bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $DATEPREFIX.gasv.in
+        $JAVAPREFIX $GASVDIR/bin/GASV.jar --output regions --maximal --minClusterSize $MINCLUSTER --batch $DATEPREFIX.gasv.in
     else
-    	java -jar -Xms512m -Xmx2g $GASVDIR/bin/GASV.jar  --output regions --minClusterSize $MINCLUSTER --batch $DATEPREFIX.gasv.in
+    	$JAVAPREFIX $GASVDIR/bin/GASV.jar  --output regions --minClusterSize $MINCLUSTER --batch $DATEPREFIX.gasv.in
     fi
 fi
 
@@ -156,6 +157,10 @@ if [ "$MAXIMAL" = "FALSE" ]; then
     echo "maxmode: true" >> $DATEPREFIX.gasvpro.in
 fi
 
+if [ "$TRANSLOCATIONS" != "FALSE" ]; then
+    echo "Translocations: true" >> $DATEPREFIX.gasvpro.in
+fi
+
 cat $DATEPREFIX.gasvpro.in
 echo "====================\n\n"
 
@@ -175,14 +180,17 @@ $GASVDIR/scripts/GASVPruneClusters.pl $DATEPREFIX.gasv.in.clusters.GASVPro.clust
 
 ###Final Formatting GASVProClusters###
 
-#echo "====================\n\n Formatting GASVPro Clusters.... \n\n===================="
+echo "====================\n\n Formatting GASVPro Clusters.... \n\n===================="
 
-#if [ "$OUTPUT" != "NULL" ]; then
-#   echo "Formatting Clusters"
-#    $GASVDIR/bin/convertClusters $DATEPREFIX.gasv.in.clusters.GASVPro.clusters $OUTPUT
-#    $GASVDIR/bin/convertClusters $DATEPREFIX.gasv.in.clusters.GASVPro.clusters.pruned.clusters $OUTPUT
-#fi
-
+if [ "$OUTPUT" = "NULL" ]; then
+    $GASVDIR/bin/convertClusters $DATEPREFIX.gasv.in.clusters
+    $GASVDIR/bin/convertClusters $DATEPREFIX.gasv.in.clusters.GASVPro.clusters
+    $GASVDIR/bin/convertClusters $DATEPREFIX.gasv.in.clusters.GASVPro.clusters.pruned.clusters
+else
+    $GASVDIR/bin/convertClusters $DATEPREFIX.gasv.in.clusters $OUTPUT
+    $GASVDIR/bin/convertClusters $DATEPREFIX.gasv.in.clusters.GASVPro.clusters $OUTPUT
+    $GASVDIR/bin/convertClusters $DATEPREFIX.gasv.in.clusters.GASVPro.clusters.pruned.clusters $OUTPUT
+fi
 
 echo "===================\n\n GASVPro-HQ Completed Successfully \n\n===================\n"
 

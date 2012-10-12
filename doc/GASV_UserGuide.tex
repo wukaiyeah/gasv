@@ -45,7 +45,7 @@
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
 \title{User Guide for GASV Software Package
-\\GASV (Version 2.0) and GASVPro (Version 1.1)}
+\\GASV (Version 2.0) and GASVPro (Version 1.2)}
 %\author{The Author}
 \date{August 15, 2012}                                           % Activate to display a given date or no date
 
@@ -85,8 +85,8 @@ S. Sindi, S. Onal, L. Peng, H. Wu, B.J. Raphael. An Integrative Probabilistic Mo
 
 \noindent This product contains software developed by Erik Garrison (\url{http://github.com/ekg}).\\ \\ 
 \
-\noindent Version: 1.1\\
-\noindent Version Date: August 14, 2012
+\noindent Version: 1.2\\
+\noindent Version Date: October 12, 2012
 
 \begin{wrapfigure}{l}{0.55\textwidth}
   \begin{center}
@@ -162,7 +162,9 @@ Building GASV from the source requires ant, available at: \url{http://ant.apache
 \noindent \texttt{bin/BAMToGASV.jar }\\
 \noindent \texttt{bin/GASVPro-CC}\\
 \noindent \texttt{bin/GASVPro-graph}\\
-\noindent \texttt{bin/GASVPro-mcmc}
+\noindent \texttt{bin/GASVPro-mcmc}\\
+\noindent \texttt{bin/GASVPro.sh}\\
+\noindent \texttt{bin/GASVPro-HQ.sh}
 }
 \end{framed}
 
@@ -326,30 +328,48 @@ To aid users in running the GASVPro pipeline, we have provided paramaterized scr
 Most users should begin with the GASVPro-HQ script. However, our scripts can be easily modified to fit a desired workflow and users are encouraged to adapt these scripts or develop their own. 
 
 \subsection{GASVPro-HQ (High Quality)}
-For data sets with only unique read mappings, we have created a script called \verb+GASVPro-HQ.sh+. To use this script, change the top section of the script file to match desired parameters. The parameters appear as follows: 
+For data sets with only unique read mappings, we have created a script called \texttt{GASVPro-HQ.sh} which runs the GASVPro-HQ (High Quality) pipeline. To use this script, change the top section of the script file to match desired parameters. The parameters appear as follows: 
+
 \begin{Verbatim}[frame=single]
 #REQUIRED:
-BAMFILE=example.bam
-GASVDIR=/home/gasv
+BAMFILE=Example.bam ##BAMFILE
+GASVDIR=/Users/suzannesindi/Documents/PROJECTS/ben/GASV_DIR/gasv ##GASVDIRECTORY
 
-#OPTIONAL (set to NULL if not being used):
-UNIQUEFILE=NULL
-MAXUNIQUEVAL=NULL		#MUST SPECIFY IF UNIQUEFILE IS GIVEN
-MINSCALEDUNIQUE=NULL             #MUST SPECIFY IF UNIQUEFILE IS GIVEN
-LRTHRESHOLD=NULL	         #default 0
-MINCLUSTER=NULL	  	#default 4
+#JAVA JAR PREFIX
+JAVAPREFIX="java -jar -Xms512m -Xmx2g"
+
+#OPTIONAL (set to NULL/FALSE if not being used):
+#(See GASV Documentation for more information)
+UNIQUEFILE=NULL        ##UNIQUENESSFILE
+MAXUNIQUEVAL=NULL      #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+MINSCALEDUNIQUE=NULL   #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+LRTHRESHOLD=NULL       #Default: 0
+MINCLUSTER=NULL        #Default: 4
+MAXIMAL=FALSE          #use GASV's --maximal flag. (Default: FALSE)
+OUTPUT=NULL            #desired GASV cluster output format (Default: intervals)
+TRANSLOCATIONS=NULL    #analyze translocations with GASVPro (Default: FALSE)
 \end{Verbatim}
+
+\begin{itemize}
+\item Required:
 \begin{itemize}
 \item {\bf BAMFILE:} The \verb+.bam+ file that will go through the pipeline. It is required.
 \item {\bf GASVDIR:} The directory that contains all of the gasv files.
-\item {\bf UNIQUEFILE:} The file containing a uniqueness track, used in GASVPro-CC. It is optional.
+\end{itemize}
+\item {\bf JAVAPREFIX:} The command to execute a jar file. (Note: The options \texttt{-Xms} and  \texttt{-Xmx} specify the memory usage of java and can be changed as necessary.)
+\item Optional:
+\begin{itemize}
+\item {\bf UNIQUEFILE:} The file containing a uniqueness track, used in GASVPro-CC. 
 \item {\bf MAXUNIQUEVAL:} The highest numerical uniqueness value given to a fragment in the unique file. REQUIRED if a unique file is given.
 \item {\bf MINSCALEDUNIQUE:} The minimum value to which the uniqueness values can be scaled. REQUIRED if a unique file is given
-\item {\bf LRTHRESHOLD:} The minimum liklihood threshold past which variants will be reported from GASVPro-CC. It is optional.
-\item {\bf MINCLUSTER: } The minimum cluster size. It is optional.
+\item {\bf LRTHRESHOLD:} The minimum liklihood threshold past which variants will be reported from GASVPro-CC. (Default: 0, will only report variants with positive likelihood.)
+\item {\bf MINCLUSTER: } The minimum cluster size. (Default: 4)
+\item {\bf OUTPUT:} Specifies the output format of cluster files (See Section~\ref{sec:GASVProHQOutput}.) (Default: Intervals) 
+\item {\bf TRANSLOCATIONS:} Whether or not to analyze translocations present in the data. (Default: False)
+\end{itemize}
 \end{itemize}
 
-\noindent After the desired parameters are chosen, be sure to save the file. Since this file needs to be executable, run 
+\noindent After the desired parameters are chosen, be sure to save the file. To ensure the file is executable, users may need to run 
 \begin{Verbatim}[frame=single]
 chmod 777 GASVPro-HQ.sh
 \end{Verbatim}
@@ -358,8 +378,9 @@ Now it is possible to run GASVPro-HQ.sh. Initiate the pipeline by running
 ./GASVPro-HQ.sh
 \end{Verbatim}
 
-\subsubsection{Output of GASVPro-HQ.sh}
-GASVPro-HQ.sh produces quite a few output files, only a few of which are the ``final products" of the entire pipeline. The following files are produced by running GASVPro-HQ:
+\subsubsection{Output of \texttt{GASVPro-HQ.sh}}
+\label{sec:GASVProHQOutput}
+\texttt{GASVPro-HQ.sh} produces a number of, only a few of which are the ``final SV predictions". The following files are produced by running \texttt{GASVPro-HQ.sh}:
 \begin{framed}
 \noindent \textit {date\_time}\verb+.gasv+\\				
 \textit{date\_time}\verb+.gasv.in.clusters+\\
@@ -374,51 +395,82 @@ GASVPro-HQ.sh produces quite a few output files, only a few of which are the ``f
 \textit {date\_time}\verb+_all.insertion+\\
 \textit {date\_time}\verb+_all.translocation+
 \end{framed}
-\noindent The final output of the pipeline is \textit {date\_time}\verb+.gasv.in.clusters.GASVPro.clusters+, containing SV clusters in regions format,			
-\textit {date\_time}\verb+.gasv.in.clusters.GASVPro.clusters.pruned.clusters+, containing a pruned subset of those clusters, and 
-\textit {date\_time}\verb+.gasv.in.clusters.GASVPro.coverage+, containing extra information about each cluster (such as concordant coverage) from GASVPro-CC. 
 
+The final predictions are specified in the three files with \texttt{GASVPro} in the file name. (Note that all remaining output files are generated by earlier steps in the GASVPro pipeline: BAMToGASV and GASV). For the three \texttt{GASVPro} files: 
+\begin{itemize}
+\item the two with \texttt{clusters} in the file name represent the final set of predictions
+\item the file with the \texttt{*pruned.clusters} lists the predictions remaining after pruning for redundant predictions (as described in (Sindi et al, 2012)).
+\item the \texttt{*coverage} file produced lists useful information computed for each GASVPro prediction (such as depth of coverage and local mapability if a uniqueness track was provided).
+\end{itemize}
+
+The GASVPro clusters files are in the GASV clusters format specified in the \texttt{OUTPUT} optional flag (default is intervals), but have an extra column for the log-likelihood ratio of a prediction. 
 \subsection{GASVPro}
 For users with both a high-quality BAM file of unique mappings and a BAM file of lower-quality and possibly multiple mappings. The GASVPro pipeline will incorporate both types of data. 
 
 We have created a script called \verb+GASVPro.sh+ which will run this pipeline completely given two BAM files. As above, it is necessary to change the options at the top of the script file to match the desired parameters. The \verb+GASVPro.sh+ parameters appear as follows:
 \begin {Verbatim}[frame=single]
 #REQUIRED:
-BAMFILEHQ=/path/to/HQ.bam
-BAMFILELQ=/path/to/Ambiguous.bam
-WORKINGDIR=/FULL/path/to/output/directory   #GIVE FULL PATH!
-GASVDIR=/path/to/gasv/
+BAMFILEHQ=path/to/HQ.bam    ##BAMFILEHQ
+BAMFILELQ=path/to/Ambig.bam ##BAMFILELQ
+MCMCTMPDIR=mcmcTmp          ##MCMCTMPDIR #GIVE FULL PATH!
+GASVDIR=/home/gasv          ##GASVDIRECTORY
                   
-#OPTIONAL (set to NULL if not being used):
-UNIQUEFILE=NULL
-MAXUNIQUEVAL=NULL               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
-MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
-LRTHRESHOLD=NULL   #default 0
-MINCLUSTER=1       #default 4
-MAXIMAL=FALSE      #use GASV's --maximal flag. (use TRUE or FALSE)
+#JAVA JAR PREFIX
+JAVAPREFIX="java -jar -Xms512m -Xmx2g"
+
+#OPTIONAL (set to NULL/FALSE if not being used):
+#(See GASV Documentation for more information)
+UNIQUEFILE=NULL         ##UNIQUENESSFILE
+MAXUNIQUEVAL=NULL       #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+MINSCALEDUNIQUE=NULL    #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+LRTHRESHOLD=NULL        #Default: 0
+MINCLUSTER=NULL         #Default: 4
+MAXIMAL=TRUE            #use GASV's --maximal flag. (use TRUE or FALSE)
+OUTPUT=NULL             #desired GASV cluster output (Default: intervals)
+TRANSLOCATIONS=TRUE     #analyze translocations with GASVPro (Default: FALSE)
+BURNIN=NULL             #GASVPro-mcmc parameter (Default: 100000)
+SAMPLE=NULL             #GASVPro-mcmc parameter (Default: 900000)
+CLEAN=NULL              #Clean/Remove working directory (Default: TRUE)
 \end{Verbatim}
 
-\noindent After the desired parameters are chosen, be sure to save the file. To ensure the file is executable, run 
+Since many of the parameters are identical to \texttt{GASVPro-HQ.sh}, we detail below only the parameters specific to \texttt{GASVPro.sh}:
+
+\begin{itemize}
+\item Required:
+\begin{itemize}
+\item \textbf{BAMFILEHQ:} Path to the BAM file of high-quality unique alignments.
+\item \textbf{BAMFILELQ:} Path to lower-quality BAM file with possibly multiply aligned data. (Note: If multiple alignments are present, the BAM file must be sorted by read name.)
+\item \textbf{MCMCTMPDIR:} The MCMC code will use this directory to output the many files it will generate. (Note: This directory will be created by GASVPro-graph if it does not already exist.)
+\end{itemize}
+\item Optional:
+\begin{itemize}
+\item \textbf{BURNIN:} In the MCMC sampling, the number of ``burn-in'' steps. (Default: 100000).
+\item \textbf{SAMPLE:} In the MCMC sampling, the number of samples to use when exploring the space of mapping assignments. (Default: 900000)
+\item \textbf{CLEAN:} Clean/Remove working directory \texttt{MCMCTMPDIR} (Default: True). The MCMC code will generate many files during its execution. Although the final set of predictions will be reported, some users may with to retain this temperadirectory.
+\end{itemize}
+\end{itemize}
+
+After the desired parameters are chosen, be sure to save the file. To ensure the file is executable, users may need to run 
 \begin{Verbatim}[frame=single]
 chmod 777 GASVPro-HQ.sh
 \end{Verbatim}
-Now it is possible to run GASVPro.sh. Initiate the pipeline by running 
+Now it is possible to run \texttt{GASVPro.sh}. Initiate the pipeline by running 
 \begin{Verbatim}[frame=single]
 ./GASVPro.sh
 \end{Verbatim}
 
-\subsubsection{Output of GASVPro.sh}
-The output of GASVPro.sh includes all of the output of GASVPro-HQ.sh {(\em one set of SV files for each of the HQ and LQ BAMs}, with combined gasv and gasvpro clusters files), plus the following additional files contained within the specified output directory:
-\begin{framed}
-\noindent \verb+sv_*.sv+ (many files)\\
-\verb+BAMToGASV.gasvpro.in_ALL.MCMCThreshold.clusters+\\
-\verb+BAMToGASV.gasvpro.in_sv_*.MCMCThreshold.clusters+ (many files)\\
-\verb+BAMToGASV.gasvpro.in_sv_*.PR.results+ (many files)\\
-\verb+BAMToGASV.gasvpro.in_sv_*.Variant.results+ (many files)\\
-\verb+p_star.summary+\\
-\verb+svFileList.summary+
-\end{framed}
-\noindent These files are the final output of the GASVPro.sh pipeline. The final set of predictions is given in \verb+BAMToGASV.gasvpro.in_ALL.MCMCThreshold.clusters+. See the GASVPro-graph and GASVPro-mcmc sections (Sections {\bf \ref{sec:gasvpro-graph}} and {\bf \ref{sec:gasvpro-mcmc}}, respectively) for details.
+\subsubsection{Output of \texttt{GASVPro.sh}}
+The output of \texttt{GASVPro.sh} includes all of the output of GASVPro-HQ.sh {(\em one set of SV files for each of the HQ and LQ BAMs}, with combined gasv and gasvpro clusters files) 
+The final set of predictions are given in the following two files:
+
+\begin{Verbatim}[frame=single]
+BAMToGASV.gasvpro.in_ALL.MCMCThreshold.clusters
+BAMToGASV.gasvpro.in_ALL.MCMCThreshold.clusters.pruned.clusters
+\end{Verbatim}
+
+\noindent As for \texttt{GASVPro-HQ.sh}, the pruned clusters represents a subset of predictions retained after pruning as described in Sindi et al. 2012.
+
+During the execution of GASVPro-graph and GASPro-mcmc many files are generated in the user-specified working directory. Users interested in more detail can choose to retain this directory by setting the optional parameter \texttt{CLEAN} to false. The files generated are described in more detail in the GASVPro-graph and GASVPro-mcmc sections (Sections {\bf \ref{sec:gasvpro-graph}} and {\bf \ref{sec:gasvpro-mcmc}}, respectively).
 
 \section{BAMToGASV}
 

@@ -47,29 +47,36 @@ my $numVariants = 0;
 my @type;
 my @names;
 
-
+my $HEADER = "";
 my $totalVariants = 0;
 while(my $line=<F>){
 	chomp($line);
-	my @args=split(/\t/,$line); 
-	my $loc = $args[2];
 	
-	my $flag = 1;
-	if($METHOD eq "ESP"){ $flag = 1;}
+	my $firstChar = substr($line,0,1);
+	if($firstChar eq "#"){
+		$HEADER = $line;
+	}
 	else{
-		$flag = 1;
-		#if(getLike($line)>=0){ $flag = 1;}
-		#else{ $flag = 0; }
-	}
+		my @args=split(/\t/,$line); 
+		my $loc = $args[2];
+	
+		my $flag = 1;
+		if($METHOD eq "ESP"){ $flag = 1;}
+		else{
+			$flag = 1;
+			#if(getLike($line)>=0){ $flag = 1;}
+			#else{ $flag = 0; }
+		}
  
-	if($loc>0 and $flag == 1){
-		$names[$numVariants] = $args[0];
-		$type[$numVariants] = substr($args[3],0,1);
-		$variants[$numVariants] = $line;
-		$printFlag[$numVariants] = 0;
-		$numVariants++;
+		if($loc>0 and $flag == 1){
+			$names[$numVariants] = $args[0];
+			$type[$numVariants] = substr($args[3],0,1);
+			$variants[$numVariants] = $line;
+			$printFlag[$numVariants] = 0;
+			$numVariants++;
+		}
+		$totalVariants++;
 	}
-	$totalVariants++;
 }
 close(F);
 
@@ -119,6 +126,7 @@ for(my $i = 0; $i<$numVariants; $i++){
 	}
 }
 
+if(length($HEADER)>0){ print O "$HEADER\n"; }
 for(my $i = 0; $i<$numVariants; $i++){
 	if($printFlag[$i] == 0){
 		print O "$variants[$i]\n";
@@ -200,7 +208,7 @@ sub overlapVariant{
 	##Note: The below is ONLY valid in the case of chrL = chrR
 	##      Need a different criteria for translocations!
 	
-	if( ($chr1L eq $chr2L) and ($chr1R eq $chr2R) ){
+	if( ($chr1L eq $chr2L) and ($chr1R eq $chr2R)){
 		#Step 1: Get Intervals;
 		my $coordList1 = $args1[7];
 		$coordList1 =~s/\,//g;
@@ -212,46 +220,76 @@ sub overlapVariant{
 		my @coords2    = split(/\s+/,$coordList2);
 		my $numCoords2 = split(/\s+/,$coordList2);
 
+        my $minX1 = $coords1[0];
 		my $maxX1 = $coords1[0];
 		my $minY1 = $coords1[1];
+        my $maxY1 = $coords1[1];
 		for(my $i = 2; $i<$numCoords1; $i = $i+2){
-			if($coords1[$i]>$maxX1){ $maxX1 = $coords1[$i];}
-			if($coords1[$i+1]<$minY1){ $minY1 = $coords1[$i+1]; }
+            if($coords1[$i]  < $minX1){ $minX1 = $coords1[$i];   }
+			if($coords1[$i]  > $maxX1){ $maxX1 = $coords1[$i];   }
+			if($coords1[$i+1]< $minY1){ $minY1 = $coords1[$i+1]; }
+            if($coords1[$i+1]> $maxY1){ $maxY1 = $coords1[$i+1]; }
 		}
-
+        
+        my $minX2 = $coords2[0];
 		my $maxX2 = $coords2[0];
 		my $minY2 = $coords2[1];
+        my $maxY2 = $coords2[1];
 		for(my $i = 2; $i<$numCoords2; $i = $i+2){
-			if($coords2[$i]>$maxX2){ $maxX2 = $coords2[$i];}
-			if($coords2[$i+1]<$minY2){ $minY2 = $coords2[$i+1]; }
+            if($coords2[$i]  < $minX2){ $minX2 = $coords2[$i];   }
+			if($coords2[$i]  > $maxX2){ $maxX2 = $coords2[$i];   }
+			if($coords2[$i+1]< $minY2){ $minY2 = $coords2[$i+1]; }
+            if($coords2[$i+1]> $maxY2){ $maxY2 = $coords2[$i+1]; }
 		}
 		
 		#Step 2: Do the intervals overlap?
-		#NO
-		if($minY2 < $maxX1 or $minY1 < $maxX2){ }
-		#YES
-		else{
-			#Do we have containment?
-			if($maxX1 < $maxX2 and $minY1 > $minY2){ $retVal = 1; }
-			elsif($maxX2 < $maxX1 and $minY2 < $minY1){ $retVal = 1; }
+        #We are Inversion/Deletions/Divergent (On the same chromosome)
+        if($chr1L eq $chr1R){
+            #NO
+            if($minY2 < $maxX1 or $minY1 < $maxX2){ }
+            #YES
+            else{
+                #Do we have containment?
+                if($maxX1 < $maxX2 and $minY1 > $minY2){ $retVal = 1; }
+                elsif($maxX2 < $maxX1 and $minY2 < $minY1){ $retVal = 1; }
 			
-			#THEN FIGURE OUT THE UNION AND INTERSECTION!
-			my $INT_X;
-			my $UNION_X;
-			if($maxX1 < $maxX2){ $UNION_X = $maxX1; $INT_X = $maxX2;}
-			else{ $UNION_X = $maxX2; $INT_X = $maxX1; }
+                #THEN FIGURE OUT THE UNION AND INTERSECTION!
+                my $INT_X;
+                my $UNION_X;
+                if($maxX1 < $maxX2){ $UNION_X = $maxX1; $INT_X = $maxX2;}
+                else{ $UNION_X = $maxX2; $INT_X = $maxX1; }
 			
-			my $INT_Y;
-			my $UNION_Y;
-			if($minY1 < $minY2){ $UNION_Y = $minY2; $INT_Y = $minY1; }
-			else{ $UNION_Y = $minY1; $INT_Y = $minY2; }
+                my $INT_Y;
+                my $UNION_Y;
+                if($minY1 < $minY2){ $UNION_Y = $minY2; $INT_Y = $minY1; }
+                else{ $UNION_Y = $minY1; $INT_Y = $minY2; }
 			
-			my $UNION_LEN = $UNION_Y - $UNION_X + 1;
-			my $INT_LEN   = $INT_Y - $INT_X + 1;
+                my $UNION_LEN = $UNION_Y - $UNION_X + 1;
+                my $INT_LEN   = $INT_Y - $INT_X + 1;
 			
-			if($INT_LEN >=0.5*$UNION_LEN){ $retVal = 1; }
-		}
+                if($INT_LEN >=0.5*$UNION_LEN){ $retVal = 1; }
+            }
+        }
+        #We are Translocaitons (different chromosomes)
+        else{
+            #Do we overlap in X?
+            if( ($maxX1 < $minX2) || ($maxX2 < $minX1) ){
+                #NO:
+            }
+            else{
+                #YES:
+                #Do we overlap in Y?
+                if( ($maxY1 < $minY2) || ($maxY2 < $minY1) ){
+                    #NO
+                }
+                else{
+                    #YES: Overlap in BOTH;
+                    $retVal = 1;
+                }
+            }
+        }
 	}
+
 	
 	return $retVal;
 	

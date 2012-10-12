@@ -28,23 +28,27 @@
 ###############################
 
 #REQUIRED:
-BAMFILEHQ=NULL ##BAMFILEHQ
-BAMFILELQ=NULL ##BAMFILELQ
-WORKINGDIR=NULL ##OUTPUTDIR  			#GIVE FULL PATH!
-GASVDIR=NULL ##GASVDIR
+BAMFILEHQ=  ##BAMFILEHQ
+BAMFILELQ=  ##BAMFILELQ
+MCMCTMPDIR= ##MCMCTMPDIR #GIVE FULL PATH!
+GASVDIR=    ##GASVDIRECTORY
                   
+#JAVA JAR PREFIX
+JAVAPREFIX="java -jar -Xms512m -Xmx2g"
 
-#OPTIONAL (set to NULL if not being used):
-UNIQUEFILE=NULL
-MAXUNIQUEVAL=NULL               #MUST SPECIFY IF UNIQUEFILE IS GIVEN
-MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
-LRTHRESHOLD=NULL                #default 0
-MINCLUSTER=NULL               	#default 4
-MAXIMAL=TRUE			#use GASV's --maximal flag. (use TRUE or FALSE)
-OUTPUT=NULL         #desired GASV cluster output (default is intervals format)
-BURNIN=NULL			#GASVPro-mcmc parameter
-SAMPLE=NULL			#GASVPro-mcmc parameter
-
+#OPTIONAL (set to NULL/FALSE if not being used):
+#(See GASV Documentation for more information)
+UNIQUEFILE=NULL         ##UNIQUENESSFILE
+MAXUNIQUEVAL=NULL       #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+MINSCALEDUNIQUE=NULL    #MUST SPECIFY IF UNIQUEFILE IS GIVEN
+LRTHRESHOLD=NULL        #Default: 0
+MINCLUSTER=NULL         #Default: 4
+MAXIMAL=TRUE            #use GASV's --maximal flag. (Default: FALSE)
+OUTPUT=NULL             #desired GASV cluster output format (Default: intervals)
+TRANSLOCATIONS=NULL     #analyze translocations with GASVPro (Default: FALSE)
+BURNIN=NULL             #GASVPro-mcmc parameter (Default: 100000)
+SAMPLE=NULL             #GASVPro-mcmc parameter (Default: 900000)
+CLEAN=NULL              #Clean/Remove working directory (Default: TRUE)
 
 ###############################
 #DO NOT MODIFY BELOW THIS POINT
@@ -52,7 +56,7 @@ SAMPLE=NULL			#GASVPro-mcmc parameter
 
 ### Check Input ###
 
-echo "\n** GASVPro Running... **\n" 
+echo "\n*** GASVPro Running... ***\n" 
 echo "====Input===="
 if [ -d $GASVDIR ]; then
 	echo "      GASVDIR...ok" 
@@ -103,10 +107,10 @@ echo "=============\n"
 ### Run BAMToGASV and BAMToGASV_AMBIG ###
 
 echo "===================================\n\n *** Running BAMToGASV....*** \n\n===================================\n"
-java -Xms512m -Xmx2048m -jar $GASVDIR/bin/BAMToGASV.jar $BAMFILEHQ -GASVPRO true -LIBRARY_SEPARATED all -OUTPUT_PREFIX BAMToGASV
+$JAVAPREFIX $GASVDIR/bin/BAMToGASV.jar $BAMFILEHQ -GASVPRO true -LIBRARY_SEPARATED all -OUTPUT_PREFIX BAMToGASV
 
 echo "===================================\n\n *** Running BAMToGASV_AMBIG....*** \n\n===================================\n"
-java -jar $GASVDIR/bin/BAMToGASV_AMBIG.jar $BAMFILELQ BAMToGASV.gasv.in -OUTPUT_PREFIX BAMToGASV_AMBIG
+$JAVAPREFIX $GASVDIR/bin/BAMToGASV_AMBIG.jar $BAMFILELQ BAMToGASV.gasv.in -OUTPUT_PREFIX BAMToGASV_AMBIG
 
 ### Run GASV ### 
 
@@ -119,15 +123,15 @@ fi
 
 if [ "$MINCLUSTER" = "NULL" ]; then
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --maximal --batch BAMToGASV_AMBIG.gasv.combined.in
+	$JAVAPREFIX $GASVDIR/bin/GASV.jar --nohead --output regions --maximal --batch BAMToGASV_AMBIG.gasv.combined.in
     else
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --batch BAMToGASV_AMBIG.gasv.combined.in
+	$JAVAPREFIX $GASVDIR/bin/GASV.jar --nohead --output regions --batch BAMToGASV_AMBIG.gasv.combined.in
     fi
 else
     if [ "$MAXIMAL" = "TRUE" ]; then
-	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --maximal --minClusterSize $MINCLUSTER --batch BAMToGASV_AMBIG.gasv.combined.in
+        $JAVAPREFIX $GASVDIR/bin/GASV.jar --nohead --output regions --maximal --minClusterSize $MINCLUSTER --batch BAMToGASV_AMBIG.gasv.combined.in
     else
-    	java -jar -Xms512m -Xmx2048m $GASVDIR/bin/GASV.jar --nohead --output regions --minClusterSize $MINCLUSTER --batch BAMToGASV_AMBIG.gasv.combined.in
+        $JAVAPREFIX $GASVDIR/bin/GASV.jar --nohead --output regions --minClusterSize $MINCLUSTER --batch BAMToGASV_AMBIG.gasv.combined.in
     fi
 fi
 
@@ -154,13 +158,16 @@ if [ "$MAXIMAL" = "FALSE" ]; then
     echo "maxmode: true" >> BAMToGASV.gasvpro.in
 fi
 
+if [ "$TRANSLOCATIONS" != "FALSE" ]; then
+    echo "Translocations: true" >> $DATEPREFIX.gasvpro.in
+fi
+
 echo "runningMCMC: true" >> BAMToGASV.gasvpro.in
 
 cat BAMToGASV.gasvpro.in
 echo "====================\n\n"
 
 $GASVDIR/bin/GASVPro-CC BAMToGASV.gasvpro.in BAMToGASV_AMBIG.gasv.combined.in.clusters
-
 
 ### Run GASVPro-graph ###
 
@@ -172,22 +179,29 @@ else
 fi
 
 
-$GASVDIR/bin/GASVPro-graph BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.clusters BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.coverage $WORKINGDIR
+$GASVDIR/bin/GASVPro-graph BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.clusters BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.coverage $MCMCTMPDIR
 
 ### Run GASVPro-mcmc ###
 
 echo "====================\n\n *** Running GASVPro-mcmc....*** \n\n===================="
-if [ "$BURNIN" -ne "NULL" ]; then
+if [ "$BURNIN" != "NULL" ]; then
   echo "Burnin: $BURNIN" >> BAMToGASV.gasvpro.in
 fi
-if [ "$SAMPLE" -ne "NULL" ]; then
+if [ "$SAMPLE" != "NULL" ]; then
   echo "Sample: $SAMPLE" >> BAMToGASV.gasvpro.in
 fi
 
-$GASVDIR/bin/GASVPro-mcmc BAMToGASV.gasvpro.in $WORKINGDIR
+$GASVDIR/bin/GASVPro-mcmc BAMToGASV.gasvpro.in $MCMCTMPDIR
 
 echo "====================\n\n Combining MCMC results.... \n\n===================="
-cat BAMToGASV.gasvpro.in_sv_*.MCMCThreshold.clusters >> BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters
+cat $MCMCTMPDIR/BAMToGASV.gasvpro.in_sv_*.MCMCThreshold.clusters >> BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters
+
+###Removing Outputfiles from MCMC TmpDirectory if Requested Needed
+
+if [ "$CLEAN" == "NULL" ]; then
+    echo "====================\n\n Removing Working Directory.... \n\n===================="
+    rm -rf $MCMCTMPDIR
+fi
 
 ###Prune Clusters###
 
@@ -195,13 +209,21 @@ echo "\n===================================\n\n *** Pruning Clusters... *** \n\n
 
 $GASVDIR/scripts/GASVPruneClusters.pl BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters
 
-#echo "====================\n\n Formatting GASVPro Clusters.... \n\n===================="
+exit
 
-#if [ "$OUTPUT" -ne "NULL" ]; then
-#    echo "Formatting Clusters"
-#    $GASVDIR/bin/convertClusters BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters $OUTPUT
-#    $GASVDIR/bin/convertClusters BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters.pruned.clusters $OUTPUT
-#fi
+echo "====================\n\n Formatting GASVPro Clusters.... \n\n===================="
 
+if [ "$OUTPUT" = "NULL" ]; then
+   echo "Formatting Clusters"
+   $GASVDIR/bin/convertClusters BAMToGASV_AMBIG.gasv.combined.in.clusters
+   $GASVDIR/bin/convertClusters BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.clusters 
+   $GASVDIR/bin/convertClusters BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters
+   $GASVDIR/bin/convertClusters BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters.pruned.clusters 
+else
+   $GASVDIR/bin/convertClusters BAMToGASV_AMBIG.gasv.combined.in.clusters $OUTPUT
+   $GASVDIR/bin/convertClusters BAMToGASV_AMBIG.gasv.combined.in.clusters.GASVPro.clusters $OUTPUT
+   $GASVDIR/bin/convertClusters BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters $OUTPUT
+   $GASVDIR/bin/convertClusters BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters.pruned.clusters $OUTPUT
+fi
 
 echo "====================\n\n *** GASVPro complete *** \n\n===================="
