@@ -7,8 +7,8 @@ Version: 2.0
 Version Date: May 30, 2012
 
 GASVPro
-Version: 1.1
-Version Date: August 15, 2012
+Version: 1.2
+Version Date: October 12, 2012
 
 Contact: Benjamin Raphael at gasv@cs.brown.edu
 
@@ -81,7 +81,7 @@ CONTENTS =============================================
 * Source code for BAMToGASV.jar and BAMToGASV_AMBIG.jar 
   is in src/bamtogasv
 
-* Source code for GASVPro is in src/gasvpro
+* Source code for GASVPro is in src/gasvPro
 
 * Running ./install builds executable GASV.jar and BAMToGASV.jar in bin/ 
 
@@ -95,7 +95,7 @@ CONTENTS =============================================
 	BAMToGASV.jar re-packages these jar files.	
 
 	For more information visit:
-    <http://picard.sourceforge.net/>	
+       <http://picard.sourceforge.net/>	
 	
 * scripts/ subdirectory:
      - sortPR.bash 
@@ -103,4 +103,7 @@ CONTENTS =============================================
 		BAMToGASV.jar, the paired-read files must be sorted with
 		sortPR.bash prior to running GASV.jar.
 
+     - GASVPruneClusters.pl
+	   Code used by GASVPro.sh and GASVPro-HQ.sh for pruning redundant
+           predictions from set of clusters.
 

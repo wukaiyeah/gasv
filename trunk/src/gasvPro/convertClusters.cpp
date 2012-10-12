@@ -106,8 +106,8 @@ int main(int argc, char* argv[]){
 	
 	//SET DEFAULTS HERE
 	int fileType = 0; //Default file type is intervals!
-	//Step 0:
-	cout << "Step 0: Processing Command Line Arguments.\n";
+	//Step 0 Command Line Argument
+	//cout << "Step 0: Processing Command Line Arguments.\n";
 		
 	if(argc == 3){
 		cout << "|||INPUT PARAMETERS|||" << endl;
@@ -128,8 +128,9 @@ int main(int argc, char* argv[]){
         }
         
     }
-        //Step 1: Process Clusters File;
-	cout << "Step 1: Processing Clusters File.\n";
+
+    //Step 1: Process Clusters File;
+	cout << "Formatting Final Clusters File.\n";
 	
 	int translocationCount = 0;
 	int divergentCount = 0;	
@@ -145,10 +146,7 @@ int main(int argc, char* argv[]){
     string TMP_FILE = CLUSTERFILE + ".tmp";
     string CMD = "cp " + CLUSTERFILE + " " + TMP_FILE;
     system(CMD.c_str());
-    
-    cout << "We've copied the file!\n";
-    exit(-1);
-    
+        
 	ifstream clusterFile(TMP_FILE.c_str(),ios::in);
 			
 	ofstream outFile(CLUSTERFILE.c_str(),ios::out);
@@ -177,7 +175,7 @@ int main(int argc, char* argv[]){
 	//0     1     2     3          4            5   6            7
 	//c1	1	204.2	D	SRR004856.7363154	1	1	746128, 748510, 746333, 748510, 746027, 748204, 746027, 748409
 	while(getline(clusterFile,clusterLine) ){
-		
+        
 		/////////////////////////
 		// Read and Parse Line //
 		/////////////////////////
@@ -187,6 +185,10 @@ int main(int argc, char* argv[]){
 		int numFields = split( v, clusterLine.c_str(), "\t" );	
 		if(numFields > 9 && !tooManyFieldsWarning){
 			cout << "\tError: There are too many fields in your clusters file check output.\n";
+            cout << "We expect 8 or 9 fields and there were " << numFields << endl;
+            for(int i = 0; i<numFields; i++){
+                cout << "Field " << i << ": " << v[i] << endl;
+            }
             cout << clusterLine << endl;
 			tooManyFieldsWarning = true;
             exit(-1);
@@ -202,19 +204,19 @@ int main(int argc, char* argv[]){
             //Note: Headerlines taken from ClusterESP.java for GASV (lines 35-37).
             if(fileType == 0){
                 outFile << "#Cluster_ID:\tLeftChr:\tLeftBreakPoint:\tRightChr:\tRightBreakPoint:\tNum PRS:\tLocalization:\tType:";
-                if(numFields == 9){ cout << "\tLogLikelihoodRatio:"; }
+                if(numFields == 9){ outFile << "\tLogLikelihoodRatio:"; }
                 outFile << endl;
 
             }
             else if(fileType == 1){
                 outFile << "#Cluster_ID:\tLeftChr:\tLeftBreakPoint:\tRightChr:\tRightBreakPoint:\tNum PRS:\tLocalization:\tType:\tList of PRS:";
-                if(numFields == 9){ cout << "\tLogLikelihoodRatio:"; }
+                if(numFields == 9){ outFile << "\tLogLikelihoodRatio:"; }
                 outFile << endl;
             }
             else if(fileType == 2){
                 //Regions format, just output as written;
                 outFile << "#Cluster_ID:\tNum PRS:\tLocalization:\tType:\tList of PRS:\t LeftChr:\tRightChr:\tBoundary Points:";
-                if(numFields == 9){ cout << "\tLogLikelihoodRatio:"; }
+                if(numFields == 9){ outFile << "\tLogLikelihoodRatio:"; }
                 outFile << endl;
             }
             else{
@@ -237,7 +239,7 @@ int main(int argc, char* argv[]){
                 chrL         = atoi(v[5].c_str());
                 chrR         = atoi(v[6].c_str());
                 if(numFields == 9){
-                    logLikeRatio = atoi(v[8].c_str());
+                    logLikeRatio = atof(v[8].c_str());
                 }
             
 
@@ -292,6 +294,10 @@ int main(int argc, char* argv[]){
             }
                         
             numLines++;
+            
+            if(numLines%numCasesBeforePrint==0){
+                cout << "\tProcessing cluster " << numLines << " with clusterID " << clusterID << endl << flush;
+            }
         }
 	}
 	

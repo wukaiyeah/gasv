@@ -1,3 +1,25 @@
+GASV and GASVPro Release October 12, 2012 =================
+
+GASVPro (Version 1.2):
+
+Modifications to GASVPro-HQ.sh and GASVPro.sh scripts:
+
+* Added Translocation Flag scripts
+Now users more clearly specify if translocations should
+be analyzed.
+
+* Updated GASVPro.sh script to clean-up temporary files
+created as default behavior.
+
+* Added OUTPUT format option, users can now specify the
+same clusters formats as GASV (clusters, reads, intervals)
+(As for GASV, intervals is the default.)
+
+scripts/:
+
+* Updated GASV Pruning code (GASVPruneClusters.pl) to 
+handle translocations
+
 GASV and GASVPro Release August 16, 2012  =================
 
 * Updated documentation and work flow description of GASV

@@ -250,7 +250,8 @@ int main(int argn, char* argv []){
 		if(strtemp[0] == '#'){getline(concordants, strtemp);}
 		if(loc>=0){
 			string finalout;
-			for(int i = 0; i < (tokens.size()-2); i++)
+            //Remove the final column for Log-Likelihood!
+			for(int i = 0; i < (tokens.size()-1); i++)
 			{
 				if(tokens[i][tokens[i].length()-1] != ',')
 					finalout+=tokens[i]+"\t";
@@ -547,6 +548,7 @@ int main(int argn, char* argv []){
 				
 		sv_c = 0;
 		while(getline(new_ver_sv2,strtemp)){
+            
 			sv_c++;
 			int tmpVal = related_svs[sv_c];
 			getline(new_ver_con,con_info_line);
@@ -602,7 +604,7 @@ int main(int argn, char* argv []){
 	delete [] frgs_supporting_sv;
 
 	//Remove temporary files:
-	string clean0 = "rm -rf " + inp_f_n_orig; 
+    string clean0 = "rm -rf " + inp_f_n_orig;
 	string clean1 = "rm -rf " + inp_f_n;
 	string clean2 = "rm -rf " + coverage_file_new;
 	string clean3 = "rm -rf new_sv.clusters";
@@ -612,6 +614,7 @@ int main(int argn, char* argv []){
 	system(clean2.c_str());
 	system(clean3.c_str());
 	system(clean4.c_str());
+    
 	
 	
 	cerr << "GASVPro-graph finished successfully.\n";

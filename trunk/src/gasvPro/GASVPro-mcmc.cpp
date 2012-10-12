@@ -168,8 +168,14 @@ int main(int argc, char* argv[] ){
 	infos.open(parameters_file.c_str());
 	
 	//(2) Determine input path; where all the svs are
-	string input_path = argv[2];  
+	string input_path = argv[2];
 		
+    char lastChar = input_path.at( input_path.length() - 1 );
+    if(lastChar!= '/'){
+        input_path = input_path + "/";
+    }
+
+    
 	//(3) Get Probability Model Parameters:
 	double COVERAGE;
 	double COVERAGE_SCALED;
@@ -192,7 +198,7 @@ int main(int argc, char* argv[] ){
 	double p_err = 0.01; //Default error parameter
 	
 	//Step 0: Process the Parameters File
-	cout << "|||INPUT PARAMETERS|||" << endl;
+	cout << "--Input Parameters--" << endl;
 	string temp;
 	ifstream p_file(argv[1], ios::in);
 	if(p_file.is_open()){cout << "   Parameters file found." << endl;}
@@ -301,10 +307,11 @@ int main(int argc, char* argv[] ){
 	
 	// Step 1: Read the info from p_star.summary (MAY NOT BE NEEDED ANYMORE!)
 	ifstream sum_info;
-	fn = input_path + "p_star.summary"; // file name for summary info
+	fn = input_path + "/p_star.summary"; // file name for summary info
 	sum_info.open(fn.c_str());
 	if(sum_info.fail()){
-		cerr<<"Missing file" << fn << "\n";
+		cerr<<"Missing file " << fn << ".\n";
+        cerr<<"Indicates GASVPro-graph may not have run correctly.\n";
 		return -1;
 	}
 	sum_info>> total_num_of_sv_clusters >> total_num_of_fragments >> dist_num_of_fragments;
