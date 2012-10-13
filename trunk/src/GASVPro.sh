@@ -43,8 +43,8 @@ MAXUNIQUEVAL=NULL       #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 MINSCALEDUNIQUE=NULL    #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL        #Default: 0
 MINCLUSTER=NULL         #Default: 4
-MAXIMAL=TRUE            #use GASV's --maximal flag. (Default: FALSE)
-OUTPUT=NULL             #desired GASV cluster output format (Default: intervals)
+MAXIMAL=FALSE           #use GASV's --maximal flag. (Default: FALSE)
+OUTPUT=NULL             #desired GASV cluster output format (Default: standard)
 TRANSLOCATIONS=NULL     #analyze translocations with GASVPro (Default: FALSE)
 BURNIN=NULL             #GASVPro-mcmc parameter (Default: 100000)
 SAMPLE=NULL             #GASVPro-mcmc parameter (Default: 900000)
@@ -208,8 +208,6 @@ fi
 echo "\n===================================\n\n *** Pruning Clusters... *** \n\n===================================\n"
 
 $GASVDIR/scripts/GASVPruneClusters.pl BAMToGASV.gasvpro.in.ALL.MCMCThreshold.clusters
-
-exit
 
 echo "====================\n\n Formatting GASVPro Clusters.... \n\n===================="
 

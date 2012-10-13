@@ -112,7 +112,7 @@ int main(int argc, char* argv[] ){
 	
 	if(argc < 3){
 		cerr << "GASVPro-mcmc: MCMC sampling of assignments for PR with multiple mappigns\n";
-		cerr << "Version:       1.1\n\n";
+		cerr << "Version:      1.2\n\n";
 		
 		cerr << "Usage: ./GASVPro-mcmc {ParametersFile} {Dir} (Optional:{START_CLUSTER} {END_CLUSTER})\n";
 		
@@ -121,8 +121,8 @@ int main(int argc, char* argv[] ){
 		cerr << "\t\t<dir>                     GASVPro-graph Output Directory\n";
 				
 		cerr << "Optional Parameters:\n";
-		cerr << "\t\tStart                     Cluster ID to start with (-1 to do all)\n";
-		cerr << "\t\tEnd                       Cluster ID to end with (-1 to do all)\n";
+		cerr << "\t\tStart                     Cluster component to start with (-1 to do all)\n";
+		cerr << "\t\tEnd                       Cluster component to end with (-1 to do all)\n";
 		cerr << "\t\tNote: Start and End allow for parallel processing.\n\n";
 	
 		return -1;
@@ -478,7 +478,7 @@ int main(int argc, char* argv[] ){
 				//cout << "\tTokenized the row --> " << clusterLine << endl << flush;
 				//cout << "\tWe have " << retVal << " number of tokens.\n";
 				
-				componentVariants[i].setTheRest(tmpTokens[2] + "\t" + tmpTokens[3] + "\t" + tmpTokens[4] + "\t" + tmpTokens[5] + "\t" + tmpTokens[6] + "\t" + tmpTokens[7] + "\t"); 
+				componentVariants[i].setTheRest(tmpTokens[2] + "\t" + tmpTokens[3] + "\t" + tmpTokens[4] + "\t" + tmpTokens[5] + "\t" + tmpTokens[6] + "\t" + tmpTokens[7]); 
 				
 				//cout << "\tSet the rest " << clusterLine << endl << flush;
 				
@@ -920,7 +920,14 @@ int main(int argc, char* argv[] ){
 						outTHRESHOLD << componentVariants[i].getName() 
 							<< "\t" << componentVariants[i].getCurrentAssigned() 
 							<< "\t" << componentVariants[i].getTheRest() 
-							<< "\t" << LLR	<< endl;
+							<< "\t" << LLR << endl;
+                        
+                        /*
+                        cout << "Name: " << componentVariants[i].getName() << endl;
+                        cout << "Current Assigned: " << componentVariants[i].getCurrentAssigned() << endl;
+                        cout << "The Rest: " << componentVariants[i].getTheRest() << endl;
+                        cout << "LLR: " << LLR << endl;
+                        */
 					}
 				}
 			}
