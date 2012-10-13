@@ -42,7 +42,7 @@ MINSCALEDUNIQUE=NULL            #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL                #Default: 0
 MINCLUSTER=NULL                 #Default: 4
 MAXIMAL=FALSE                   #use GASV's --maximal flag. (Default: FALSE)
-OUTPUT=NULL                     #desired GASV cluster output format (Default: intervals)
+OUTPUT=NULL                     #desired GASV cluster output format (Default: standard)
 TRANSLOCATIONS=NULL             #analyze translocations with GASVPro (Default: FALSE)
 
 ###############################

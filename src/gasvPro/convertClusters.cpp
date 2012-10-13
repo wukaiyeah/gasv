@@ -96,7 +96,7 @@ int main(int argc, char* argv[]){
 				cout << "Usage: ./exe {clusterfile} {type (optional)} " << endl;
 				cout << "\n";
                 cout << "Parameters Considered:\n";
-				cout << "           type:  {GASV Format}    (Default: INTERVALS)\n";
+				cout << "           type:  {GASV Format}    (Default: standard)\n";
 				cout << "\n";
 				cout << "Output: {clusterfile}\n";
                 cout << "cluterfile is converted from regions to desired output";
@@ -110,20 +110,26 @@ int main(int argc, char* argv[]){
 	//cout << "Step 0: Processing Command Line Arguments.\n";
 		
 	if(argc == 3){
-		cout << "|||INPUT PARAMETERS|||" << endl;
 		string temp = argv[2];
         if(temp == "intervals" || temp == "INTERVALS" || temp == "Intervals"){
             fileType = 0;
+	    cout << "Outputting to standard cluster format.\n";
+        }
+        else if(temp == "standard" || temp == "STANDARD" || temp == "Standard" ){
+            fileType = 0;
+	    cout << "Outputting to standard cluster format.\n";
         }
         else if(temp == "reads" || temp == "READS" || temp == "Reads"){
             fileType = 1;
+	    cout << "Outputting to reads cluster format.\n";
         }
         else if(temp == "regions" || temp == "Regions" || temp == "REGIONS"){
             fileType = 2;
+	    cout << "Outputting to regions cluster format.\n";
         }
         else{
             cout << "GASV Output Type \"" << argv[2] << "\" is invalid." << endl;
-            cout << "Assuming intervals output\n";
+            cout << "Assuming standard output\n";
             fileType = 0;
         }
         

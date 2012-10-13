@@ -18,7 +18,10 @@ same clusters formats as GASV (clusters, reads, intervals)
 scripts/:
 
 * Updated GASV Pruning code (GASVPruneClusters.pl) to 
-handle translocations
+also handle translocations
+
+* Added convertClusters program, which carries out the final
+conversion of GASVPro output to appropriate GASV formats.
 
 GASV and GASVPro Release August 16, 2012  =================
 
