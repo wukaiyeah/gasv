@@ -1,3 +1,4 @@
+#labels Troubleshooting,Featured
 = Troubleshooting Common Issues= 
 
 *If your issue is not listed or further information required email gasv@cs.brown.edu
@@ -6,7 +7,7 @@
 
     This error Lmin>=Lmax, indicates an inconsistency in the data and means that our GASV program did not run to completion. 
 
-     Most often the "Lmin>=Lmax" error arrises when a BAM file contains data from read libraries (with reasonably different fragment lengths or read lengths) which were labeled in the BAM file as coming from the same library.
+     Most often the "Lmin>=Lmax" error arrises when a BAM file contains data from read libraries (with sufficiently different fragment lengths or read lengths) which were labeled in the BAM file as coming from the same library.
 
 
    _*How the Issue Arrises*_  
@@ -19,4 +20,6 @@
 
      _*How to Fix the Issue*_  
 
-        The best way to address the issue is to figure out  
+        The simplest way to address this issue is to increase Lmax beyond 2 times the maximum Readlength in the problematic library. This will ensure GASV will run to completion, but the output produced may not be useful. 
+
+        The best way to address the issue is to figure out the cause of the discrepancy in the data. We suggest separating the read data from this library according to Readlength and then empirically re-estimating Lmin/Lmax. 
