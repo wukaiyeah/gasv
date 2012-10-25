@@ -1,0 +1,24 @@
+#summary Troubleshooting
+
+= Troubleshooting Common Issues= 
+
+*If your issue is not listed or further information required email gasv@cs.brown.edu
+
+ # ERROR: Lmin has been increased beyond >= Lmax
+
+    This error Lmin>=Lmax, indicates an inconsistency in the data and means that our GASV program did not run to completion. 
+
+     Most often the "Lmin>=Lmax" error arrises when a BAM file contains data from read libraries (with reasonably different fragment lengths or read lengths) which were labeled in the BAM file as coming from the same library.
+
+
+   _*How the Issue Arrises*_  
+          
+     - The estimates for Lmin/Lmax (the minimum/maximum length) for each read library are computed by BAMToGASV.
+
+       - When GASV clusters discordant fragments we require the minimum fragment length (Lmin) to be at least as large as 2 times the Readlength.  So, if GASV encounters a fragment with 2*Readlength > Lmin, GASV assumes the estimates provided were wrong and attempts to correct the problem by increasing Lmin to 2*Readlength. 
+      
+         -  Of course, we also need Lmin < Lmax, so if GASV increases Lmin beyond Lmax execution halts.
+
+     _*How to Fix the Issue*_  
+
+        The best way to address the issue is to figure out  
