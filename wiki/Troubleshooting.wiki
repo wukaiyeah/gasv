@@ -1,5 +1,3 @@
-#summary Troubleshooting
-
 = Troubleshooting Common Issues= 
 
 *If your issue is not listed or further information required email gasv@cs.brown.edu
