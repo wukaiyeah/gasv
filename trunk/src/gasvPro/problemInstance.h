@@ -366,6 +366,7 @@ class variant{
 	
 		string getName(){return name; }
 		int setName(string N){ name = N; return 0;}
+        int setType(string T){ type = T; return 0; }
 	
 		int setTheRest(string R){ theRest = R; return 0; }
 		string getTheRest(){ return theRest;}
@@ -498,9 +499,11 @@ class variant{
 	
 		double getLikelihoodVariantGiven(double perr, double COVERAGE, double COVERAGE_SCALED, int LAVG, int LDIS, int DISCORDANT){
 			int numDiscordants = DISCORDANT;
-			double probDisHomo   = probVariant(numDiscordants,LDIS,COVERAGE,2);
-			double probDisHetero = probVariant(numDiscordants,LDIS,COVERAGE,1);
-			
+            
+            int LDIS_LOCAL = LDIS;
+            if(type.compare("IR")==0 || type.compare("TR+")==0 || type.compare("TR-") == 0){ LDIS_LOCAL = 2*LDIS; }
+            double probDisHomo   = probVariant(numDiscordants,LDIS_LOCAL,COVERAGE,2);
+			double probDisHetero = probVariant(numDiscordants,LDIS_LOCAL,COVERAGE,1);
 			
 			double probConError,probConHetero;
 			probConError = probConHetero = 0.0;
@@ -560,9 +563,12 @@ class variant{
 		double probCurrentlyAssigned(double perr, double COVERAGE, double COVERAGE_SCALED, int LAVG, int LDIS){
 			//Gamma(n) = (n-1)!
 			int numDiscordants = currentAssigned;
-			double probDisHomo   = probVariant(numDiscordants,LDIS,COVERAGE,2);
-			double probDisHetero = probVariant(numDiscordants,LDIS,COVERAGE,1);
-			
+            
+            int LDIS_LOCAL = LDIS;
+            if(type.compare("IR")==0 || type.compare("TR+")==0 || type.compare("TR-") == 0){ LDIS_LOCAL = 2*LDIS; }
+            double probDisHomo   = probVariant(numDiscordants,LDIS_LOCAL,COVERAGE,2);
+			double probDisHetero = probVariant(numDiscordants,LDIS_LOCAL,COVERAGE,1);
+
 			
 			double probConError,probConHetero;
 			probConError = probConHetero = 0.0;
@@ -621,8 +627,11 @@ class variant{
 		double probProposedAssigned(double perr, double COVERAGE, double COVERAGE_SCALED, int LAVG, int LDIS){ 
 			//Gamma(n) = (n-1)!
 			int numDiscordants = proposedAssigned;
-			double probDisHomo   = probVariant(numDiscordants,LDIS,COVERAGE,2);
-			double probDisHetero = probVariant(numDiscordants,LDIS,COVERAGE,1);
+            
+            int LDIS_LOCAL = LDIS;
+            if(type.compare("IR")==0 || type.compare("TR+")==0 || type.compare("TR-") == 0){ LDIS_LOCAL = 2*LDIS; }
+            double probDisHomo   = probVariant(numDiscordants,LDIS_LOCAL,COVERAGE,2);
+			double probDisHetero = probVariant(numDiscordants,LDIS_LOCAL,COVERAGE,1);
 			
 			double probConError,probConHetero;
 			probConError = probConHetero = 0.0;
@@ -784,6 +793,7 @@ class variant{
 	
 	private:
 		string name;
+        string type;
 		string theRest; //This is needed for outputting the resulting SVs
 
 		std::vector<int> possibleDependentESPs; //The value is 0 if no dependencies and 1 otherwise.
