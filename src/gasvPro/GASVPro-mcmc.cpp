@@ -407,7 +407,7 @@ int main(int argc, char* argv[] ){
 				//ClusterLine: (Note: The ESPs and coordinates are each on their own line!)
 				//0     1    2  3       4 -> 4+NumESPS
 				//c1	1	189	D	1_1_1_chr17_41883_42105_0:0:0_2:0:0_15789d3 	17	17	41642, 42623, 41821, 42623, 41532, 42334, 41532, 42513
-				int numESPs = atoi(clusterTokens[1].c_str()); 
+				int numESPs = atoi(clusterTokens[1].c_str());
 				for(int j = 4; j<4+numESPs; j++){
 					vector <string> ESPTokens;
 					Tokenize(clusterTokens[j],ESPTokens,"_");
@@ -468,6 +468,7 @@ int main(int argc, char* argv[] ){
 				//0     1    2  3       4 -> 4+NumESPS								5	6	7
 				//c1	1	189	D	1_1_1_chr17_41883_42105_0:0:0_2:0:0_15789d3 	17	17	41642, 42623, 41821, 42623, 41532, 42334, 41532, 42513
 				componentVariants[i].setName(clusterTokens[0].c_str());
+                componentVariants[i].setType(clusterTokens[3].c_str());
 				
 				//cout << "Processing variant " << i << ":\t" << componentVariants[i].getName() << endl << flush;
 				
