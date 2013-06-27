@@ -262,7 +262,7 @@ int main(int argc, char* argv[]){
 	int *UNIQUE = new int[550000];
 	int *TOTAL  = new int[550000];
 	
-	if(argc == 2)
+	if(argc == 2 || argc == 3)
 	{
 		cout << "|||INPUT PARAMETERS|||" << endl;
 		string temp;
@@ -275,6 +275,8 @@ int main(int argc, char* argv[]){
 				continue;
 			else
 			{
+                
+                
 				string term;
 				string value;
 				int spacePos = temp.find(' ');
@@ -289,8 +291,7 @@ int main(int argc, char* argv[]){
 					value = temp.substr(spacePos+1);
 					term = temp.substr(0,spacePos);
 				}
-				
-				if(term == "clusterFile:")
+						if(term == "clusterFile:")
 				{
 						CLUSTERINPUT = value;
 						cout << "   Cluster file: " << CLUSTERINPUT << endl;
@@ -338,7 +339,7 @@ int main(int argc, char* argv[]){
 						continue;
 				}
 				if(term == "Verbose:"){
-						if(value == "Y" || value == "y" || value == "yes"){
+						if(value == "Y" || value == "y" || value == "yes" || value=="YES" || value == "Yes"){
 							PRINT_FLAG = 1;
 							cout << "   ***Verbose Mode Enabled***" << endl;}
 						else
@@ -365,13 +366,13 @@ int main(int argc, char* argv[]){
 						TRANSLOCATIONS_ON = false;
 				}
 				if(term == "TransOnly:"){
-					if(value == "true" || value == "True"){
+					if(value == "true" || value == "True" || value == "TRUE"){
 						TRANS_ONLY = true;
 						cout << "***WARNING: ONLY TRANSLOCATIONS WILL BE DETECTED.***" << endl;
 					}
 				}
 				if(term == "LRThreshold:"){
-					if(value == "all" || value == "All"){
+					if(value == "all" || value == "All" || value == "ALL"){
 						PRINTALL = true;
 						cout << "   LR Threshold: PRINT_ALL" << endl;
 					}
@@ -402,141 +403,8 @@ int main(int argc, char* argv[]){
 	
 	if(argc == 3)
 	{
-		string temp;
-		ifstream p_file(argv[1], ios::in);
-		if(p_file.is_open()){cout << "   Parameters file found." << endl;}
-		else{cout << "ERROR: Parameters file \"" << argv[1] << "\" cannot be opened." << endl; exit(1);}
-		while(getline(p_file, temp))
-		{
-			if(temp[0] == '#')
-				continue;
-			else
-			{
-				string term;
-				string value;
-				int spacePos = temp.find(' ');
-				if(spacePos == -1)
-				{
-					spacePos = temp.find(':');
-					value = temp.substr(spacePos+1);
-					term = temp.substr(0,spacePos+1);
-
-				}
-				else{
-					value = temp.substr(spacePos+1);
-					term = temp.substr(0,spacePos);
-				}
-				
-				if(term == "clusterFile:")
-				{
-						CLUSTERINPUT = value;
-						cout << "   Cluster file: " << CLUSTERINPUT << endl;
-						continue;
-				}
-				if(term == "ConcordantFile:") {
-						ESPINPUT = value;
-						cout << "   Concordant File: " << ESPINPUT << endl;
-						continue;
-				}
-				if(term == "UNIQUEFile:"){
-						UNIQUEINPUT = value;
-						cout << "   Uniqueness File " << UNIQUEINPUT << endl;
-						continue;
-				}
-				if(term == "Lavg:")
-				{
-						Lavg = atoi(value.c_str());
-						cout << "   Lavg: " << Lavg << endl;
-						continue;
-				}
-				if(term == "ReadLen:"){
-						ReadLen = atoi(value.c_str());
-						cout << "   Read Length: " << ReadLen << endl;
-						continue;
-				}
-				if(term == "Lambda:"){
-						Lambda = atof(value.c_str());
-						cout << "   Lambda: " << Lambda << endl;
-						continue;
-				}
-				if(term == "Perr:"){
-						Perr = atof(value.c_str());
-						cout << "   Perr: " << Perr << endl;
-						continue;
-				}
-				if(term == "Limit:"){
-						Limit = atoi(value.c_str());
-						cout << "   Limit: " << Limit << endl;
-						continue;
-				}
-				if(term == "Tolerance:"){
-						Tolerance = atof(value.c_str());
-						cout << "   Tolerance: " << Tolerance << endl;
-						continue;
-				}
-				if(term == "Verbose:"){
-						if(value == "Y" || value == "y" || value == "yes"){
-							PRINT_FLAG = 1;
-							cout << "   ***Verbose Mode Enabled***" << endl;}
-						else
-							PRINT_FLAG = 0;
-				}	
-				if(term == "MaxChrNumber:"){
-					MAX_CHR_NUMBER = atoi(value.c_str());
-					cout << "   Max Chromosome Number: " << MAX_CHR_NUMBER << endl;
-				}
-				if(term == "MaxUniqueValue:"){
-					MAX_UNIQUE_VALUE = atof(value.c_str());
-					cout << "   Max Unique Value: " << MAX_UNIQUE_VALUE << endl;
-				}
-				if(term == "MinScaledUniqueness:"){
-					MIN_SCALED_UNIQUE = atof(value.c_str());
-					cout << "   Min Scaled Uniqueness: " << MIN_SCALED_UNIQUE << endl;
-				}
-				if(term == "Translocations:"){
-					if(value == "true" || value == "True"){
-						TRANSLOCATIONS_ON = true;
-						cout << "   Translocations Mode Activated." << endl;
-					}
-					else
-						TRANSLOCATIONS_ON = false;
-				}
-				if(term == "TransOnly:"){
-					if(value == "true" || value == "True"){
-						TRANS_ONLY = true;
-						cout << "***WARNING: ONLY TRANSLOCATIONS WILL BE DETECTED.***" << endl;
-					}
-				}
-				if(term == "LRThreshold:"){
-					if(value == "all" || value == "All"){
-						PRINTALL = true;
-						cout << "   LR Threshold: PRINT_ALL" << endl;
-					}
-					else{
-						LRTHRESHOLD = atof(value.c_str());
-						PRINTALL = false;
-						cout << "   LR Threshold: " << LRTHRESHOLD << endl;
-					}
-				}
-				if(term == "Ambiguous:"){
-					if(value == "True" || value == "true")
-						AMBIG_MODE = true;
-				}
-				if(term == "maxmode:"){
-					if(value == "true")
-						MAXMODE = true;
-				}
-				if(term == "runningMCMC:"){
-					if(value == "true"){
-						MCMCMODE = true;
-						cout << "   MCMC Mode: true" << endl;
-					}
-				}
-			}
-		}
 		CLUSTERINPUT = argv[2];
 	}
-	cout << "|||INPUT PARAMETERS|||" << endl << endl;
 	
 	if(argc == 13)
 	{
@@ -1267,7 +1135,6 @@ int main(int argc, char* argv[]){
 				cout << "discordantProbHomoVariant:\t" << discordantProbHomoVariant << endl;
 				cout << "discordantProbHeteroVariant:\t" << discordantProbHeteroVariant << endl;
 				*/
-				
 				long checking = 0;	
 				
 				int covBeyondTolerance = 0;
@@ -1357,11 +1224,12 @@ int main(int argc, char* argv[]){
 									//}
 									//else if(deletion, inversions )
 									
+                                    int concordantLength = Lavg;
+                                    
 									double localHomozygous   = probError(Perr,scaledCovLeft) + probError(Perr,scaledCovRight);
-									double localHeterozygous = probVariant(Lambda/2,1.0,scaledCovLeft) + probVariant(Lambda/2,1.0,scaledCovRight); 
-									double localError        = probVariant(Lambda,1.0,scaledCovLeft) + probVariant(Lambda,1.0,scaledCovRight);
-									
-									
+                                    double localHeterozygous = probVariant(Lambda/2,concordantLength,scaledCovLeft) + probVariant(Lambda/2,concordantLength,scaledCovRight);
+									double localError        = probVariant(Lambda,concordantLength,scaledCovLeft) + probVariant(Lambda,concordantLength,scaledCovRight);
+
 									double combinedDiffHomo   = (discordantProbHomoVariant + localHomozygous) - (localError + discordantProbNoVariant);
 									double combinedDiffHetero = (discordantProbHeteroVariant + localHeterozygous) - (localError + discordantProbNoVariant);
 									
@@ -2287,11 +2155,13 @@ int main(int argc, char* argv[]){
 											scaledCovLeft = covLeft;   //
 											scaledCovRight = covRight; //these two lines reset the above calculations
 											
-											double localHomozygous   = probError(Perr,scaledCovLeft) + probError(Perr,scaledCovRight);
-											double localHeterozygous = probVariant(Lambda/2,1.0,scaledCovLeft) + probVariant(Lambda/2,1.0,scaledCovRight); 
-											double localError        = probVariant(Lambda,1.0,scaledCovLeft) + probVariant(Lambda,1.0,scaledCovRight);
-											
-											
+                                            
+                                            int concordantLength = Lavg;
+                                            
+                                            double localHomozygous   = probError(Perr,scaledCovLeft) + probError(Perr,scaledCovRight);
+                                            double localHeterozygous = probVariant(Lambda/2,concordantLength,scaledCovLeft) + probVariant(Lambda/2,concordantLength,scaledCovRight);
+                                            double localError        = probVariant(Lambda,concordantLength,scaledCovLeft) + probVariant(Lambda,concordantLength,scaledCovRight);
+                                            
 											double combinedDiffHomo   = (discordantProbHomoVariant + localHomozygous) - (localError + discordantProbNoVariant);
 											double combinedDiffHetero = (discordantProbHeteroVariant + localHeterozygous) - (localError + discordantProbNoVariant);
 											
