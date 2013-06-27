@@ -191,7 +191,7 @@ int main(int argc, char* argv[]){
      if(argc != 10 && argc != 3 && argc != 2){
                 //                 0        1              2                      3              4       5         6       7        8       9           // 10
 				cout << "\nGASVPro: Geometric Analysis of Structural Variants, Probabilistic" << endl;
-				cout << "Version: 1.2" << endl << endl;
+				cout << "Version: 1.2.1" << endl << endl;
 				cout << "Usage: Pass parameter file of the following format AND a clusters file:" << endl;
                 cout << "       \tConcordantFile: {path/to/file}\n\tUNIQUEFile: {path/to/file}\n\tLavg: {value} \n\tReadLen: {value}\n\tLambda: {value}\n\tPerr: {value}\n\tLimit: {value}\n\tTolerance: {value}\n\tVerbose: {value}\n\tMaxChrNumber: {Value}\n\tMaxUniqueValue: {value}\n\tMinScaledUniqueness: {Value}\n\tTranslocations: {Value}\n\tTransOnly: {value}\n\tAmbiguous: {value}\n\tLRThreshold: {value}\n\trunningMCMC: {value}\n\n";
                 cout << "      ./exe {parametersfile} {clusterfile}\n " << endl;
