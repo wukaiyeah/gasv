@@ -112,7 +112,7 @@ int main(int argc, char* argv[] ){
 	
 	if(argc < 3){
 		cerr << "GASVPro-mcmc: MCMC sampling of assignments for PR with multiple mappigns\n";
-		cerr << "Version:      1.2\n\n";
+		cerr << "Version:      1.2.1\n\n";
 		
 		cerr << "Usage: ./GASVPro-mcmc {ParametersFile} {Dir} (Optional:{START_CLUSTER} {END_CLUSTER})\n";
 		

@@ -1,3 +1,11 @@
+GASV and GASVPro Release June 27, 2012 =================
+
+GASVPro (Version 1.2.1)
+
+* Corrected a problem with GASVPro coverage model 
+for reciprocal inversions (IR) and reciprocal translocations
+(TR+ and TR-).
+
 GASV and GASVPro Release October 12, 2012 =================
 
 GASVPro (Version 1.2):
