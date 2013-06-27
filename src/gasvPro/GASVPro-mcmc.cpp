@@ -264,7 +264,7 @@ int main(int argc, char* argv[] ){
 			}
 			
 			if(term == "Verbose:"){
-				if(value == "Y" || value == "y" || value == "yes"){
+				if(value == "Y" || value == "y" || value == "yes" || value == "YES" || value == "Yes"){
 					PRINT_FLAG = 1;
 				cout << "   ***Verbose Mode Enabled***" << endl;}
 				else{
@@ -273,7 +273,7 @@ int main(int argc, char* argv[] ){
 				continue;
 			}	
 			if(term == "LRThreshold:"){
-				if(value == "all" || value == "All"){
+				if(value == "all" || value == "All" || value == "ALL"){
 					PRINTALL = true;
 					cout << "   LR Threshold: PRINT_ALL" << endl;
 				}
