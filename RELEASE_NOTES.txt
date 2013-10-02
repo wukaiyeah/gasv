@@ -1,4 +1,12 @@
-GASV and GASVPro Release June 27, 2012 =================
+GASV and GASVPro Release October 1, 2013 =================
+
+* Corrected a bug in GASVPro-HQ.sh and GASVPro.sh so that
+the default behavior is to ignore translocations.
+
+* Added support for Illumina Mate Pair orientation to 
+BAM file processing.
+
+GASV and GASVPro Release June 27, 2013 =================
 
 GASVPro (Version 1.2.1)
 
