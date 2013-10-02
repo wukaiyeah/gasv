@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -39,20 +38,11 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
 import net.sf.samtools.util.RuntimeEOFException;
 import net.sf.samtools.util.RuntimeIOException;
 import net.sf.picard.sam.FixMateInformation;
-import net.sf.samtools.SAMFileWriterFactory;
-
-/**
- * @author  Suzanne Sindi
- * @version January 2013
- *
- * Modifications to support split-read detection. Added
- * a readlength alignment requirement for concordant/discordant
- * fragments.
- *
- */
 
 /**
  * Bam to GASV Processor
+ * TODO: LICENSE INFORMATION? PICARD LICENSE INFORMATION?
+ * TODO: write a cleanup function to close things
  * TODO: Compress concordant file.
  * 
  * @author Anna Ritz, Suzanne Sindi, Hsin-Ta Wu, and Layla Oesper
@@ -70,7 +60,6 @@ public class BAMToGASV {
 	public String LIBRARY_SEPARATED="sep"; // changed from 'library-separated'
 	public String OUTPUT_PREFIX;
 	public int MAPPING_QUALITY = 10;
-    public int MIN_ALIGNED_PCT = 95;
 	public String CUTOFF_LMINLMAX="PCT=99%";
 	public int USE_NUMBER_READS = 500000;
 	public String CHROMOSOME_NAMING_FILE = null;
@@ -78,7 +67,6 @@ public class BAMToGASV {
 	public String PLATFORM="illumina"; // note lower case
 	public boolean WRITE_CONCORDANT = false;
 	public boolean WRITE_LOWQ = false;
-    public boolean WRITE_SPLITREAD = false;
 	public ValidationStringency STRINGENCY = ValidationStringency.SILENT; 
 	public boolean GASVPRO_OUTPUT = false; // GASVPro
 	public boolean BATCH = false;
@@ -98,23 +86,13 @@ public class BAMToGASV {
 	public Pattern file = Pattern.compile("FILE=(.*)");
 
 	/* Data Structures */
-	public HashMap<String,String> LIBRARY_IDS;              // <library_id,full_library_name>
-	public HashMap<String,Library> LIBRARY_INFO;            // <full_library_name,Library Object>
-	public ArrayList<String> LIBRARY_NAMES;                 // list of <full_library_name>
-    public HashMap<String,BufferedWriter> CONCORDANT_FILES; // <filename, filewriter>
+	public HashMap<String,String> LIBRARY_IDS; // <library_id,full_library_name>
+	public HashMap<String,Library> LIBRARY_INFO; // <full_library_name,Library Object>
+	public ArrayList<String> LIBRARY_NAMES; // list of <full_library_name>
+	public HashMap<String,String> HIGHQ_INDICATOR; // <full_library_name,#of reads>
+	public HashMap<String,String> LOWQ_INDICATOR; // <full_library_name,#of reads>
+	public HashMap<String,BufferedWriter> CONCORDANT_FILES; // <filename, filewriter>
 
-    /*
-	public HashMap<String,String> HIGHQ_INDICATOR;          // <full_library_name,#of reads>
-	public HashMap<String,String> LOWQ_INDICATOR;           // <full_library_name,#of reads>
-    public HashMap<String,String> SPLIT_INDICATOR;          // <full_library_name,#of reads>
-	public HashMap<String,String> UNMAPPED_INDICATOR;       // <full_library_name,#of reads>
-*/
-    
-    public HashMap<String,SAMRecord> HIGHQ_INDICATOR_SAM;          // <full_library_name,#of reads>
-	public HashMap<String,SAMRecord> LOWQ_INDICATOR_SAM;           // <full_library_name,#of reads>
-    public HashMap<String,SAMRecord> SPLIT_INDICATOR_SAM;          // <full_library_name,#of reads>
-	public HashMap<String,SAMRecord> UNMAPPED_INDICATOR_SAM;       // <full_library_name,#of reads>
-    
 	/* (Done by Anna on 5/5)
 	 * (1) Make HIGHQ and LOWQ indicator data structures HashMaps (key; fragmentname), values are SAMRecord strings.
 	 *     We can do this with getSAMString()
@@ -130,13 +108,8 @@ public class BAMToGASV {
 	public static VariantType[] VARIANTS = VariantType.values(); // list of variant types
 
 	/* Output BAM File Names */
-	//public BufferedWriter LOWQ_BAM_FILE;
-	//public BufferedWriter SPLIT_BAM_FILE;
-    
-    public SAMFileWriter LOWQ_BAM;
-    public SAMFileWriter SPLIT_BAM;
-    public SAMFileHeader fileHeader;
-    
+	public BufferedWriter LOWQ_BAM_FILE;
+
 	/**
 	 * Main class.
 	 * @param args - see usage information.
@@ -204,19 +177,8 @@ public class BAMToGASV {
 		LIBRARY_IDS = new HashMap<String,String>();
 		LIBRARY_NAMES = new ArrayList<String>();
 		LIBRARY_INFO = new HashMap<String,Library>();
-        
-		/*HIGHQ_INDICATOR = new HashMap<String,String>();
+		HIGHQ_INDICATOR = new HashMap<String,String>();
 		LOWQ_INDICATOR = new HashMap<String,String>();
-        SPLIT_INDICATOR = new HashMap<String,String>();     //New Indicators for SplitReads and Unmapped. (We now have all four cases for reads covered!)
-        UNMAPPED_INDICATOR = new HashMap<String,String>();
-        */
-        
-        HIGHQ_INDICATOR_SAM = new HashMap<String,SAMRecord>();
-		LOWQ_INDICATOR_SAM = new HashMap<String,SAMRecord>();
-        SPLIT_INDICATOR_SAM = new HashMap<String,SAMRecord>();     //New Indicators for SplitReads and Unmapped. (We now have all four cases for reads covered!)
-        UNMAPPED_INDICATOR_SAM = new HashMap<String,SAMRecord>();
-
-        
 		NON_DEFAULT_REFS = new HashMap<String,Boolean>();
 		if(NOSORT) {
 			CONCORDANT_FILES = new HashMap<String,BufferedWriter>();
@@ -298,16 +260,7 @@ public class BAMToGASV {
 					System.out.println("Error! MAPPING_QUALITY must be a non-negative integer.");
 					return false;
 				}
-			}else if(args[i].equalsIgnoreCase("-MIN_ALIGNED_PCT")) {
-				try {
-					MIN_ALIGNED_PCT = Integer.parseInt(args[i+1]);
-					if(MIN_ALIGNED_PCT < 50 || MIN_ALIGNED_PCT > 100)
-						throw new Exception();
-				} catch (Exception e) {
-					System.out.println("Error! MIN_ALIGNED_PCT must be between 50 and 100 percent.");
-					return false;
-				}
-			}else if(args[i].equalsIgnoreCase("-CUTOFF_LMINLMAX")) {
+			} else if(args[i].equalsIgnoreCase("-CUTOFF_LMINLMAX")) {
 				CUTOFF_LMINLMAX = args[i+1];
 				if(!pct.matcher(CUTOFF_LMINLMAX).matches() &&
 						!std.matcher(CUTOFF_LMINLMAX).matches() &&
@@ -340,10 +293,10 @@ public class BAMToGASV {
 					return false;
 				}
 			} else if(args[i].equalsIgnoreCase("-PLATFORM")) {
-				if(args[i+1].equalsIgnoreCase("illumina") || args[i+1].equalsIgnoreCase("solid"))
+				if(args[i+1].equalsIgnoreCase("illumina") || args[i+1].equalsIgnoreCase("solid") || args[i+1].equalsIgnoreCase("matepair"))
 					PLATFORM = args[i+1].toLowerCase();
 				else {
-					System.out.println("Error! PLATFORM option can only be 'Illumina' or 'SOLiD'.");
+					System.out.println("Error! PLATFORM option can only be 'Illumina', 'SOLiD' or 'MatePair'.");
 					return false;
 				}
 			} else if(args[i].equalsIgnoreCase("-WRITE_CONCORDANT")) {
@@ -362,15 +315,6 @@ public class BAMToGASV {
 					WRITE_LOWQ = false;
 				else {
 					System.out.println("Error! WRITE_LOWQ option can only be 'True' or 'False'.");
-					return false;
-				}
-			} else if(args[i].equalsIgnoreCase("-WRITE_SPLITREAD")) {
-				if(args[i+1].equalsIgnoreCase("true"))
-					WRITE_SPLITREAD = true;
-				else if (args[i+1].equalsIgnoreCase("false"))
-					WRITE_SPLITREAD = false;
-				else {
-					System.out.println("Error! WRITE_SPLITREAD option can only be 'True' or 'False'.");
 					return false;
 				}
 			} else if(args[i].equalsIgnoreCase("-VALIDATION_STRINGENCY")) {
@@ -437,8 +381,6 @@ public class BAMToGASV {
 				"\tThe prefix for your output files.\n" +
 				"-MAPPING_QUALITY [Integer] (Default: 10)\n" +
 				"\tMapping quality threshold for reads.\n" +
-                "-MIN_ALIGNED_PCT [Integer] (Default: 95)\n" +
-                "\tMin aligned pct for a nonsplit read (must be >=50).\n"+
 				"-CUTOFF_LMINLMAX [String] (Default: PCT=99%)\n" +
 				"\tSpecifies lower and upper bounds on the fragment distribution.\n" +
 				"\tPCT=X%\tTake the quantile on the top/bottom X percent.\n" +
@@ -452,14 +394,13 @@ public class BAMToGASV {
 				"-PROPER_LENGTH [Integer] (Default: 10000)\n" +
 				"\tIgnore ESPs with separation larger than PROPER_LENGTH when calculating Lmin and Lmax.\n" +
 				"-PLATFORM [String] (Default: Illumina)\n" +
-				"\tIllumina\tReads are sequenced with the Illumina platform.\n" +
+				"\tIllumina\tReads are sequenced with the Illumina platform (paired-read orientation --> <--).\n" +
 				"\tSOLiD\tReads are sequenced with the SOLiD platform.\n" +
+				"\tMatePair\tReads are sequenced with the mate pair orientation (outward orientation <-- -->).\n" +
 				"-WRITE_CONCORDANT [Boolean] (Default: False)\n" +
 				"\tTrue\tWrites concordant file. Warning - this will be large!\n"+
 				"-WRITE_LOWQ [Boolean] (Default: False)\n" +
 				"\tTrue\tWrites low quality read file. Warning - this will be large!\n"+
-                "-WRITE_SPLITREAD [Boolean] (Default: False)\n" +
-                "\tTrue\tWrites candidates split reads. Warning - this may be large!\n"+
 				"-VALIDATION_STRINGENCY [String] (Default: silent)\n"+
 				"\tsilent\tRead SAM records without any validation.\n"+
 				"\tlenient\tRead SAM records and emit a warning when a record is not formatted properly.\n"+
@@ -485,14 +426,12 @@ public class BAMToGASV {
 			System.out.println("  BAM File = " + BAMFILE); 
 		System.out.println("  Output Prefix = " + OUTPUT_PREFIX);
 		System.out.println("  Minimum Mapping Quality = " + MAPPING_QUALITY);
-        System.out.println("  Minimum Alignment Percent = " + MIN_ALIGNED_PCT);
 		System.out.println("  Lmin/Lmax Cutoff = \"" + CUTOFF_LMINLMAX+"\"");
 		System.out.println("  # of Reads for Calculating Lmin/Lmax, Checking Pairs, and Checking Variant Types = " + USE_NUMBER_READS);
 		System.out.println("  Chromosome Naming File (null if none specified) = " + CHROMOSOME_NAMING_FILE);
 		System.out.println("  Maximum Length for a Proper Pair = " + PROPER_LENGTH);
 		System.out.println("  Platform = \"" + PLATFORM+"\"");
 		System.out.println("  Write Concordant File? " + WRITE_CONCORDANT);
-        System.out.println("  Write SplitRead File? " + WRITE_SPLITREAD);
 		System.out.print("  Separate Libraries? ");
 		if(LIBRARY_SEPARATED.equals("all"))
 			System.out.println("false");
@@ -556,8 +495,7 @@ public class BAMToGASV {
 
 		// get SAMFileHeader object
 		SAMFileHeader header = reader.getFileHeader();
-        fileHeader = reader.getFileHeader();
-        
+
 		// GASGPro using - getSequenceInfo in the header
 		if (GASVPRO_OUTPUT){
 			SAMSequenceDictionary SeqInfo = header.getSequenceDictionary();
@@ -580,10 +518,10 @@ public class BAMToGASV {
 			libname = record.getLibrary();
 
 			if(platform == null || platform.equals("")) 
-				System.out.println("  WARNING: Platform not specified for library "+libname+". Proceeding with "+PLATFORM+". You can specify the platform as Illumina or SOLiD using -PLATFORM.");
+				System.out.println("  WARNING: Platform not specified for library "+libname+". Proceeding with "+PLATFORM+". You can specify the platform as Illumina, SOLiD or MatePair using -PLATFORM.");
 
 			else if(!platform.toLowerCase().equals(PLATFORM)) 
-				System.out.println("  WARNING: Platform in library " + libname + " is " + platform+". Proceeding with "+PLATFORM+". You can specify the platform as Illumina or SOLiD using -PLATFORM.");
+				System.out.println("  WARNING: Platform in library " + libname + " is " + platform+". Proceeding with "+PLATFORM+". You can specify the platform as Illumina, SOLiD or MatePair using -PLATFORM.");
 
 			else if(!platform.equals("")) // if platform is non an empty string, we've seen it.
 				viewedPlatforms.put(platform.toLowerCase(),platform);
@@ -958,63 +896,20 @@ public class BAMToGASV {
 			}
 		}
 
-        System.out.println("About to set up the output files\n");
-     
 		// initialize BAM file for lowquality alignments.
-		if(WRITE_LOWQ){
-            LOWQ_BAM = new SAMFileWriterFactory().makeSAMOrBAMWriter(fileHeader,false,new File(OUTPUT_PREFIX+"_lowqual.bam"));
-        }
-        else{
-            LOWQ_BAM = null;
-        }
-        
-        if(WRITE_SPLITREAD){
-            SPLIT_BAM = new SAMFileWriterFactory().makeSAMOrBAMWriter(fileHeader,false,new File(OUTPUT_PREFIX+"_splitread.bam"));
-        }
-        else{
-            SPLIT_BAM = null;
-        }
-   /*
-        if(WRITE_LOWQ)
+		if(WRITE_LOWQ)
 			try {
 				LOWQ_BAM_FILE = new BufferedWriter(new FileWriter(new File(OUTPUT_PREFIX+"_lowqual.sam")));
 				String header = inputSam.getFileHeader().getTextHeader();
 				LOWQ_BAM_FILE.write(header);
-                
-                //LOWQ_BAM = SAM_FACTORY.makeSAMOrBAMWriter(fileHeader,false,new File(OUTPUT_PREFIX+"_lowqual.bam"));
-                
-                //final SAMFileWriter outputBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(fileHeader,false,new File(OUTPUT_PREFIX+"_lowqual.bam"));
-                
-                LOWQ_BAM = new SAMFileWriterFactory().makeSAMOrBAMWriter(fileHeader,false,new File(OUTPUT_PREFIX+"_lowqual.bam"));
-
-                
-                System.out.println("Successfully set up the LOWQ BAM File");
-                    
 			} catch (IOException e) {
 				System.out.println("ERROR creating low quality SAM file.");
 				System.exit(-1);
 			}
-        else
-            LOWQ_BAM_FILE = null;
+			else
+				LOWQ_BAM_FILE = null;
 
-        // initialize BAM file for split alignments.
-		if(WRITE_SPLITREAD)
-			try {
-				SPLIT_BAM_FILE = new BufferedWriter(new FileWriter(new File(OUTPUT_PREFIX+"_splitread.sam")));
-				String header = inputSam.getFileHeader().getTextHeader();
-				SPLIT_BAM_FILE.write(header);
-                
-                SPLIT_BAM = new SAMFileWriterFactory().makeSAMOrBAMWriter(fileHeader,false,new File(OUTPUT_PREFIX+"_splitread.bam"));
-                System.out.println("Successfully set up the SPLIT BAM File");
 
-			} catch (IOException e) {
-				System.out.println("ERROR creating split read SAM file.");
-				System.exit(-1);
-			}
-        else
-            SPLIT_BAM_FILE = null;
-*/
-        
 		// Initialize Library objects
 		for(int i=0; i<LIBRARY_NAMES.size();i++) {
 			libname = LIBRARY_NAMES.get(i);
@@ -1109,23 +1004,13 @@ public class BAMToGASV {
 		}
 		inputSam.close();
 		if(WRITE_LOWQ) {
-            LOWQ_BAM.close();
-			/*try {
+			try {
 				LOWQ_BAM_FILE.close();
 			} catch (IOException e) {
 				System.out.println("WARNING: Cannot close low-quality sam file.");
-			}*/
+			}
 		}
 
-        if(WRITE_SPLITREAD) {
-            SPLIT_BAM.close();
-			/*try {
-				SPLIT_BAM_FILE.close();
-			} catch (IOException e) {
-				System.out.println("WARNING: Cannot close split-read sam file.");
-			}*/
-		}
-        
 		System.out.println("Done reading BAM file.\n");
 
 		// finish analysis with remaining records in libraries.
@@ -1363,8 +1248,6 @@ public class BAMToGASV {
 	 * 
 	 * @param s - SAM record to parse
 	 * @param lib - Library to use.
-     *
-     * There are four cases for each read: fullHigh, fullLow, split, unmapped
 	 */
 	private void parseSAMRecord(SAMRecord s, Library lib){
 
@@ -1373,164 +1256,84 @@ public class BAMToGASV {
 		if(s.getDuplicateReadFlag() || !s.getReadPairedFlag()) 
 			return;
 
-		String readname      = s.getReadName();
-        
-		boolean highQualityRead = false;
-        boolean fullLength      = false;
-        boolean unmapped        = s.getReadUnmappedFlag();
-		
-        //Check Mapping Quality;
-        if(s.getMappingQuality() < MAPPING_QUALITY){
-			highQualityRead = false;
-		}
-        else{
-            highQualityRead = true;
-        }
-		        
-        //Checking Aligned Length;
-        int readLength = s.getReadLength();
-			
-        //Check for Clipping only when we are writing to lowquality.
-        //Parse the Cigar String for Soft Clipping;
-        List<CigarElement> cigarList = s.getCigar().getCigarElements();
-        Iterator<CigarElement> ele = cigarList.iterator();
-        int clippedLength = 0;
-        while(ele.hasNext()) {
-            CigarElement element = ele.next();
-            int len         = element.getLength();
-            String operator = element.getOperator().toString();
-            if(operator.equals("S")){
-                clippedLength+=len;
-            }
-        }
-        
-        //Need to make this a parameter
-        if(clippedLength>=(100-MIN_ALIGNED_PCT)*0.01*readLength){
-            fullLength = false;
-            int alignedLength = s.getAlignmentEnd() - s.getAlignmentStart(); 
-            int fullClippedLength = readLength - clippedLength;
-            //System.out.println(s.getCigar().toString() + " ClippedLength= " + fullClippedLength + " AlignmentLength= " + alignedLength);
-        }
-        else{ fullLength = true; }
-		
-        //Four Cases:
-        // if(unmapped);            --> Read is unmapped;
-        // else if(!fulllength);    --> Read is split; (Mapped & Not Full Alignment)
-        // else if(highQualityRead);--> Read is high quality (Mapped, Full Alignment, High Quality)
-        // else                     --> Read is low quality (Mapped, Full Alignment, Not High Enough Quality)
-        
-		
-        //Have we seen this read before?
-        if( HIGHQ_INDICATOR_SAM.containsKey(readname) || LOWQ_INDICATOR_SAM.containsKey(readname) || SPLIT_INDICATOR_SAM.containsKey(readname) || UNMAPPED_INDICATOR_SAM.containsKey(readname)){
-            
-            //Case 1: Read is Unmapped or Case 2: Read is Split
-            // If mate is high quality, output as split; else output as low-quality
-            if( unmapped || !fullLength){
-                SAMRecord other;
-                if(HIGHQ_INDICATOR_SAM.containsKey(readname)){
-                    other = HIGHQ_INDICATOR_SAM.remove(readname);
-                    if(WRITE_SPLITREAD || WRITE_LOWQ){
-                        writeSplitRecordPair(other,s);
-                    }
-                }
-                else{
-                    if(LOWQ_INDICATOR_SAM.containsKey(readname)){
-                        other = LOWQ_INDICATOR_SAM.remove(readname);
-                    } else if(SPLIT_INDICATOR_SAM.containsKey(readname)){
-                        other = SPLIT_INDICATOR_SAM.remove(readname);
-                    } else {
-                        other = UNMAPPED_INDICATOR_SAM.remove(readname);
-                    }
-                    if(WRITE_LOWQ){
-                        writeLowQualityRecordPair(other,s);
-                    }
-                }
-            }
-            //Case 3: Read is high quality (Either split or low-quality)
-            // (1) Mate is highquality (process as discordant or concordant)
-            // (2) Mate is split or unmapped (output as split)
-            // (3) Mate is lowquality (output as lowquality)
-            else if(highQualityRead){
-                SAMRecord other;
-                if(HIGHQ_INDICATOR_SAM.containsKey(readname)){
-                    other = HIGHQ_INDICATOR_SAM.remove(readname);
-                    
-                    // make a GASVPair object
-                    GASVPair pobj = null;
-                    try {
-                        pobj = new GASVPair(s, PLATFORM);
-                        if(pobj.badChrParse) // chromosome not recognized. skip.
-                            return;
-                    } catch (SAMFormatException e) {
-                        BAD_RECORD_COUNTER++;
-                        System.err.println("**SAMFormatException** "+e.getMessage());
-                        return;
-                    }
-                    
-                    // If we've already computed stats, then we just need to
-                    // parse the ESP.  If not, then keep in mem.
-                    if(lib.computedStats) {
-                        // parse ESP
-                        parseESPfromGASVPair(pobj,lib);
-                    } else { // keep this read in memory
-                        // ADD this GASVPair object to the list of first N reads
-                        lib.firstNreads.add(pobj);
-                        
-                        // calculate insert length
-                        calculateInsertLength(lib,pobj,s);		
-                        
-                        // if we haven't found a mate, check pair information.
-                        if (!lib.mateFound) 
-                            lib.isRecordPaired(s);
-                    }
-                }
-                else if(LOWQ_INDICATOR_SAM.containsKey(readname)){
-                    other = LOWQ_INDICATOR_SAM.remove(readname);
-                    if(WRITE_LOWQ){
-                        writeLowQualityRecordPair(other,s);
-                    }
-                }
-                else{
-                    if(SPLIT_INDICATOR_SAM.containsKey(readname)){
-                        other = SPLIT_INDICATOR_SAM.remove(readname);
-                    }
-                    else{
-                        other = UNMAPPED_INDICATOR_SAM.remove(readname);
-                    }
-                    if(WRITE_SPLITREAD || WRITE_LOWQ){
-                        writeSplitRecordPair(other,s);
-                    }
-                }
-            }
-            //Case 4: The read is low-quality; in all cases output to low-quality;
-            else{
-                SAMRecord other;
-                if(HIGHQ_INDICATOR_SAM.containsKey(readname)){
-                    other = HIGHQ_INDICATOR_SAM.remove(readname);
-                } else if(LOWQ_INDICATOR_SAM.containsKey(readname)){
-                    other = LOWQ_INDICATOR_SAM.remove(readname);
-                } else if(SPLIT_INDICATOR_SAM.containsKey(readname)){
-                    other = SPLIT_INDICATOR_SAM.remove(readname);
-                } else {
-                    other = UNMAPPED_INDICATOR_SAM.remove(readname);
-                }
-                if(WRITE_LOWQ){
-                    writeLowQualityRecordPair(other,s);
-                }
-            }
-            
-        }
-        else{
-            if(unmapped){ UNMAPPED_INDICATOR_SAM.put(readname,s); }
-            else if(!fullLength){ SPLIT_INDICATOR_SAM.put(readname, s); }
-            else if(highQualityRead){ HIGHQ_INDICATOR_SAM.put(readname,s); }
-            else{ LOWQ_INDICATOR_SAM.put(readname,s); }
-        }
-        
+		String readname = s.getReadName();
 
+		// If this record has high mapping quality, then store it.
+		// If this record has low mapping quality AND the write-lowq flag is set, store it too.
+		if(s.getMappingQuality() >= MAPPING_QUALITY){ 	
+
+			// Have we seen it's mate? First check HIGHQ, then check LOWQ
+			if(HIGHQ_INDICATOR.containsKey(readname)) {
+				// remove PAIR counting of this read
+				HIGHQ_INDICATOR.remove(readname);
+
+				// make a GASVPair object
+				GASVPair pobj = null;
+				try {
+					pobj = new GASVPair(s, PLATFORM);
+					if(pobj.badChrParse) // chromosome not recognized. skip.
+						return;
+				} catch (SAMFormatException e) {
+					BAD_RECORD_COUNTER++;
+					System.err.println("**SAMFormatException** "+e.getMessage());
+					return;
+				}
+
+				// If we've already computed stats, then we just need to 
+				// parse the ESP.  If not, then keep in mem.
+				if(lib.computedStats) {
+					// parse ESP
+					parseESPfromGASVPair(pobj,lib);
+				} else { // keep this read in memory
+					// ADD this GASVPair object to the list of first N reads
+					lib.firstNreads.add(pobj);
+
+					// calculate insert length
+					calculateInsertLength(lib,pobj,s);		
+
+					// if we haven't found a mate, check pair information.
+					if (!lib.mateFound) 
+						lib.isRecordPaired(s);
+				}
+
+			} else if (WRITE_LOWQ && LOWQ_INDICATOR.containsKey(readname)) {
+				//Current read has high quality, but the other read was: (1) already seen; (2) has low-quality.
+				// NOTE: if write_lowq is set, then LOWQ_ind is populated. 
+
+				// remove PAIR counting of this read
+				String other = LOWQ_INDICATOR.remove(readname);
+
+				writeLowQualityRecordPair(other,s.getSAMString());
+
+			} else { // haven't seen it, put it in HIGHQ 
+				HIGHQ_INDICATOR.put(readname,s.getSAMString());
+			} // END high quality read conditional 
+
+		} else { // (s.getMappingQuality() < MAPPING_QUALITY)
+
+			// Have we seen it's mate? First check HIGHQ, then check LOWQ
+			if(HIGHQ_INDICATOR.containsKey(readname)) {
+				// remove PAIR counting of this read
+				String other = HIGHQ_INDICATOR.remove(readname);
+
+				// IF write_lowq, then write low qual.
+				if(WRITE_LOWQ) {	
+					writeLowQualityRecordPair(other,s.getSAMString());
+				}
+
+			} else if (WRITE_LOWQ && LOWQ_INDICATOR.containsKey(readname)) {
+				// NOTE: if write_lowq is set, then LOWQ_ind is populated. 
+
+				// remove PAIR counting of this read
+				String other = LOWQ_INDICATOR.remove(readname);
+				writeLowQualityRecordPair(other,s.getSAMString());
+
+			} else if (WRITE_LOWQ) { // we haven't seen it - add to LOWQ
+				LOWQ_INDICATOR.put(readname,s.getSAMString());
+			} // END low quality read conditional
+		} // END mapping quality check
 	}
 
-    /*
 	public void writeLowQualityRecordPair(String record1,String record2)  {
 		try {
 			LOWQ_BAM_FILE.write(record1+record2);
@@ -1539,39 +1342,7 @@ public class BAMToGASV {
 			System.exit(-1);
 		}
 	}
-    
-    //Note: If WRITE_SPLITREAD = False; then write the output to write lowquality.
-	public void writeSplitRecordPair(String record1,String record2)  {
-        if(WRITE_LOWQ && !WRITE_SPLITREAD){
-            writeLowQualityRecordPair(record1,record2);
-        }
-        else{
-            try {
-                SPLIT_BAM_FILE.write(record1+record2);
-            } catch (IOException e) {
-                System.out.println("ERROR: Cannot write split read sam file.");
-                System.exit(-1);
-            }
-        }
-	}
-    */
-    
-    public void writeLowQualityRecordPair(SAMRecord record1,SAMRecord record2)  {
-		LOWQ_BAM.addAlignment(record1);
-        LOWQ_BAM.addAlignment(record2);
-    }
-    
-    //Note: If WRITE_SPLITREAD = False; then write the output to write lowquality.
-	public void writeSplitRecordPair(SAMRecord record1,SAMRecord record2)  {
-        if(WRITE_LOWQ && !WRITE_SPLITREAD){
-            writeLowQualityRecordPair(record1,record2);
-        }
-        else{
-            SPLIT_BAM.addAlignment(record1);
-            SPLIT_BAM.addAlignment(record2);
-        }
-	}
-    
+
 	/**
 	 * Gets the variant type of a GASVPair depending on chr, orientation, and distance.
 	 * Note that LOW Variant Type is special and never returned here.

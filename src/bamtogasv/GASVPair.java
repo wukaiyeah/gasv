@@ -40,7 +40,7 @@ public class GASVPair {
 	public GASVPair(SAMRecord s, String platform) throws SAMFormatException {
 		readname = s.getReadName();
 		
-		// if the mate's chromosmoe is larger than the query's OR the inferred
+		// if the mate's chromosome is larger than the query's OR the inferred
 		// insert size is < 0, then the mate comes first.
 		boolean queryFirst = true;
 		if(parseChr(s.getReferenceName()) > parseChr(s.getMateReferenceName()) || 
@@ -60,11 +60,17 @@ public class GASVPair {
 			second_end = s.getMateAlignmentStart()+s.getReadLength()-1;
 			
 			// SOLiD platform - flip the orientation of the second read
-			if (platform == "solid"){
+			if (platform.equals("solid")){
 				if(s.getFirstOfPairFlag()){
 					second_ori = (second_ori == '-') ? '+':'-';
 				}	
-			}	
+			}
+            //We reverse the orientation of BOTH strands.
+            else if(platform.equals("matepair")){
+                first_ori = (first_ori == '-') ? '+':'-';
+                second_ori = (second_ori == '-') ? '+':'-';
+            }
+            
 		} else { // position: mate ... query
 			first_chrom = parseChr(s.getMateReferenceName());			
 			first_ori = s.getMateNegativeStrandFlag() ?'-':'+';
@@ -77,12 +83,16 @@ public class GASVPair {
 			second_end = s.getAlignmentEnd(); 
 			
 			// SOLiD platform
-			if (platform == "solid"){
+			if (platform.equals("solid")){
 				if(s.getSecondOfPairFlag()){
 					second_ori = (second_ori == '-') ? '+':'-';
 				}
 			}
-		} 
+            else if(platform.equals("matepair")){
+                first_ori = (first_ori == '-') ? '+':'-';
+                second_ori = (second_ori == '-') ? '+':'-';
+            }
+		}
 	}
 	
 	// NEW in Version 2.0: insert size is end-start+1 rather than end-start.

@@ -258,10 +258,10 @@ public class BAMToGASV_AMBIG {
 					System.out.println("Error! " + CHROMOSOME_NAMING_FILE + " does not exist.");
 				}
 			} else if(args[i].equalsIgnoreCase("-PLATFORM")) {
-				if(args[i+1].equalsIgnoreCase("illumina") || args[i+1].equalsIgnoreCase("solid"))
+				if(args[i+1].equalsIgnoreCase("illumina") || args[i+1].equalsIgnoreCase("solid") || args[i+1].equalsIgnoreCase("matepair"))
 					PLATFORM = args[i+1].toLowerCase();
 				else {
-					System.out.println("Error! PLATFORM option can only be 'Illumina' or 'SOLiD'.");
+					System.out.println("Error! PLATFORM option can only be 'Illumina', 'SOLiD' or 'MatePair'.");
 					return false;
 				}
 			} else if(args[i].equalsIgnoreCase("-VALIDATION_STRINGENCY")) {
@@ -301,8 +301,9 @@ public class BAMToGASV_AMBIG {
 				"-CHROMOSOME_NAMING [String] (Default: none)\n" +
 				"\tFile of the form '<ChrName>\\t<IntegerID>' for specifying non-default chromosome namings.  Default chromosome namings are Integers,X, and Y, either alone or with a 'chr' prefix.\n" +
 				"-PLATFORM [String] (Default: Illumina)\n" +
-				"\tIllumina\tReads are sequenced with the Illumina platform.\n" +
+				"\tIllumina\tReads are sequenced with the Illumina platform (paired-read orientation --> <--).\n" +
 				"\tSOLiD\tReads are sequenced with the SOLiD platform.\n" +
+				"\tMatePair\tReads are sequenced with the mate pair orientation (outward orientation <-- -->).\n" +
 				"-VALIDATION_STRINGENCY [String] (Default: silent)\n"+
 				"\tsilent\tRead SAM records without any validation.\n"+
 				"\tlenient\tRead SAM records and emit a warning when a record is not formatted properly.\n"+
@@ -416,10 +417,10 @@ public class BAMToGASV_AMBIG {
 			libname = record.getLibrary();
 
 			if(platform == null || platform.equals("")) 
-				System.out.println("  WARNING: Platform not specified for library "+libname+". Proceeding with "+PLATFORM+". You can specify the platform as Illumina or SOLiD using -PLATFORM.");
+				System.out.println("  WARNING: Platform not specified for library "+libname+". Proceeding with "+PLATFORM+". You can specify the platform as Illumina, SOLiD or MatePair using -PLATFORM.");
 
 			else if(!platform.toLowerCase().equals(PLATFORM)) 
-				System.out.println("  WARNING: Platform in library " + libname + " is " + platform+". Proceeding with "+PLATFORM+". You can specify the platform as Illumina or SOLiD using -PLATFORM.");
+				System.out.println("  WARNING: Platform in library " + libname + " is " + platform+". Proceeding with "+PLATFORM+". You can specify the platform as Illumina, SOLiD or MatePair using -PLATFORM.");
 
 			else if(!platform.equals("")) // if platform is non an empty string, we've seen it.
 				viewedPlatforms.put(platform.toLowerCase(),platform);
