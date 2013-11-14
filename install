@@ -15,6 +15,9 @@ cd ..
 echo "Installing GASVPro-CC..."
 g++ -O2 -w src/gasvPro/GASVPro-cc.cpp -o bin/GASVPro-CC
 
+echo "Installing GASVPro-CC..."
+g++ -O2 -w src/gasvPro/GASVPro-cc-new.cpp -o bin/GASVPro-CC-new
+
 echo "Installing GASVPro-graph..."
 g++ -O2 -w src/gasvPro/GASVPro-graph.cpp -o bin/GASVPro-graph
 
