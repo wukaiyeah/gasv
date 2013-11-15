@@ -159,12 +159,14 @@ public class Clone extends BreakRegion{
 						+ name 
 						+ " where 2*readlength was > Lmin, so increasing Lmin for this ESP to " 
 						+ Lmin);
-				if (Lmin >= Lmax) {
+				
+                /*if (Lmin >= Lmax) {
 					Out.print("ERROR: Lmin has been increased beyond >= Lmax for ESP: " + name 
 							+ " so halting program!");
 					System.exit(-1);
 
-				}
+				}*/
+                
 				//old code to be used if we go back to allowing triangles
 				//p.add(newX, newY);
 				//p.add(Math.abs(x) + signumX * Lmax - signumX * yLen, newY);
