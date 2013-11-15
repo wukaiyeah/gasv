@@ -45,8 +45,10 @@ public class ReadESP extends ReadFile {
 	private int windowSize_;
 	private boolean concordantESPWarningRaised_ = false;
 	private boolean overlapESPWarningRaised_ = false;
+    private boolean invalidLminWarningRaised_ = false;
 	private int numConcordant_ = 0;
 	private int numOverlapping_ = 0;
+    private int numInvalidLmin_ = 0;
 	private int intervalID_ = 1;
 	private HashMap<String, Integer> transcriptToIntMap = null;
 	
@@ -100,6 +102,19 @@ public class ReadESP extends ReadFile {
 		}	 
 	}
 	
+    /**
+	 *  Returns true if c has an invalid Lmin (i.e., Lmin > Lmax)
+     *  Typically caused by 2*ReadLen>Lmin requirement.
+	 */
+    private boolean hasInvalidLmin(Clone c){
+        if(c.getLmin() > c.getLmax()){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+    
 	/**
 	 *  Returns true if we correspond to a valid mapping. (i.e., the reads alignments do NOT overlap.)
 	 */
@@ -314,7 +329,20 @@ public class ReadESP extends ReadFile {
 
 		}
 	
-				if(isOverlapping(c)){
+				if(hasInvalidLmin(c)){
+                    if(!invalidLminWarningRaised_){
+                        Out.print("Warning: File: " +  file_ + " contains a PR with Lmin > Lmax "
+                                  + " caused by enforcing Lmin > 2*ReadLen "
+								  + " GASV ignores such cases. The first such PR case encountered: "
+								  + nextLine);
+						invalidLminWarningRaised_ = true;
+                    }
+                    numInvalidLmin_++;
+                    
+                    throw new Exception("Invalid ReadLength/Lmin Combination Encountered: " + nextLine);
+                }
+                
+                if(isOverlapping(c)){
 					if(!overlapESPWarningRaised_){
 						Out.print("Warning: File: " +  file_ + " contains a PR with overlapping reads "
 								  + " GASV ignores such cases. The first such PR case encountered: "
@@ -438,6 +466,9 @@ public class ReadESP extends ReadFile {
 		}
 		if (numOverlapping_ > 0) { 
 			Out.print("Ignored " + numOverlapping_ + " overlapping-read PR's in file " + file_);
+		}
+        if (numInvalidLmin_ > 0) {
+			Out.print("Ignored " + numInvalidLmin_ + " PR's with invalid Lmin values in file " + file_);
 		}
 		return true;
 		
