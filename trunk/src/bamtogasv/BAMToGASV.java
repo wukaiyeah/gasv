@@ -85,6 +85,7 @@ public class BAMToGASV {
 	public boolean GASVPRO_OUTPUT = false; // GASVPro
 	public boolean BATCH = false;
 	public boolean NOSORT = false;
+	public boolean IGNORE_DUPLICATES = true;
 
 	/* Additional Variables */
 	public boolean someLibPassed = false; // true if at least one library is paired, false otherwise.
@@ -122,6 +123,7 @@ public class BAMToGASV {
 	public HashMap<String,SAMRecord> LOWQ_INDICATOR_SAM;           // <full_library_name,#of reads>
     public HashMap<String,SAMRecord> SPLIT_INDICATOR_SAM;          // <full_library_name,#of reads>
 	public HashMap<String,SAMRecord> UNMAPPED_INDICATOR_SAM;       // <full_library_name,#of reads>
+	public HashMap<String,SAMRecord> DUPLICATE_INDICATOR_SAM;	   // <full_library_name,#of reads>
 
 
 	/* Sorters for ESPs and for Concordants */
@@ -217,6 +219,7 @@ public class BAMToGASV {
 		LOWQ_INDICATOR_SAM = new HashMap<String,SAMRecord>();
         SPLIT_INDICATOR_SAM = new HashMap<String,SAMRecord>();     //New Indicators for SplitReads and Unmapped. (We now have all four cases for reads covered!)
         UNMAPPED_INDICATOR_SAM = new HashMap<String,SAMRecord>();
+        DUPLICATE_INDICATOR_SAM = new HashMap<String,SAMRecord>();
         
         NON_DEFAULT_REFS = new HashMap<String,Boolean>();
 		if(NOSORT) {
@@ -404,6 +407,16 @@ public class BAMToGASV {
 					System.out.println("Error! Option " + args[i] + " does not exist.");
 					return false;
 				}
+			} else if (args[i].equalsIgnoreCase("-IGNORE_DUPLICATES")){
+				if(args[i+1].equalsIgnoreCase("true")){
+					IGNORE_DUPLICATES = true;
+				}
+				else if (args[i+1].equalsIgnoreCase("false")){
+					IGNORE_DUPLICATES = false;
+				} else {
+					System.out.println("Error! IGNORE_DUPLICATES can only be 'True' or 'False'.");
+					return false;
+				}
 			} else {
 				System.out.println("Error! Option " + args[i] + " does not exist.");
 				return false;
@@ -468,6 +481,9 @@ public class BAMToGASV {
 				"\tTrue\tGenerate GASVPro parameters file and concordant file. Warning - this will be large!\n"+
 				"-NOSORT [Boolean] (Default: False)\n"+
 				"\tTrue\tDo not sort the concordant file. Improves running time.\n"+
+				"-IGNORE_DUPLICATES [Boolean] (Default: True)\n"+
+				"\tTrue\tIgnore pairs of reads where at least one is marked as a PCR/Optical Duplicate.\n"+
+				"\tFalse\tTreat duplicates as normal reads, never check duplicate flag.\n" +
 		"Refer to the Manual for more details.");
 	}
 
@@ -1287,141 +1303,6 @@ public class BAMToGASV {
 
 	}
 
-
-	/**
-	 * Add GASVPair object to the LOWQUAL list in Library's data structure.
-	 * @param pobj - GASVPair object
-	 * @param lib - library to add ESP to.
-	 */
-	/*
-	private void parseLowQualESPfromGASVPair(GASVPair pobj, Library lib){ 
-		VariantType type = VariantType.LOW;
-
-		// Add line to variant list for this library.
-		lib.addLine(type,pobj.createOutput(type));
-
-		// Check to see if we should sort and write tmp file here.
-		// Now, sort and write ALL tmp files (all libraries, all types)
-		if(lib.rowsForVariant.get(type).size() >= NUM_LINES_FOR_EXTERNAL_SORT) {
-			String libname;
-			for(int i = 0;i<LIBRARY_NAMES.size();i++) {
-				libname = LIBRARY_NAMES.get(i);
-				lib = LIBRARY_INFO.get(libname);
-
-				for(int j=0;j<VARIANTS.length;j++) {
-					if(VARIANTS[j] == VariantType.CONC && !WRITE_CONCORDANT)
-						continue;
-					if(VARIANTS[j] == VariantType.LOW && !WRITE_LOWQ)
-						continue;
-
-					// if there are fewer than 1/10th of the number of reads, don't do this yet.
-					if(lib.rowsForVariant.get(VARIANTS[j]).size() < USE_NUMBER_READS/10)
-						continue;
-
-					sortAndWriteTempFile(lib,VARIANTS[j]);
-
-				} // END for each variant
-			} // END for each Library
-		} // END if(lib.rowsForVariant.get(type).size() >= NUM_LINES_FOR_EXTERNAL_SORT)
-
-	}
-	 */
-
-	/**
-	 * Parse read and put the SAM record in the appropriate place.  
-	 * --> if it's the first of the pair, keep track of it.
-	 * --> if it's the second ofthe pair, make the ESP and store it in 
-	 * the library's list of ESPs in memory.
-	 * Finally, write list of ESPs to temp file if they exceed a buffer size.
-	 * 
-	 * @param s - SAM record to parse
-	 * @param lib - Library to use.
-	 */
-	/*private void parseSAMRecord(SAMRecord s, Library lib){
-
-		// If this record is duplicated (according to flag) OR is NOT paired, then 
-		// return immediately.
-		if(s.getDuplicateReadFlag() || !s.getReadPairedFlag()) 
-			return;
-
-		String readname = s.getReadName();
-
-		// If this record has high mapping quality, then store it.
-		// If this record has low mapping quality AND the write-lowq flag is set, store it too.
-		if(s.getMappingQuality() >= MAPPING_QUALITY){ 	
-
-			// Have we seen it's mate? First check HIGHQ, then check LOWQ
-			if(HIGHQ_INDICATOR.containsKey(readname)) {
-				// remove PAIR counting of this read
-				HIGHQ_INDICATOR.remove(readname);
-
-				// make a GASVPair object
-				GASVPair pobj = null;
-				try {
-					pobj = new GASVPair(s, PLATFORM);
-					if(pobj.badChrParse) // chromosome not recognized. skip.
-						return;
-				} catch (SAMFormatException e) {
-					BAD_RECORD_COUNTER++;
-					System.err.println("**SAMFormatException** "+e.getMessage());
-					return;
-				}
-
-				// If we've already computed stats, then we just need to 
-				// parse the ESP.  If not, then keep in mem.
-				if(lib.computedStats) {
-					// parse ESP
-					parseESPfromGASVPair(pobj,lib);
-				} else { // keep this read in memory
-					// ADD this GASVPair object to the list of first N reads
-					lib.firstNreads.add(pobj);
-
-					// calculate insert length
-					calculateInsertLength(lib,pobj,s);		
-
-					// if we haven't found a mate, check pair information.
-					if (!lib.mateFound) 
-						lib.isRecordPaired(s);
-				}
-
-			} else if (WRITE_LOWQ && LOWQ_INDICATOR.containsKey(readname)) {
-				//Current read has high quality, but the other read was: (1) already seen; (2) has low-quality.
-				// NOTE: if write_lowq is set, then LOWQ_ind is populated. 
-
-				// remove PAIR counting of this read
-				String other = LOWQ_INDICATOR.remove(readname);
-
-				writeLowQualityRecordPair(other,s.getSAMString());
-
-			} else { // haven't seen it, put it in HIGHQ 
-				HIGHQ_INDICATOR.put(readname,s.getSAMString());
-			} // END high quality read conditional 
-
-		} else { // (s.getMappingQuality() < MAPPING_QUALITY)
-
-			// Have we seen it's mate? First check HIGHQ, then check LOWQ
-			if(HIGHQ_INDICATOR.containsKey(readname)) {
-				// remove PAIR counting of this read
-				String other = HIGHQ_INDICATOR.remove(readname);
-
-				// IF write_lowq, then write low qual.
-				if(WRITE_LOWQ) {	
-					writeLowQualityRecordPair(other,s.getSAMString());
-				}
-
-			} else if (WRITE_LOWQ && LOWQ_INDICATOR.containsKey(readname)) {
-				// NOTE: if write_lowq is set, then LOWQ_ind is populated. 
-
-				// remove PAIR counting of this read
-				String other = LOWQ_INDICATOR.remove(readname);
-				writeLowQualityRecordPair(other,s.getSAMString());
-
-			} else if (WRITE_LOWQ) { // we haven't seen it - add to LOWQ
-				LOWQ_INDICATOR.put(readname,s.getSAMString());
-			} // END low quality read conditional
-		} // END mapping quality check
-	}*/
-
     /**
 	 * Parse read and put the SAM record in the appropriate place.
 	 * --> if it's the first of the pair, keep track of it.
@@ -1436,25 +1317,112 @@ public class BAMToGASV {
 	 */
 	private void parseSAMRecord(SAMRecord s, Library lib){
         
-		// If this record is duplicated (according to flag) OR is NOT paired, then
-		// return immediately.
-		if(s.getDuplicateReadFlag() || !s.getReadPairedFlag())
-			return;
+		// If this record is NOT paired, then return immediately.
+		if(!s.getReadPairedFlag()) return;
         
-		String readname      = s.getReadName();
-        
-		boolean highQualityRead = false;
-        boolean fullLength      = false;
-        boolean unmapped        = s.getReadUnmappedFlag();
+		String readname = s.getReadName();
+
+		// Determine type of read
+		ReadType type = ReadType.LOWQ;
+		if (IGNORE_DUPLICATES && s.getDuplicateReadFlag()) 
+		   //The only time we check the duplicate flag on the record
+		   //is when IGNORE_DUPLICATES is on. Otherwise, we treat duplicate
+		   //records just like others	
+			type = ReadType.DUPLICATE;
+		else if (s.getReadUnmappedFlag()) 
+			type = ReadType.UNMAPPED;
+		else if (isClipped(s))
+			type = ReadType.SPLIT;
+		else if (s.getMappingQuality() >= MAPPING_QUALITY) 
+			//ReadType is only HIGHQ if the read is not also SPLIT or DUPLICATE
+			//This condition check must be last!
+			type = ReadType.HIGHQ;
+
+		// Have we seen this readname already?
+        RecordAndType pair = getPairFromSAMHashMaps(readname);
+		if (pair == null){ 
+			// We don't have the pair in memory, so we store S and return
+			putRecordInSAMHashMap(readname, s, type);
+			return; 
+		}		
 		
-        //Check Mapping Quality;
-        if(s.getMappingQuality() < MAPPING_QUALITY){
-			highQualityRead = false;
+		SAMRecord other = pair.record;
+		ReadType pairType = pair.type;
+
+		// Process read pair based on the read types of s and other
+		switch(type){
+			case UNMAPPED:
+			case SPLIT:
+				if (pairType == ReadType.HIGHQ){
+					if (WRITE_SPLITREAD || WRITE_LOWQ)
+					    writeSplitRecordPair(other,s);
+				}
+				else { 
+					if(WRITE_LOWQ)
+						// Pair type is SPLIT, UNMAPPED, DUPLICATE, or LOWQ
+						writeLowQualityRecordPair(other,s);
+				}
+				break;
+			case DUPLICATE:
+			case LOWQ:
+				if (WRITE_LOWQ)
+					// No matter what pair type is, if a read is DUPLICATE or
+					// LOWQ, output to lowq
+					writeLowQualityRecordPair(other,s);
+				break;
+			case HIGHQ:	
+					if (pairType == ReadType.HIGHQ){    
+						// Both reads are HIGHQ
+						processHighQRecordPair(other, s, lib);
+					}
+					else if(pairType == ReadType.LOWQ || pairType == ReadType.DUPLICATE){
+						if(WRITE_LOWQ)
+							writeLowQualityRecordPair(other,s);
+					}else{
+						// Pair Type is SPLIT, or UNMAPPED
+						if(WRITE_SPLITREAD || WRITE_LOWQ)
+							writeSplitRecordPair(other,s);
+					}
+				break;
 		}
-        else{
-            highQualityRead = true;
-        }
-        
+    }
+
+	/**
+	 * Processes a read pair consisting of two high quality records
+	 **/ 
+	public void processHighQRecordPair(SAMRecord other, SAMRecord s, Library lib){
+		// make a GASVPair object
+        GASVPair pobj = null;
+		try {
+		    pobj = new GASVPair(s, PLATFORM);
+			if(pobj.badChrParse) // chromosome not recognized. skip.
+				return;
+			} catch (SAMFormatException e) {
+				BAD_RECORD_COUNTER++;
+				System.err.println("**SAMFormatException** "+e.getMessage());
+				return;
+			}
+			// If we've already computed stats, then we just need t
+			// parse the ESP.  If not, then keep in mem.
+			if(lib.computedStats) 
+				parseESPfromGASVPair(pobj,lib);
+			else { // keep this read in memory
+				// ADD this GASVPair object to the list of first N reads
+				lib.firstNreads.add(pobj);
+							     
+				// calculate insert length
+				calculateInsertLength(lib,pobj,s);
+ 
+                if (!lib.mateFound)
+	                lib.isRecordPaired(s);
+
+			}
+	}
+
+	/**
+	 * Checks whether the record, s, has been clipped
+	 **/
+	public boolean isClipped(SAMRecord s){
         //Checking Aligned Length;
         int readLength = s.getReadLength();
         
@@ -1473,131 +1441,10 @@ public class BAMToGASV {
         }
         
         //Need to make this a parameter
-        if(clippedLength>=(100-MIN_ALIGNED_PCT)*0.01*readLength){
-            fullLength = false;
-            int alignedLength = s.getAlignmentEnd() - s.getAlignmentStart();
-            int fullClippedLength = readLength - clippedLength;
-            //System.out.println(s.getCigar().toString() + " ClippedLength= " + fullClippedLength + " AlignmentLength= " + alignedLength);
-        }
-        else{ fullLength = true; }
-		
-        //Four Cases:
-        // if(unmapped);            --> Read is unmapped;
-        // else if(!fulllength);    --> Read is split; (Mapped & Not Full Alignment)
-        // else if(highQualityRead);--> Read is high quality (Mapped, Full Alignment, High Quality)
-        // else                     --> Read is low quality (Mapped, Full Alignment, Not High Enough Quality)
-        
-		
-        //Have we seen this read before?
-        if( HIGHQ_INDICATOR_SAM.containsKey(readname) || LOWQ_INDICATOR_SAM.containsKey(readname) || SPLIT_INDICATOR_SAM.containsKey(readname) || UNMAPPED_INDICATOR_SAM.containsKey(readname)){
-            
-            //Case 1: Read is Unmapped or Case 2: Read is Split
-            // If mate is high quality, output as split; else output as low-quality
-            if( unmapped || !fullLength){
-                SAMRecord other;
-                if(HIGHQ_INDICATOR_SAM.containsKey(readname)){
-                    other = HIGHQ_INDICATOR_SAM.remove(readname);
-                    if(WRITE_SPLITREAD || WRITE_LOWQ){
-                        writeSplitRecordPair(other,s);
-                    }
-                }
-                else{
-                    if(LOWQ_INDICATOR_SAM.containsKey(readname)){
-                        other = LOWQ_INDICATOR_SAM.remove(readname);
-                    } else if(SPLIT_INDICATOR_SAM.containsKey(readname)){
-                        other = SPLIT_INDICATOR_SAM.remove(readname);
-                    } else {
-                        other = UNMAPPED_INDICATOR_SAM.remove(readname);
-                    }
-                    if(WRITE_LOWQ){
-                        writeLowQualityRecordPair(other,s);
-                    }
-                }
-            }
-            //Case 3: Read is high quality (Either split or low-quality)
-            // (1) Mate is highquality (process as discordant or concordant)
-            // (2) Mate is split or unmapped (output as split)
-            // (3) Mate is lowquality (output as lowquality)
-            else if(highQualityRead){
-                SAMRecord other;
-                if(HIGHQ_INDICATOR_SAM.containsKey(readname)){
-                    other = HIGHQ_INDICATOR_SAM.remove(readname);
-                    
-                    // make a GASVPair object
-                    GASVPair pobj = null;
-                    try {
-                        pobj = new GASVPair(s, PLATFORM);
-                        if(pobj.badChrParse) // chromosome not recognized. skip.
-                            return;
-                    } catch (SAMFormatException e) {
-                        BAD_RECORD_COUNTER++;
-                        System.err.println("**SAMFormatException** "+e.getMessage());
-                        return;
-                    }
-                    
-                    // If we've already computed stats, then we just need to
-                    // parse the ESP.  If not, then keep in mem.
-                    if(lib.computedStats) {
-                        // parse ESP
-                        parseESPfromGASVPair(pobj,lib);
-                    } else { // keep this read in memory
-                        // ADD this GASVPair object to the list of first N reads
-                        lib.firstNreads.add(pobj);
-                        
-                        // calculate insert length
-                        calculateInsertLength(lib,pobj,s);
-                        
-                        // if we haven't found a mate, check pair information.
-                        if (!lib.mateFound)
-                            lib.isRecordPaired(s);
-                    }
-                }
-                else if(LOWQ_INDICATOR_SAM.containsKey(readname)){
-                    other = LOWQ_INDICATOR_SAM.remove(readname);
-                    if(WRITE_LOWQ){
-                        writeLowQualityRecordPair(other,s);
-                    }
-                }
-                else{
-                    if(SPLIT_INDICATOR_SAM.containsKey(readname)){
-                        other = SPLIT_INDICATOR_SAM.remove(readname);
-                    }
-                    else{
-                        other = UNMAPPED_INDICATOR_SAM.remove(readname);
-                    }
-                    if(WRITE_SPLITREAD || WRITE_LOWQ){
-                        writeSplitRecordPair(other,s);
-                    }
-                }
-            }
-            //Case 4: The read is low-quality; in all cases output to low-quality;
-            else{
-                SAMRecord other;
-                if(HIGHQ_INDICATOR_SAM.containsKey(readname)){
-                    other = HIGHQ_INDICATOR_SAM.remove(readname);
-                } else if(LOWQ_INDICATOR_SAM.containsKey(readname)){
-                    other = LOWQ_INDICATOR_SAM.remove(readname);
-                } else if(SPLIT_INDICATOR_SAM.containsKey(readname)){
-                    other = SPLIT_INDICATOR_SAM.remove(readname);
-                } else {
-                    other = UNMAPPED_INDICATOR_SAM.remove(readname);
-                }
-                if(WRITE_LOWQ){
-                    writeLowQualityRecordPair(other,s);
-                }
-            }
-            
-        }
-        else{
-            if(unmapped){ UNMAPPED_INDICATOR_SAM.put(readname,s); }
-            else if(!fullLength){ SPLIT_INDICATOR_SAM.put(readname, s); }
-            else if(highQualityRead){ HIGHQ_INDICATOR_SAM.put(readname,s); }
-            else{ LOWQ_INDICATOR_SAM.put(readname,s); }
-        }
-        
-        
+        return clippedLength>=(100-MIN_ALIGNED_PCT)*0.01*readLength;
 	}
-    
+
+
     //New Oct 2013: Write the output as a SAM/BAM file directly. 
     public void writeLowQualityRecordPair(SAMRecord record1,SAMRecord record2)  {
 		LOWQ_BAM.addAlignment(record1);
@@ -1614,7 +1461,59 @@ public class BAMToGASV {
             SPLIT_BAM.addAlignment(record2);
         }
 	}
-    
+
+	/**
+	 * Enum for classifying reads in parseSAMRecord
+	 **/
+	private enum ReadType {
+		HIGHQ, LOWQ, SPLIT, UNMAPPED, DUPLICATE 
+	}
+	/**
+	 * Struct bundling SAMRecord and ReadType, used for getPairFromSAMHashMaps
+	 **/
+	private class RecordAndType {
+		public SAMRecord record;
+		public ReadType type;
+
+		public RecordAndType(SAMRecord record, ReadType type){
+			this.record = record;
+			this.type = type;
+		}
+	}
+
+	/**
+	 * Puts record s into the correct HashMap based on the readType
+	 **/
+	public void putRecordInSAMHashMap(String readname, SAMRecord s, ReadType type){
+		if(type == ReadType.DUPLICATE) { DUPLICATE_INDICATOR_SAM.put(readname,s); }
+		else if(type == ReadType.UNMAPPED){ UNMAPPED_INDICATOR_SAM.put(readname,s); }
+		else if(type == ReadType.SPLIT){ SPLIT_INDICATOR_SAM.put(readname, s); }
+		else if(type == ReadType.HIGHQ){ HIGHQ_INDICATOR_SAM.put(readname,s); }
+		else{ LOWQ_INDICATOR_SAM.put(readname,s); }
+	}
+
+	/**
+	 * Queries SAMRecord Hashmaps for readname. If read is in one of the hashmaps,
+	 * a RecordAndType object is returned, containing the SAMRecord, and a ReadType
+	 * object indicating which map the read was found in. Returns null if the read
+	 * is not found
+	 **/
+	public RecordAndType getPairFromSAMHashMaps(String readname){
+        RecordAndType other = null;
+        if(HIGHQ_INDICATOR_SAM.containsKey(readname)){
+			other = new RecordAndType(HIGHQ_INDICATOR_SAM.remove(readname), ReadType.HIGHQ); 
+		} else if(LOWQ_INDICATOR_SAM.containsKey(readname)){
+			other = new RecordAndType(LOWQ_INDICATOR_SAM.remove(readname), ReadType.LOWQ); 
+		} else if(SPLIT_INDICATOR_SAM.containsKey(readname)){
+			other = new RecordAndType(SPLIT_INDICATOR_SAM.remove(readname), ReadType.SPLIT); 
+		} else if(UNMAPPED_INDICATOR_SAM.containsKey(readname)){
+			other = new RecordAndType(UNMAPPED_INDICATOR_SAM.remove(readname), ReadType.UNMAPPED); 
+		} else if(DUPLICATE_INDICATOR_SAM.containsKey(readname)){
+			other = new RecordAndType(DUPLICATE_INDICATOR_SAM.remove(readname), ReadType.DUPLICATE); 
+		}
+		return other;
+	}    
+
 	/**
 	 * Gets the variant type of a GASVPair depending on chr, orientation, and distance.
 	 * Note that LOW Variant Type is special and never returned here.
