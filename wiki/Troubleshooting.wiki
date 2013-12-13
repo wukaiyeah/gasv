@@ -38,14 +38,5 @@
 
         The second, and more common reason you may not appear to have valid paired reads in your BAM file has to do with the naming of reference sequences/chromosomes. 
 
-       BAMToGASV assumes that chromosomes have "standard" namings such as chr1, Chr1, chrX, ChrY. If your BAM file has non-standard chromosome naming, then you'll need to supply a "Chromosome Naming" file:
-
-       -CHROMOSOME NAMING FILE <String> (Default: none)
-       File of the form ‘<ChrName>\t<Integer>’ for specifying non-default chromosome namings. This is an optional parameter, you do not need this option if you are using the default chromosome naming references (a number, X, Y, chr+a number, chrX, and chrY). The second
-column contains unique integer IDs for each non-default chromosome name.
-       EXAMPLE:
-       Ca21chr1   1
-       Ca21chr2   2
-       Ca21-mtDNA 9
-
+       BAMToGASV assumes that chromosomes have "standard" namings such as chr1, Chr1, chrX, ChrY. If your BAM file has non-standard chromosome naming, then you'll need to supply a "Chromosome Naming" file as specified in the GASV documentation:
        http://gasv.googlecode.com/svn/trunk/doc/GASV_UserGuide.pdf
