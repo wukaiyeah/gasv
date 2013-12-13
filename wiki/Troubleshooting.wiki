@@ -29,3 +29,5 @@
         The simplest way to address this issue is to increase Lmax beyond 2 times the maximum Readlength in the problematic library. This will ensure GASV will run to completion, but is likely to effect the set of SV predictions produced by GASV. 
 
         The best way to address the issue is to figure out the cause of the discrepancy in the data. We suggest separating the read data from this library according to Readlength and then empirically re-estimating Lmin/Lmax.  Discordant fragments from these additional "sub-libraries"  can be clustered with GASV by modifying the gasv.in file. (See GASV Manual for more information.)
+
+# BAM File Lacking Pairing Information
