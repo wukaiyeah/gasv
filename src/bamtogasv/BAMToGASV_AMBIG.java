@@ -322,7 +322,8 @@ public class BAMToGASV_AMBIG {
 		if(IS_URL)
 			System.out.println("  BAM File URL = " + BAMFILE);
 		else
-			System.out.println("  BAM File = " + BAMFILE); 
+			System.out.println("  BAM File = " + BAMFILE);
+        System.out.println("  GASVInput File = " + GASVINPUT);
 		System.out.println("  Output Prefix = " + OUTPUT_PREFIX);
 		System.out.println("  Minimum Mapping Quality = " + MAPPING_QUALITY);
 		System.out.println("  Lmin/Lmax Cutoff = \"" + CUTOFF_LMINLMAX+"\"");
@@ -866,29 +867,7 @@ public class BAMToGASV_AMBIG {
 			}
 		}
 		
-		/*	
-		while(itr.hasNext()){
-			SAMRecord samRecord1 = itr.next();
-			SAMRecord samRecord2 = itr.next();
-			
-			System.out.println("Reading Read Name --> " + samRecord1.getReadName() + "\t" + samRecord2.getReadName());
-
-			
-			if(!samRecord1.getReadName().equals(samRecord2.getReadName())) {
-				System.out.println("ERROR! SAM file may not be sorted.");
-				System.out.println("Suspicious Read Names:\n" + samRecord1.getReadName() + "\n" + samRecord2.getReadName());
-				System.exit(-1);
-			}
-			if(!samRecord1.getReadName().equals(currentname)) {
-				FRAGMENT_COUNT = 1;
-				currentname = samRecord1.getReadName();
-			} else {
-				FRAGMENT_COUNT++;
-			}
-			parseSAMRecordAmbi(samRecord1,samRecord2,lib,FRAGMENT_COUNT);
-		}
-
-*/
+	
 		inputSam.close();
 		System.out.println("Done reading BAM file.\n");
 
@@ -926,85 +905,6 @@ public class BAMToGASV_AMBIG {
 
 		} // END for each library
 
-		// finish analysis with remaining records in libraries.
-		// FOR EACH LIBRARY: 
-		// (1) If stats haven't been computed, compute.
-		//   FOR EACH VARIANT:
-		// (2) Write last temporary file
-		// (3) merge temporary files into one sorted file.
-		/*	for(int i=0;i<LIBRARY_NAMES.size();i++) {
-			libname = LIBRARY_NAMES.get(i);
-			lib = LIBRARY_INFO.get(libname); 
-
-			// (1) If stats haven't been computed, compute.
-			// After reading the entire BAM file, some libraries
-			// might have fewer than USE_NUMBER_READS pairs.  
-			// Calculate stats now if this is the case.
-			if (!lib.computedStats){ 
-				System.out.println("  WARNING: There are fewer than " + 
-						USE_NUMBER_READS + " for library \""+libname+"\". Computing statistics now...");
-
-				// check pairInfo
-				checkPairingInfo(lib);
-
-				// get LminLmax
-				getLminLmax(lib);
-
-				// check variantTypes
-				checkVariantTypes(lib);
-
-				// First N reads are in memory. We must go through them and store them 
-				// in their respective types.  Afterwards, sets pairs to null for memory 
-				// efficiency.
-				for(GASVPair p : lib.firstNreads) {
-					parseESPfromGASVPair(p,lib);
-					lib.firstNreads = null;
-				}
-				lib.computedStats = true;
-
-			} // END haven't computed stats yet
-
-			// IF Lmin and Lmax are the initial parameters, then there are NO reads for this 
-			// library. We don't need to write variant files here.
-			if(lib.Lmin == Integer.MIN_VALUE || lib.Lmax == Integer.MIN_VALUE)
-				continue;
-
-			// Go through each Variant Type.
-			for(int j=0;j<VARIANTS.length;j++) {
-				type = VARIANTS[j];
-
-				// skip variant types that aren't flagged as "to-write"
-				if(type == VariantType.CONC && !WRITE_CONCORDANT)
-					continue;
-				if(type == VariantType.LOW && !WRITE_LOWQ)
-					continue;
-
-				// (2) Write last temporary files for variants
-				if(lib.rowsForVariant.get(type).size() > 0) 				
-					sortAndWriteTempFile(lib,type);
-
-				// (3) For each variant, merge temporary files into one sorted file.
-				// Files are deleted in the merge() function.
-
-				// First, get a list of the temporary file names.
-				tmpFilenames.clear();
-				for(int k=1;k<=lib.numTmpFilesForVariant.get(type);k++) 
-					tmpFilenames.add(getTmpFileName(libname,type,k));
-
-				System.out.println("  Library \""+libname+"\" type "+type+": merging "+
-						tmpFilenames.size() + " temporary files");
-
-				// Now, merge files. Concordants are written differently than all
-				// other ESP files.
-				if(type == VariantType.CONC)
-					concordantSorter.merge(tmpFilenames,getFinalFileName(libname,type));
-				else 
-					discordantSorter.merge(tmpFilenames,getFinalFileName(libname,type));
-
-			} // END for each variant
-
-		} // END for each library
-		 */
 		System.out.println();
 	}
 
@@ -1136,44 +1036,7 @@ public class BAMToGASV_AMBIG {
 
 	}
 
-	/**
-	 * Add GASVPair object to the LOWQUAL list in Library's data structure.
-	 * @param pobj - GASVPair object
-	 * @param lib - library to add ESP to.
-	 */
-	/*
-	private void parseLowQualESPfromGASVPair(GASVPair pobj, Library lib){ 
-		VariantType type = VariantType.LOW;
-
-		// Add line to variant list for this library.
-		lib.addLine(type,pobj.createOutput(type));
-
-		// Check to see if we should sort and write tmp file here.
-		// Now, sort and write ALL tmp files (all libraries, all types)
-		if(lib.rowsForVariant.get(type).size() >= NUM_LINES_FOR_EXTERNAL_SORT) {
-			String libname;
-			for(int i = 0;i<LIBRARY_NAMES.size();i++) {
-				libname = LIBRARY_NAMES.get(i);
-				lib = LIBRARY_INFO.get(libname);
-
-				for(int j=0;j<VARIANTS.length;j++) {
-					if(VARIANTS[j] == VariantType.CONC && !WRITE_CONCORDANT)
-						continue;
-					if(VARIANTS[j] == VariantType.LOW && !WRITE_LOWQ)
-						continue;
-
-					// if there are fewer than 1/10th of the number of reads, don't do this yet.
-					if(lib.rowsForVariant.get(VARIANTS[j]).size() < USE_NUMBER_READS/10)
-						continue;
-
-					sortAndWriteTempFile(lib,VARIANTS[j]);
-
-				} // END for each variant
-			} // END for each Library
-		} // END if(lib.rowsForVariant.get(type).size() >= NUM_LINES_FOR_EXTERNAL_SORT)
-
-	}
-	*/
+	
 
 	/**
 	 * Parse *Special Sam record
@@ -1184,7 +1047,7 @@ public class BAMToGASV_AMBIG {
 			// make a GASVPair object
 			GASVPair pobj = null;
 			try {
-				pobj = new GASVPair(s1, PLATFORM);
+				pobj = new GASVPair(s1, PLATFORM,CHR_NAMES);
 
 				if(pobj.badChrParse) // chromosome not recognized. skip.
 					return;
@@ -1199,97 +1062,9 @@ public class BAMToGASV_AMBIG {
 
 
 
-		/*
-				VariantType VAR = getVariantType(pobj,lib);
-
-				if(VAR == VariantType.CONC){ // Handle Concordants.
-
-				} else { // Handle Discordants
-						try {
-							discordantSorter.sort( lib.rowsForVariant.get(VAR),
-												  getTmpFileName(lib.name,VAR,curnum));
-						} catch (IOException e) {
-							System.out.println("ERROR WHILE WRITING DISCORDANT TMP FILE " + getTmpFileName(lib.name,VAR,curnum) + ". Most likely, the tmp file cannot be created - check the output directory location.");
-							System.exit(-1);
-						}
-				}*/
-
-
+	
 	}
 
-	/**
-	 * Parse read and put the SAM record in the appropriate place.  
-	 * --> if it's the first of the pair, keep track of it.
-	 * --> if it's the second ofthe pair, make the ESP and store it in 
-	 * the library's list of ESPs in memory.
-	 * Finally, write list of ESPs to temp file if they exceed a buffer size.
-	 * 
-	 * @param s - SAM record to parse
-	 * @param lib - Library to use.
-	 */
-	/*
-	private void parseSAMRecord(SAMRecord s, Library lib){
-
-		// If this record is duplicated (according to flag) OR is NOT paired, then 
-		// return immediately.
-		if(s.getDuplicateReadFlag() || !s.getReadPairedFlag()) 
-			return;
-
-		String readname = s.getReadName();
-
-		// If this record has high mapping quality, then store it.
-		// If this record has low mapping quality AND the write-lowq flag is set, store it too.
-		if(s.getMappingQuality() >= MAPPING_QUALITY){ 	
-
-			// Have we seen it's mate? First check HIGHQ, then check LOWQ
-			if(HIGHQ_INDICATOR.containsKey(readname)) {
-				// remove PAIR counting of this read
-				HIGHQ_INDICATOR.remove(readname);
-
-				// make a GASVPair object
-				GASVPair pobj = null;
-				try {
-					pobj = new GASVPair(s, PLATFORM);
-					if(pobj.badChrParse) // chromosome not recognized. skip.
-						return;
-				} catch (SAMFormatException e) {
-					BAD_RECORD_COUNTER++;
-					System.err.println("**SAMFormatException** "+e.getMessage());
-					return;
-				}
-
-				// If we've already computed stats, then we just need to 
-				// parse the ESP.  If not, then keep in mem.
-				if(lib.computedStats) {
-					// parse ESP
-					parseESPfromGASVPair(pobj,lib);
-				} else { // keep this read in memory
-					// ADD this GASVPair object to the list of first N reads
-					lib.firstNreads.add(pobj);
-
-					// calculate insert length
-					calculateInsertLength(lib,pobj,s);		
-
-					// if we haven't found a mate, check pair information.
-					if (!lib.mateFound) 
-						lib.isRecordPaired(s);
-				}
-
-			} else { // haven't seen it, put it in HIGHQ 
-				HIGHQ_INDICATOR.put(readname,1);
-			} // END high quality read conditional 
-
-		} else { // (s.getMappingQuality() < MAPPING_QUALITY)
-
-			// Have we seen it's mate? First check HIGHQ, 
-			if(HIGHQ_INDICATOR.containsKey(readname)) {
-				// remove PAIR counting of this read
-				HIGHQ_INDICATOR.remove(readname);
-
-			} 
-		} // END mapping quality check
-	}
-*/
 	/**
 	 * Gets the variant type of a GASVPair depending on chr, orientation, and distance.
 	 * Note that LOW Variant Type is special and never returned here.
