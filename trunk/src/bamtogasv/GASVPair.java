@@ -19,6 +19,8 @@
  */
 import net.sf.samtools.SAMFormatException;
 import net.sf.samtools.SAMRecord;
+import java.util.HashMap;
+
 
 public class GASVPair {
 	private int first_start, first_end, second_start, second_end;
@@ -94,6 +96,65 @@ public class GASVPair {
             }
 		}
 	}
+    
+    public GASVPair(SAMRecord s, String platform, HashMap<String,Integer> CHR_NAMES) throws SAMFormatException {
+		readname = s.getReadName();
+		
+		// if the mate's chromosome is larger than the query's OR the inferred
+		// insert size is < 0, then the mate comes first.
+		boolean queryFirst = true;
+		if(parseChr(s.getReferenceName(),CHR_NAMES) > parseChr(s.getMateReferenceName(),CHR_NAMES) ||
+           (parseChr(s.getReferenceName(),CHR_NAMES) == parseChr(s.getMateReferenceName(),CHR_NAMES) &&
+            s.getAlignmentStart() > s.getMateAlignmentStart()))
+			queryFirst = false;
+		
+		if (queryFirst){ // position: query ... mate
+			first_chrom = parseChr(s.getReferenceName(),CHR_NAMES);
+			first_ori = s.getReadNegativeStrandFlag() ?'-':'+';
+			first_start = s.getAlignmentStart();
+			first_end = s.getAlignmentEnd();
+			
+			second_chrom = parseChr(s.getMateReferenceName(),CHR_NAMES);
+			second_ori = s.getMateNegativeStrandFlag() ?'-':'+';
+			second_start = s.getMateAlignmentStart();
+			second_end = s.getMateAlignmentStart()+s.getReadLength()-1;
+			
+			// SOLiD platform - flip the orientation of the second read
+			if (platform.equals("solid")){
+				if(s.getFirstOfPairFlag()){
+					second_ori = (second_ori == '-') ? '+':'-';
+				}
+			}
+            //We reverse the orientation of BOTH strands.
+            else if(platform.equals("matepair")){
+                first_ori = (first_ori == '-') ? '+':'-';
+                second_ori = (second_ori == '-') ? '+':'-';
+            }
+            
+		} else { // position: mate ... query
+			first_chrom = parseChr(s.getMateReferenceName(),CHR_NAMES);
+			first_ori = s.getMateNegativeStrandFlag() ?'-':'+';
+			first_start = s.getMateAlignmentStart();
+			first_end = s.getMateAlignmentStart()+s.getReadLength()-1;
+			
+			second_chrom = parseChr(s.getReferenceName(),CHR_NAMES);
+			second_ori = s.getReadNegativeStrandFlag() ?'-':'+';
+			second_start = s.getAlignmentStart();
+			second_end = s.getAlignmentEnd();
+			
+			// SOLiD platform
+			if (platform.equals("solid")){
+				if(s.getSecondOfPairFlag()){
+					second_ori = (second_ori == '-') ? '+':'-';
+				}
+			}
+            else if(platform.equals("matepair")){
+                first_ori = (first_ori == '-') ? '+':'-';
+                second_ori = (second_ori == '-') ? '+':'-';
+            }
+		}
+	}
+    
 	
 	// NEW in Version 2.0: insert size is end-start+1 rather than end-start.
 	public int getInsertSize(){
@@ -139,6 +200,33 @@ public class GASVPair {
 		}
 		return Integer.MIN_VALUE;
 	}
+    
+    public int parseChr(String str, HashMap<String,Integer> CHR_NAMES) {
+		if (CHR_NAMES == null) {
+			try {
+				return Integer.parseInt(str);
+			} catch (NumberFormatException e1) {
+				String origstr = str;
+				str = str.replace("chr",""); // remove chr
+				str = str.replace("Chr",""); // remove Chr
+				str = str.replace("CHR",""); // remove Chr
+				str = str.replace("X","23"); // replace X with 23
+				str = str.replace("Y","24"); // replace Y with 24
+				try {
+					return Integer.parseInt(str);
+				} catch (NumberFormatException e2) {
+					badChrParse = true;
+				}
+			}
+		} else {
+			if(!CHR_NAMES.containsKey(str)){
+				badChrParse = true;
+			}
+			return CHR_NAMES.get(str);
+		}
+		return Integer.MIN_VALUE;
+	}
+    
 	
 	// output need to transfer 'X' and 'Y' into 23 and 24, respectively.
 	public String createOutput(VariantType t){
