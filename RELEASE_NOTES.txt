@@ -1,3 +1,15 @@
+GASV and GASVPro Release February 26, 2014 =================
+
+* Corrected a memory issue in BAMToGASV.jar which improves
+the memory usage.
+
+* Modified the usage information for GASV.jar so that users
+with a *gasv.in file are guided to the the "--batch" option
+for GASV.
+
+* Corrected an error in processing alternative chromosome
+naming files in BAMToGASV_AMBIG.jar.
+
 GASV and GASVPro Release October 1, 2013 =================
 
 * Corrected a bug in GASVPro-HQ.sh and GASVPro.sh so that

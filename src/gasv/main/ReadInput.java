@@ -191,7 +191,11 @@ public class ReadInput {
 			else {
 				Out.print("ReadInput.java: Error parsing line:\n" 
 						+ nextLine + "\n\t...unrecognized file format: Can't "
-						+ "handle file with " + line.length + " columns!");
+						+ "handle file with " + line.length + " columns.");
+				if(line.length == 4){
+					Out.print("Are you using a gasv.in file? Rerun with the --batch flag\n");
+					Out.print("java -jar GASV.jar --batch <YourFile>.gasv.in\n");					
+				}
 				b.close();
 				f.close();
 				return null;
