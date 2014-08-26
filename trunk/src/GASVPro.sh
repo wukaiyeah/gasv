@@ -43,6 +43,7 @@ MAXUNIQUEVAL=NULL       #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 MINSCALEDUNIQUE=NULL    #MUST SPECIFY IF UNIQUEFILE IS GIVEN
 LRTHRESHOLD=NULL        #Default: 0
 MINCLUSTER=NULL         #Default: 4
+MAX_CHR_NUMBER=NULL	#Default: 100
 MAXIMAL=FALSE           #use GASV's --maximal flag. (Default: FALSE)
 OUTPUT=NULL             #desired GASV cluster output format (Default: standard)
 TRANSLOCATIONS=FALSE    #analyze translocations with GASVPro (Default: FALSE)
@@ -159,7 +160,11 @@ if [ "$MAXIMAL" = "FALSE" ]; then
 fi
 
 if [ "$TRANSLOCATIONS" != "FALSE" ]; then
-    echo "Translocations: true" >> $DATEPREFIX.gasvpro.in
+    echo "Translocations: true" >> BAMToGASV.gasvpro.in
+fi
+
+if [ "$MAX_CHR_NUMBER" != "NULL" ]; then
+	echo "MaxChrNumber: $MAX_CHR_NUMBER" >> BAMToGASV.gasvpro.in
 fi
 
 echo "runningMCMC: true" >> BAMToGASV.gasvpro.in
